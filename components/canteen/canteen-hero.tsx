@@ -16,7 +16,7 @@ export function CanteenHero({ canteen }: CanteenHeroProps) {
   return (
     <section className="mb-8 overflow-hidden rounded-3xl border-0 bg-white shadow-lg shadow-orange-100/50">
       {/* Hero Banner */}
-      <div className="relative h-72 w-full overflow-hidden bg-gradient-to-br from-orange-100 via-primary/20 to-orange-50">
+      <div className="relative h-64 w-full overflow-hidden bg-gradient-to-br from-orange-100 via-primary/20 to-orange-50 md:h-80">
         {canteen.banner_url ? (
           <Image
             src={canteen.banner_url}
@@ -33,12 +33,12 @@ export function CanteenHero({ canteen }: CanteenHeroProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
         
         {/* Logo and Info Section */}
-        <div className="absolute bottom-0 left-0 right-0 p-6">
-          <div className="container mx-auto">
+        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6">
+          <div className="mx-auto max-w-7xl">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div className="flex flex-1 items-end gap-4">
+              <div className="flex flex-1 items-end gap-3 md:gap-4">
                 {canteen.logo_url && (
-                  <div className="relative h-24 w-24 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-xl ring-4 ring-white/20">
+                  <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-xl ring-2 ring-white/30 md:h-24 md:w-24">
                     <Image
                       src={canteen.logo_url}
                       alt={`${canteen.name} logo`}
@@ -48,29 +48,29 @@ export function CanteenHero({ canteen }: CanteenHeroProps) {
                     />
                   </div>
                 )}
-                <div className="text-white">
-                  <h1 className="text-4xl font-bold drop-shadow-lg md:text-5xl">
+                <div className="min-w-0 flex-1 text-white">
+                  <h1 className="text-2xl font-bold drop-shadow-lg md:text-4xl lg:text-5xl">
                     {canteen.name}
                   </h1>
-                  <p className="mt-1 text-base text-white/90 drop-shadow-md">
+                  <p className="mt-1 text-sm text-white/90 drop-shadow-md md:text-base line-clamp-2">
                     {canteen.description || "Campus favourite with quick service"}
                   </p>
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-sm px-4 py-1.5 text-sm font-semibold">
-                      <Star className="h-4 w-4 fill-yellow-300 text-yellow-300" />
-                      {Number(canteen.rating).toFixed(1)}
-                      <span className="text-white/70">
+                  <div className="mt-2 flex flex-wrap items-center gap-2 md:gap-3 md:mt-3">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/25 backdrop-blur-md px-3 py-1.5 text-xs font-semibold shadow-sm md:text-sm md:px-4">
+                      <Star className="h-3.5 w-3.5 fill-yellow-300 text-yellow-300 md:h-4 md:w-4" />
+                      <span className="font-bold">{Number(canteen.rating).toFixed(1)}</span>
+                      <span className="text-white/70 text-xs">
                         ({canteen.total_reviews} {canteen.total_reviews === 1 ? "review" : "reviews"})
                       </span>
                     </span>
                     <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold backdrop-blur-sm ${
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold backdrop-blur-md shadow-sm md:text-sm md:px-4 ${
                         canteen.is_open
-                          ? "bg-green-500/90 text-white"
-                          : "bg-red-500/90 text-white"
+                          ? "bg-green-500/95 text-white"
+                          : "bg-red-500/95 text-white"
                       }`}
                     >
-                      <Clock className="h-4 w-4" />
+                      <Clock className="h-3.5 w-3.5 md:h-4 md:w-4" />
                       {canteen.is_open ? "Open now" : "Closed"}
                     </span>
                   </div>
@@ -78,12 +78,12 @@ export function CanteenHero({ canteen }: CanteenHeroProps) {
               </div>
               
               {/* Action Buttons */}
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-2 md:gap-3">
                 {canteen.contact_phone && (
                   <Button
                     asChild
                     size="lg"
-                    className="rounded-full bg-white text-primary shadow-lg hover:bg-orange-50 hover:shadow-xl transition-all"
+                    className="rounded-full bg-white text-primary shadow-lg hover:bg-orange-50 hover:shadow-xl transition-all text-sm md:text-base"
                   >
                     <a href={`tel:${canteen.contact_phone}`} className="flex items-center gap-2">
                       <Phone className="h-4 w-4" />
@@ -97,7 +97,7 @@ export function CanteenHero({ canteen }: CanteenHeroProps) {
                     asChild
                     size="lg"
                     variant="outline"
-                    className="rounded-full bg-white/90 backdrop-blur-sm border-white/50 text-gray-800 hover:bg-white hover:shadow-lg transition-all"
+                    className="rounded-full bg-white/95 backdrop-blur-sm border-white/50 text-gray-800 hover:bg-white hover:shadow-lg transition-all text-sm md:text-base"
                   >
                     <Link href={canteen.google_maps_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                       <MapPin className="h-4 w-4" />
@@ -113,7 +113,7 @@ export function CanteenHero({ canteen }: CanteenHeroProps) {
       </div>
 
       {/* Info Grid */}
-      <div className="grid gap-6 border-t border-orange-50 bg-gradient-to-b from-white to-orange-50/30 p-6 md:grid-cols-3">
+      <div className="grid gap-4 border-t border-orange-50/50 bg-gradient-to-b from-white to-orange-50/30 p-4 md:gap-6 md:p-6 md:grid-cols-3">
         {canteen.address && (
           <div className="flex items-start gap-3">
             <div className="rounded-full bg-primary/10 p-2">

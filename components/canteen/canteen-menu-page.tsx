@@ -88,7 +88,7 @@ export function CanteenMenuPage({
     .reduce((sum, item) => sum + item.price * item.quantity, 0)
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-6 space-y-10 md:py-8">
+    <div className="mx-auto max-w-7xl px-4 py-4 space-y-8 md:px-6 md:py-6 md:space-y-10">
       <CanteenHero canteen={canteen} />
 
       {featuredItems.length > 0 && (
@@ -124,18 +124,18 @@ export function CanteenMenuPage({
       )}
 
       {/* Categories */}
-      <div className="mb-8">
-        <div className="mb-4">
-          <h2 className="text-2xl font-bold text-foreground">Menu</h2>
-          <p className="text-sm text-muted-foreground">Explore our delicious offerings</p>
+      <div className="mb-6 md:mb-8">
+        <div className="mb-3 md:mb-4">
+          <h2 className="text-xl font-bold text-foreground md:text-2xl">Menu</h2>
+          <p className="mt-1 text-xs text-muted-foreground md:text-sm">Explore our delicious offerings</p>
         </div>
         <div
-          className="flex gap-3 overflow-x-auto pb-3 scrollbar-hide"
+          className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide md:gap-3 md:pb-3"
           aria-busy={categories.length === 0}
         >
           <button
             onClick={() => setSelectedCategory(null)}
-            className={`group whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold shadow-sm transition-all duration-200 ${
+            className={`group flex-shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold shadow-sm transition-all duration-200 md:px-5 md:py-2.5 md:text-sm ${
               selectedCategory === null
                 ? "bg-gradient-to-r from-primary to-orange-500 text-white shadow-md shadow-primary/30 scale-105"
                 : "bg-white text-gray-700 hover:bg-orange-50 hover:shadow-md border border-orange-100"
@@ -146,10 +146,10 @@ export function CanteenMenuPage({
           {categories.length === 0 ? (
             showGlobalPlaceholder ? (
               Array.from({ length: 3 }).map((_, idx) => (
-                <Skeleton key={idx} className="h-10 w-24 rounded-full" />
+                <Skeleton key={idx} className="h-9 w-20 flex-shrink-0 rounded-full md:h-10 md:w-24" />
               ))
             ) : (
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs text-muted-foreground md:text-sm">
                 Categories coming soon
               </span>
             )
@@ -158,7 +158,7 @@ export function CanteenMenuPage({
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
-                className={`group whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold shadow-sm transition-all duration-200 ${
+                className={`group flex-shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold shadow-sm transition-all duration-200 md:px-5 md:py-2.5 md:text-sm ${
                   selectedCategory === category.id
                     ? "bg-gradient-to-r from-primary to-orange-500 text-white shadow-md shadow-primary/30 scale-105"
                     : "bg-white text-gray-700 hover:bg-orange-50 hover:shadow-md border border-orange-100"
@@ -172,7 +172,7 @@ export function CanteenMenuPage({
       </div>
 
       {/* Menu Items */}
-      <div className="space-y-4" aria-busy={filteredItems.length === 0}>
+      <div className="space-y-4 md:space-y-6" aria-busy={filteredItems.length === 0}>
         {filteredItems.length === 0 ? (
           showGlobalPlaceholder ? (
             <div className="grid gap-4 md:grid-cols-2">
@@ -208,7 +208,7 @@ export function CanteenMenuPage({
             </Card>
           )
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredItems.map((item) => {
               const quantity = getItemQuantity(item.id)
               const isAvailable = item.is_available
@@ -224,42 +224,42 @@ export function CanteenMenuPage({
                 >
                   <CardContent className="p-0">
                     {/* Item Image */}
-                    <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-orange-50 to-primary/10">
+                    <div className="relative h-40 w-full overflow-hidden bg-gradient-to-br from-orange-50 to-primary/10 md:h-48">
                       {item.image_url ? (
                         <Image
                           src={item.image_url}
                           alt={item.name}
                           fill
                           className="object-cover transition-transform duration-300 group-hover:scale-110"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         />
                       ) : (
-                        <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5 text-5xl">
+                        <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5 text-4xl md:text-5xl">
                           🍔
                         </div>
                       )}
                       {!isAvailable && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                          <span className="rounded-full bg-black/70 px-4 py-2 text-sm font-semibold text-white">
+                          <span className="rounded-full bg-black/70 px-3 py-1.5 text-xs font-semibold text-white md:px-4 md:py-2 md:text-sm">
                             Unavailable
                           </span>
                         </div>
                       )}
                       {item.is_featured && (
-                        <div className="absolute left-3 top-3 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+                        <div className="absolute left-2 top-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-lg md:left-3 md:top-3 md:px-3 md:text-xs">
                           ⭐ Featured
                         </div>
                       )}
                     </div>
 
                     {/* Item Info */}
-                    <div className="space-y-3 p-4">
+                    <div className="space-y-2 p-3 md:space-y-3 md:p-4">
                       <div>
-                        <h3 className="line-clamp-1 text-lg font-bold text-foreground group-hover:text-primary transition-colors">
+                        <h3 className="line-clamp-1 text-base font-bold text-foreground group-hover:text-primary transition-colors md:text-lg">
                           {item.name}
                         </h3>
                         {item.description && (
-                          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground md:text-sm">
                             {item.description}
                           </p>
                         )}
@@ -267,15 +267,15 @@ export function CanteenMenuPage({
 
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-2xl font-bold text-primary">
+                          <span className="text-xl font-bold text-primary md:text-2xl">
                             ₹{item.price}
                           </span>
                           {item.is_vegetarian ? (
-                            <span className="rounded-full bg-green-500 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
+                            <span className="rounded-full bg-green-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm md:px-2.5 md:py-1 md:text-xs">
                               Veg
                             </span>
                           ) : (
-                            <span className="rounded-full bg-red-500 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
+                            <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm md:px-2.5 md:py-1 md:text-xs">
                               Non-Veg
                             </span>
                           )}
@@ -290,14 +290,14 @@ export function CanteenMenuPage({
                                 e.stopPropagation()
                                 handleAddItem(item)
                               }}
-                              className="w-full rounded-full bg-gradient-to-r from-primary to-orange-500 font-semibold shadow-md hover:shadow-lg transition-all hover:scale-[1.02]"
+                              className="w-full rounded-full bg-gradient-to-r from-primary to-orange-500 text-xs font-semibold shadow-md hover:shadow-lg transition-all hover:scale-[1.02] md:text-sm"
                               size="lg"
                             >
-                              <Plus className="mr-2 h-4 w-4" />
+                              <Plus className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
                               Add to cart
                             </Button>
                           ) : (
-                            <div className="flex items-center justify-center gap-3 rounded-full border-2 border-primary bg-orange-50 p-2">
+                            <div className="flex items-center justify-center gap-2 rounded-full border-2 border-primary bg-orange-50 p-1.5 md:gap-3 md:p-2">
                               <Button
                                 onClick={(e) => {
                                   e.stopPropagation()
@@ -305,11 +305,11 @@ export function CanteenMenuPage({
                                 }}
                                 size="icon"
                                 variant="ghost"
-                                className="h-8 w-8 rounded-full hover:bg-primary/10"
+                                className="h-7 w-7 rounded-full hover:bg-primary/10 md:h-8 md:w-8"
                               >
-                                <Minus className="h-4 w-4 text-primary" />
+                                <Minus className="h-3.5 w-3.5 text-primary md:h-4 md:w-4" />
                               </Button>
-                              <span className="min-w-[2ch] text-center text-lg font-bold text-primary">
+                              <span className="min-w-[2ch] text-center text-base font-bold text-primary md:text-lg">
                                 {quantity}
                               </span>
                               <Button
@@ -319,9 +319,9 @@ export function CanteenMenuPage({
                                 }}
                                 size="icon"
                                 variant="ghost"
-                                className="h-8 w-8 rounded-full hover:bg-primary/10"
+                                className="h-7 w-7 rounded-full hover:bg-primary/10 md:h-8 md:w-8"
                               >
-                                <Plus className="h-4 w-4 text-primary" />
+                                <Plus className="h-3.5 w-3.5 text-primary md:h-4 md:w-4" />
                               </Button>
                             </div>
                           )}
