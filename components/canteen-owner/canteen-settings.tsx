@@ -9,6 +9,7 @@ import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import toast from "react-hot-toast"
 import { useRouter } from "next/navigation"
+import { LogoutButton } from "@/components/profile/logout-button"
 
 type Canteen = Database["public"]["Tables"]["canteens"]["Row"]
 type Category = Database["public"]["Tables"]["categories"]["Row"]
@@ -114,6 +115,21 @@ export function CanteenSettings({ canteen, categories }: CanteenSettingsProps) {
           <Button type="submit" disabled={loading}>
             {loading ? "Saving..." : "Save Changes"}
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6 border-destructive/20">
+        <CardHeader>
+          <CardTitle className="text-destructive">Account</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              Sign out of your account. You will need to log in again to access
+              your canteen dashboard.
+            </p>
+          </div>
+          <LogoutButton variant="destructive" className="w-full md:w-auto" />
         </CardContent>
       </Card>
     </form>
