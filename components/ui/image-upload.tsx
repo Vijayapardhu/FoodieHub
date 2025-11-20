@@ -134,8 +134,8 @@ export function ImageUpload({
   return (
     <div className="space-y-4">
       {preview ? (
-        <div className={`relative ${className ?? ""}`}>
-          <div className={`relative overflow-hidden rounded-lg border ${getAspectRatioClass()}`}>
+        <div className={`relative w-full ${className ?? ""}`}>
+          <div className={`relative w-full overflow-hidden rounded-lg border ${getAspectRatioClass()}`}>
             <Image
               src={preview}
               alt="Preview"
@@ -147,7 +147,7 @@ export function ImageUpload({
             type="button"
             variant="destructive"
             size="icon"
-            className="absolute right-2 top-2"
+            className="absolute right-2 top-2 z-10"
             onClick={handleRemove}
             disabled={uploading}
           >
