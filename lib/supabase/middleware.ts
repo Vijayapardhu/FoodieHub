@@ -44,8 +44,26 @@ export async function updateSession(request: NextRequest) {
   if (request.nextUrl.pathname === '/') {
     const url = request.nextUrl.clone()
     if (user) {
-      // User is logged in, redirect to home page
-      url.pathname = '/home'
+      // Get user role and redirect accordingly
+      try {
+        const { data: userProfile } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        if (userProfile?.role === 'admin') {
+          url.pathname = '/admin'
+        } else if (userProfile?.role === 'canteen_owner') {
+          url.pathname = '/canteen'
+        } else {
+          // Default to student/home
+          url.pathname = '/home'
+        }
+      } catch {
+        // If role lookup fails, default to home
+        url.pathname = '/home'
+      }
       return NextResponse.redirect(url)
     } else {
       // User is not logged in, redirect to login page
