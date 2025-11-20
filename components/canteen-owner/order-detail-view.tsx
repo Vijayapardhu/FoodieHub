@@ -261,6 +261,7 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
                     onChange={(e) => setCashReceived(e.target.value)}
                     placeholder="Enter amount"
                     className="mt-1"
+                    disabled={order.status === "completed"}
                   />
                 </div>
                 {cashReceived && Number(cashReceived) >= Number(order.total_amount) && (
@@ -271,7 +272,7 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
                 )}
                 <Button
                   onClick={handlePayment}
-                  disabled={loading || !cashReceived || Number(cashReceived) < Number(order.total_amount)}
+                  disabled={loading || !cashReceived || Number(cashReceived) < Number(order.total_amount) || order.status === "completed"}
                   className="w-full"
                 >
                   Record Payment
@@ -306,7 +307,7 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
             {action && (
               <Button
                 onClick={() => handleStatusUpdate(action.next)}
-                disabled={loading || cancelling}
+                disabled={loading || cancelling || order.status === "completed"}
                 className="flex-1"
                 size="lg"
               >
@@ -314,7 +315,7 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
                 {action.label}
               </Button>
             )}
-            {order.status !== "cancelled" && (
+            {order.status !== "cancelled" && order.status !== "completed" && (
               <Button
                 type="button"
                 variant="outline"
@@ -322,7 +323,7 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
                   !action ? "" : ""
                 }`}
                 onClick={handleCancelOrder}
-                disabled={cancelling || loading}
+                disabled={cancelling || loading || order.status === "completed"}
                 size="lg"
               >
                 {cancelling ? "Cancelling..." : "Cancel order"}
