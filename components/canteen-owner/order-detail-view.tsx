@@ -327,7 +327,7 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
                   !action ? "" : ""
                 }`}
                 onClick={handleCancelOrder}
-                disabled={cancelling || loading || order.status === "completed"}
+                disabled={cancelling || loading}
                 size="lg"
               >
                 {cancelling ? "Cancelling..." : "Cancel order"}
