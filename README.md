@@ -170,7 +170,44 @@ See `supabase/migrations/` for the complete schema.
 
 ## Deployment
 
-### Vercel (Recommended)
+### Render
+
+1. Push your code to GitHub (already done)
+
+2. Go to [Render Dashboard](https://dashboard.render.com/) and sign up/login
+
+3. Click **"New +"** and select **"Web Service"**
+
+4. Connect your GitHub account and select the `FoodieHub` repository
+
+5. Configure the service:
+   - **Name**: `foodiehub` (or your preferred name)
+   - **Environment**: `Node`
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm start`
+   - **Plan**: Choose a plan (Starter plan is recommended for getting started)
+
+6. Add Environment Variables:
+   - `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anonymous key
+   - `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key
+   - `NEXT_PUBLIC_APP_URL` - Your Render app URL (e.g., `https://foodiehub.onrender.com`)
+   - `NODE_VERSION` - Set to `18.x` (or your preferred Node version)
+
+7. Click **"Create Web Service"**
+
+8. Render will automatically deploy your application. The first deployment may take several minutes.
+
+9. Once deployed, update `NEXT_PUBLIC_APP_URL` in Render environment variables with your actual Render URL
+
+10. Update your Supabase project settings:
+    - Go to Authentication > URL Configuration in Supabase Dashboard
+    - Add your Render URL to "Site URL" and "Redirect URLs"
+    - Add `https://your-app.onrender.com/auth/callback` to redirect URLs
+
+**Note**: Render's free tier may spin down after inactivity. For production use, consider upgrading to a paid plan.
+
+### Vercel (Alternative)
 
 1. Push your code to GitHub
 2. Import your repository in Vercel
@@ -180,10 +217,10 @@ See `supabase/migrations/` for the complete schema.
 ### Environment Variables for Production
 
 Make sure to set all environment variables in your deployment platform:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anonymous key
+- `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key
+- `NEXT_PUBLIC_APP_URL` - Your production app URL
 
 ## Contributing
 
