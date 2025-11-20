@@ -114,29 +114,31 @@ export function HomePageContent({
 
       {/* Featured Image/Banner */}
       {featuredItems.length > 0 ? (
-        <div className="mb-6 overflow-hidden rounded-3xl">
-          <div className="relative h-64 w-full bg-gradient-to-br from-orange-100 to-primary/10">
-            {featuredItems[0].image_url ? (
-              <Image
-                src={featuredItems[0].image_url}
-                alt={featuredItems[0].name}
-                fill
-                className="object-cover"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                <div className="text-center">
-                  <h2 className="text-2xl font-bold text-primary">
-                    {featuredItems[0].name}
-                  </h2>
-                  <p className="mt-2 text-muted-foreground">
-                    {featuredItems[0].canteens?.name}
-                  </p>
+        <Link href={`/items/${featuredItems[0].id}`}>
+          <div className="mb-6 overflow-hidden rounded-3xl cursor-pointer transition-transform hover:scale-[1.02]">
+            <div className="relative h-64 w-full bg-gradient-to-br from-orange-100 to-primary/10">
+              {featuredItems[0].image_url ? (
+                <Image
+                  src={featuredItems[0].image_url}
+                  alt={featuredItems[0].name}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center">
+                  <div className="text-center">
+                    <h2 className="text-2xl font-bold text-primary">
+                      {featuredItems[0].name}
+                    </h2>
+                    <p className="mt-2 text-muted-foreground">
+                      {featuredItems[0].canteens?.name}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        </Link>
       ) : showGlobalPlaceholder ? (
         <Skeleton className="mb-6 h-48 rounded-2xl" />
       ) : (
@@ -199,7 +201,7 @@ export function HomePageContent({
             {featuredItems.slice(0, 6).map((item) => (
               <Link
                 key={item.id}
-                href={`/canteen/${item.canteen_id}`}
+                href={`/items/${item.id}`}
                 className="group"
               >
                 <Card className="overflow-hidden rounded-3xl border-0 bg-white/80 shadow-sm transition-transform hover:-translate-y-1 hover:shadow-lg">
