@@ -88,91 +88,108 @@ export function CanteenMenuPage({
     .reduce((sum, item) => sum + item.price * item.quantity, 0)
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-8">
+    <div className="container mx-auto max-w-7xl px-4 py-6 space-y-10 md:py-8">
       <CanteenHero canteen={canteen} />
 
       {featuredItems.length > 0 && (
-        <FeaturedItemsRail
-          title="Chef's featured picks"
-          subtitle="Curated by the kitchen, refreshed daily"
-          items={featuredItems}
-          getQuantity={getItemQuantity}
-          onAdd={handleAddItem}
-          onRemove={handleRemoveItem}
-        />
+        <section className="space-y-4">
+          <FeaturedItemsRail
+            title="Chef's featured picks"
+            subtitle="Curated by the kitchen, refreshed daily"
+            items={featuredItems}
+            getQuantity={getItemQuantity}
+            onAdd={handleAddItem}
+            onRemove={handleRemoveItem}
+          />
+        </section>
       )}
 
       {comboItems.length > 0 && (
-        <FeaturedItemsRail
-          title="Top combos"
-          subtitle="Bundle offers crafted for hungry teams"
-          items={comboItems}
-          getQuantity={getItemQuantity}
-          onAdd={handleAddItem}
-          onRemove={handleRemoveItem}
-        />
+        <section className="space-y-4">
+          <FeaturedItemsRail
+            title="Top combos"
+            subtitle="Bundle offers crafted for hungry teams"
+            items={comboItems}
+            getQuantity={getItemQuantity}
+            onAdd={handleAddItem}
+            onRemove={handleRemoveItem}
+          />
+        </section>
       )}
 
-      {reviews.length > 0 && <FeedbackCarousel reviews={reviews} />}
+      {reviews.length > 0 && (
+        <section className="space-y-4">
+          <FeedbackCarousel reviews={reviews} />
+        </section>
+      )}
 
       {/* Categories */}
-      <div
-        className="mb-6 flex gap-2 overflow-x-auto pb-2"
-        aria-busy={categories.length === 0}
-      >
-        <button
-          onClick={() => setSelectedCategory(null)}
-          className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-            selectedCategory === null
-              ? "bg-primary text-white"
-              : "bg-white text-gray-700"
-          }`}
+      <div className="mb-8">
+        <div className="mb-4">
+          <h2 className="text-2xl font-bold text-foreground">Menu</h2>
+          <p className="text-sm text-muted-foreground">Explore our delicious offerings</p>
+        </div>
+        <div
+          className="flex gap-3 overflow-x-auto pb-3 scrollbar-hide"
+          aria-busy={categories.length === 0}
         >
-          All
-        </button>
-        {categories.length === 0 ? (
-          showGlobalPlaceholder ? (
-            Array.from({ length: 3 }).map((_, idx) => (
-              <Skeleton key={idx} className="h-9 w-20 rounded-full" />
-            ))
+          <button
+            onClick={() => setSelectedCategory(null)}
+            className={`group whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold shadow-sm transition-all duration-200 ${
+              selectedCategory === null
+                ? "bg-gradient-to-r from-primary to-orange-500 text-white shadow-md shadow-primary/30 scale-105"
+                : "bg-white text-gray-700 hover:bg-orange-50 hover:shadow-md border border-orange-100"
+            }`}
+          >
+            All Menu
+          </button>
+          {categories.length === 0 ? (
+            showGlobalPlaceholder ? (
+              Array.from({ length: 3 }).map((_, idx) => (
+                <Skeleton key={idx} className="h-10 w-24 rounded-full" />
+              ))
+            ) : (
+              <span className="text-sm text-muted-foreground">
+                Categories coming soon
+              </span>
+            )
           ) : (
-            <span className="text-sm text-muted-foreground">
-              Categories coming soon
-            </span>
-          )
-        ) : (
-          categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
-              className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                selectedCategory === category.id
-                  ? "bg-primary text-white"
-                  : "bg-white text-gray-700"
-              }`}
-            >
-              {category.name}
-            </button>
-          ))
-        )}
+            categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                className={`group whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold shadow-sm transition-all duration-200 ${
+                  selectedCategory === category.id
+                    ? "bg-gradient-to-r from-primary to-orange-500 text-white shadow-md shadow-primary/30 scale-105"
+                    : "bg-white text-gray-700 hover:bg-orange-50 hover:shadow-md border border-orange-100"
+                }`}
+              >
+                {category.name}
+              </button>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Menu Items */}
       <div className="space-y-4" aria-busy={filteredItems.length === 0}>
         {filteredItems.length === 0 ? (
           showGlobalPlaceholder ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, idx) => (
-                <Skeleton key={idx} className="h-28 rounded-2xl" />
+            <div className="grid gap-4 md:grid-cols-2">
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <Skeleton key={idx} className="h-32 rounded-2xl" />
               ))}
             </div>
           ) : (
-            <Card>
-              <CardContent className="space-y-4 py-12 text-center">
-                <p className="text-muted-foreground">
-                  Menu coming soon. Check back or explore other canteens.
+            <Card className="border-dashed">
+              <CardContent className="space-y-4 py-16 text-center">
+                <p className="text-lg font-semibold text-foreground">
+                  Menu coming soon
                 </p>
-                <div className="flex justify-center gap-3">
+                <p className="text-muted-foreground">
+                  Check back later or explore other canteens.
+                </p>
+                <div className="flex justify-center gap-3 pt-4">
                   <Button
                     variant="outline"
                     className="gap-2 rounded-full"
@@ -191,62 +208,74 @@ export function CanteenMenuPage({
             </Card>
           )
         ) : (
-          filteredItems.map((item) => {
-            const quantity = getItemQuantity(item.id)
-            const isAvailable = item.is_available
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filteredItems.map((item) => {
+              const quantity = getItemQuantity(item.id)
+              const isAvailable = item.is_available
 
-            return (
-              <Card
-                key={item.id}
-                className={`cursor-pointer overflow-hidden ${
-                  !isAvailable ? "opacity-60" : ""
-                }`}
-                onClick={() => router.push(`/items/${item.id}`)}
-                role="button"
-              >
-                <CardContent className="p-4">
-                  <div className="flex gap-4">
-                    <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+              return (
+                <Card
+                  key={item.id}
+                  className={`group cursor-pointer overflow-hidden border-0 bg-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
+                    !isAvailable ? "opacity-60" : ""
+                  }`}
+                  onClick={() => router.push(`/items/${item.id}`)}
+                  role="button"
+                >
+                  <CardContent className="p-0">
+                    {/* Item Image */}
+                    <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-orange-50 to-primary/10">
                       {item.image_url ? (
                         <Image
                           src={item.image_url}
                           alt={item.name}
                           fill
-                          className="object-cover"
-                          sizes="96px"
+                          className="object-cover transition-transform duration-300 group-hover:scale-110"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         />
                       ) : (
-                        <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5 text-3xl">
+                        <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5 text-5xl">
                           🍔
                         </div>
                       )}
                       {!isAvailable && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                          <span className="text-xs font-semibold text-white">
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                          <span className="rounded-full bg-black/70 px-4 py-2 text-sm font-semibold text-white">
                             Unavailable
                           </span>
                         </div>
                       )}
+                      {item.is_featured && (
+                        <div className="absolute left-3 top-3 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+                          ⭐ Featured
+                        </div>
+                      )}
                     </div>
 
-                    <div className="flex flex-1 flex-col justify-between">
+                    {/* Item Info */}
+                    <div className="space-y-3 p-4">
                       <div>
-                        <p className="font-semibold text-foreground">{item.name}</p>
+                        <h3 className="line-clamp-1 text-lg font-bold text-foreground group-hover:text-primary transition-colors">
+                          {item.name}
+                        </h3>
                         {item.description && (
                           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                             {item.description}
                           </p>
                         )}
-                        <div className="mt-2 flex items-center gap-2">
-                          <span className="text-lg font-bold text-primary">
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl font-bold text-primary">
                             ₹{item.price}
                           </span>
                           {item.is_vegetarian ? (
-                            <span className="rounded-full bg-green-500 px-2 py-0.5 text-xs font-semibold text-white">
+                            <span className="rounded-full bg-green-500 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
                               Veg
                             </span>
                           ) : (
-                            <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
+                            <span className="rounded-full bg-red-500 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
                               Non-Veg
                             </span>
                           )}
@@ -254,33 +283,33 @@ export function CanteenMenuPage({
                       </div>
 
                       {isAvailable && (
-                        <div className="mt-3">
+                        <div className="pt-2">
                           {quantity === 0 ? (
                             <Button
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleAddItem(item)
                               }}
-                              size="sm"
-                              className="w-full bg-primary hover:bg-primary/90"
+                              className="w-full rounded-full bg-gradient-to-r from-primary to-orange-500 font-semibold shadow-md hover:shadow-lg transition-all hover:scale-[1.02]"
+                              size="lg"
                             >
                               <Plus className="mr-2 h-4 w-4" />
-                              Add
+                              Add to cart
                             </Button>
                           ) : (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-center gap-3 rounded-full border-2 border-primary bg-orange-50 p-2">
                               <Button
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleRemoveItem(item.id)
                                 }}
                                 size="icon"
-                                variant="outline"
-                                className="h-9 w-9"
+                                variant="ghost"
+                                className="h-8 w-8 rounded-full hover:bg-primary/10"
                               >
-                                <Minus className="h-4 w-4" />
+                                <Minus className="h-4 w-4 text-primary" />
                               </Button>
-                              <span className="w-12 text-center font-semibold">
+                              <span className="min-w-[2ch] text-center text-lg font-bold text-primary">
                                 {quantity}
                               </span>
                               <Button
@@ -289,37 +318,40 @@ export function CanteenMenuPage({
                                   handleAddItem(item)
                                 }}
                                 size="icon"
-                                variant="outline"
-                                className="h-9 w-9"
+                                variant="ghost"
+                                className="h-8 w-8 rounded-full hover:bg-primary/10"
                               >
-                                <Plus className="h-4 w-4" />
+                                <Plus className="h-4 w-4 text-primary" />
                               </Button>
                             </div>
                           )}
                         </div>
                       )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
         )}
       </div>
 
       {/* Sticky Add to Cart Button */}
       {cartItemCount > 0 && (
-        <div className="fixed bottom-16 left-0 right-0 z-40 border-t bg-white p-4 shadow-lg md:bottom-0">
-          <div className="container mx-auto flex items-center justify-between">
+        <div className="fixed bottom-20 left-0 right-0 z-40 border-t-2 border-primary/20 bg-white/95 backdrop-blur-lg p-4 shadow-2xl md:bottom-0">
+          <div className="container mx-auto flex items-center justify-between max-w-7xl">
             <div>
-              <p className="text-sm text-muted-foreground">
-                {cartItemCount} {cartItemCount === 1 ? "item" : "items"}
+              <p className="text-sm font-medium text-muted-foreground">
+                {cartItemCount} {cartItemCount === 1 ? "item" : "items"} in cart
               </p>
-              <p className="text-xl font-bold">₹{cartTotal.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-primary">₹{cartTotal.toFixed(2)}</p>
             </div>
             <Link href={`/cart?canteen=${canteen.id}`}>
-              <Button size="lg" className="bg-primary hover:bg-primary/90">
-                Add to Cart
+              <Button
+                size="lg"
+                className="rounded-full bg-gradient-to-r from-primary to-orange-500 px-8 font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+              >
+                View Cart
               </Button>
             </Link>
           </div>
