@@ -131,7 +131,6 @@ export function CanteenMenuPage({
         </div>
         <div
           className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide md:gap-3 md:pb-3"
-          aria-busy={categories.length === 0}
         >
           <button
             onClick={() => setSelectedCategory(null)}
@@ -172,7 +171,7 @@ export function CanteenMenuPage({
       </div>
 
       {/* Menu Items */}
-      <div className="space-y-4 md:space-y-6" aria-busy={filteredItems.length === 0}>
+      <div className="space-y-4 md:space-y-6">
         {filteredItems.length === 0 ? (
           showGlobalPlaceholder ? (
             <div className="grid gap-4 md:grid-cols-2">
