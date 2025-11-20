@@ -1,0 +1,4 @@
+ALTER TABLE public.items
+  ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS featured_image_url TEXT;
+
