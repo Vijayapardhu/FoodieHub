@@ -28,10 +28,10 @@ export default async function SettingsPage() {
     .order("name")
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">
+    <div className="p-4 md:p-6">
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-2xl font-bold md:text-3xl">Settings</h1>
+        <p className="text-sm text-muted-foreground md:text-base">
           Manage your canteen profile and preferences
         </p>
       </div>

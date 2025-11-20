@@ -37,16 +37,16 @@ export default async function MenuManagementPage() {
     .order("name")
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="p-4 md:p-6">
+      <div className="mb-4 flex flex-col gap-4 md:mb-6 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Menu Management</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold md:text-3xl">Menu Management</h1>
+          <p className="text-sm text-muted-foreground md:text-base">
             Manage your menu items and categories
           </p>
         </div>
-        <Link href="/canteen/menu/new">
-          <Button>
+        <Link href="/canteen/menu/new" className="self-start">
+          <Button className="w-full md:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Add Item
           </Button>

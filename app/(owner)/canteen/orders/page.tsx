@@ -42,19 +42,20 @@ export default async function OrdersPage() {
 
   return (
     <div className="p-4 md:p-6">
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="mb-4 flex flex-col gap-4 md:mb-6 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Order Management</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold md:text-3xl">Order Management</h1>
+          <p className="text-sm text-muted-foreground md:text-base">
             Manage and track all orders for your canteen
           </p>
         </div>
         <Link
           href="/canteen"
-          className="inline-flex items-center gap-2 self-start rounded-full border border-orange-100 px-4 py-2 text-sm font-semibold text-primary"
+          className="inline-flex items-center gap-2 self-start rounded-full border border-orange-100 px-3 py-2 text-xs font-semibold text-primary md:px-4 md:text-sm"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to dashboard
+          <span className="hidden sm:inline">Back to dashboard</span>
+          <span className="sm:hidden">Back</span>
         </Link>
       </div>
 

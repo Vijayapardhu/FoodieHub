@@ -32,11 +32,11 @@ export default async function OffersPage() {
     .order("created_at", { ascending: false })
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="p-4 md:p-6">
+      <div className="mb-4 flex flex-col gap-4 md:mb-6 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Offers & Promotions</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold md:text-3xl">Offers & Promotions</h1>
+          <p className="text-sm text-muted-foreground md:text-base">
             Manage your promotional offers
           </p>
         </div>

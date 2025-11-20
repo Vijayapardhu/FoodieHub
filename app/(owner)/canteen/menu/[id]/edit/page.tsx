@@ -36,9 +36,9 @@ export default async function EditMenuItemPage({
     .order("name")
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-4 space-y-4 md:p-6">
       <div>
-        <h1 className="text-3xl font-bold">Edit Menu Item</h1>
+        <h1 className="text-2xl font-bold md:text-3xl">Edit Menu Item</h1>
         <p className="text-sm text-muted-foreground">
           Update details for {item.name}
         </p>

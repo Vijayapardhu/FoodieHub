@@ -16,7 +16,7 @@ export default async function NewOfferPage() {
 
   if (!canteen) {
     return (
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <Card>
           <CardContent className="space-y-4 py-10 text-center">
             <p className="text-muted-foreground">
@@ -32,7 +32,7 @@ export default async function NewOfferPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 space-y-4 md:p-6 md:space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/canteen/offers">
           <Button variant="ghost" size="icon" className="rounded-full">
@@ -40,8 +40,8 @@ export default async function NewOfferPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Create Offer</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold md:text-3xl">Create Offer</h1>
+          <p className="text-sm text-muted-foreground md:text-base">
             Craft a promotion for students. Approval may be required.
           </p>
         </div>

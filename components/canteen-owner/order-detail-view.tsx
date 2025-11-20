@@ -126,30 +126,34 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 p-4 md:space-y-6 md:p-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Order Details</h1>
-          <p className="text-muted-foreground">Token: {order.token}</p>
+          <h1 className="text-2xl font-bold md:text-3xl">Order Details</h1>
+          <p className="text-sm text-muted-foreground md:text-base">
+            Token: {order.token}
+          </p>
         </div>
-        <Badge className={statusColors[order.status] || "bg-muted"}>
+        <Badge
+          className={`${statusColors[order.status] || "bg-muted"} self-start`}
+        >
           {order.status}
         </Badge>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Token & QR Code</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col items-center gap-4 sm:flex-row">
               <div className="rounded-lg border p-4">
-                <QRCodeSVG value={order.token} size={128} />
+                <QRCodeSVG value={order.token} size={128} className="h-auto w-full max-w-[128px]" />
               </div>
-              <div>
+              <div className="text-center sm:text-left">
                 <p className="text-sm text-muted-foreground">Order Token</p>
-                <p className="text-2xl font-mono font-bold">{order.token}</p>
+                <p className="text-xl font-mono font-bold md:text-2xl">{order.token}</p>
               </div>
             </div>
           </CardContent>
@@ -303,7 +307,7 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
 
       {(action || order.status !== "cancelled") && (
         <Card>
-          <CardContent className="flex flex-col gap-3 pt-6 md:flex-row">
+          <CardContent className="flex flex-col gap-3 pt-4 md:pt-6 md:flex-row">
             {action && (
               <Button
                 onClick={() => handleStatusUpdate(action.next)}

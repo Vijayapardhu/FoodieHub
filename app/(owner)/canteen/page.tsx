@@ -190,26 +190,28 @@ export default async function CanteenDashboardPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back, {canteen.name}</p>
+    <div className="p-4 md:p-6">
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-2xl font-bold md:text-3xl">Dashboard</h1>
+        <p className="text-sm text-muted-foreground md:text-base">
+          Welcome back, {canteen.name}
+        </p>
       </div>
 
       <DashboardStats metrics={metrics} />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <div className="mt-4 grid gap-4 md:mt-6 md:gap-6 lg:grid-cols-3">
         <RevenueTrendCard weeklyData={weeklyRevenueByDay} />
         <AttentionItemsCard items={attentionItems} />
         <OpsFeedCard events={opsFeed} />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      <div className="mt-4 grid gap-4 md:mt-6 md:gap-6 lg:grid-cols-2">
         <RecentOrders orders={activeOrders || []} />
         <TopDishesCard dishes={topDishes} />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      <div className="mt-4 grid gap-4 md:mt-6 md:gap-6 lg:grid-cols-2">
         <QuickActions canteenId={canteen.id} />
       </div>
     </div>

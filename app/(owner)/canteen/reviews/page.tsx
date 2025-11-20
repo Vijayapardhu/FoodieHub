@@ -29,10 +29,10 @@ export default async function ReviewsPage() {
     .order("created_at", { ascending: false })
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Reviews</h1>
-        <p className="text-muted-foreground">
+    <div className="p-4 md:p-6">
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-2xl font-bold md:text-3xl">Reviews</h1>
+        <p className="text-sm text-muted-foreground md:text-base">
           View and respond to customer reviews
         </p>
       </div>

@@ -34,10 +34,10 @@ export default async function AnalyticsPage() {
     .order("created_at", { ascending: false })
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Analytics</h1>
-        <p className="text-muted-foreground">
+    <div className="p-4 md:p-6">
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-2xl font-bold md:text-3xl">Analytics</h1>
+        <p className="text-sm text-muted-foreground md:text-base">
           Track your sales and performance
         </p>
       </div>
