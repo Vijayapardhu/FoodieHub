@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { LogOut } from "lucide-react"
+import toast from "react-hot-toast"
 
 export function LogoutButton(props: ButtonProps) {
   const router = useRouter()
@@ -14,9 +15,17 @@ export function LogoutButton(props: ButtonProps) {
   const handleLogout = async () => {
     try {
       setLoading(true)
-      await supabase.auth.signOut()
-      router.push("/login")
-    } finally {
+      const { error } = await supabase.auth.signOut()
+      
+      if (error) {
+        toast.error(error.message || "Failed to logout")
+        return
+      }
+
+      // Use window.location for a hard redirect to ensure all state is cleared
+      window.location.href = "/login"
+    } catch (error: any) {
+      toast.error(error.message || "Failed to logout")
       setLoading(false)
     }
   }
