@@ -30,7 +30,7 @@ export function FeedbackCarousel({ reviews }: FeedbackCarouselProps) {
     <section className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">What students say</h2>
+          <h2 className="text-2xl font-bold text-foreground">What users say</h2>
           <p className="mt-1 text-sm font-medium text-muted-foreground">
             Ratings straight from the pickup counter
           </p>
@@ -47,7 +47,7 @@ export function FeedbackCarousel({ reviews }: FeedbackCarouselProps) {
                 {review.users?.avatar_url ? (
                   <Image
                     src={review.users.avatar_url}
-                    alt={review.users.full_name || "Student"}
+                    alt={review.users.full_name || "User"}
                     fill
                     className="object-cover"
                     sizes="48px"

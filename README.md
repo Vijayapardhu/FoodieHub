@@ -47,49 +47,43 @@ A comprehensive canteen management system built with Next.js 14, TypeScript, Sup
 
 - Node.js 18+ and npm/yarn
 - Supabase account and project
-- Google OAuth credentials (for authentication)
+- Google OAuth credentials (optional, for OAuth authentication)
 
-### Installation
+### Quick Setup
 
-1. Clone the repository:
+1. **Clone and Install**:
 ```bash
 git clone <repository-url>
 cd "Canteen Management"
-```
-
-2. Install dependencies:
-```bash
 npm install
 ```
 
-3. Set up environment variables:
-```bash
-cp .env.local.example .env.local
-```
-
-Fill in your Supabase credentials:
-```
+2. **Environment Variables**:
+Create `.env.local` file:
+```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-4. Set up the database:
-   - Run the migrations in `supabase/migrations/` in your Supabase project
-   - Or use Supabase CLI: `supabase db push`
+3. **Database Setup**:
+   - Go to Supabase Dashboard > SQL Editor
+   - Run migrations in order from `supabase/migrations/`
+   - **IMPORTANT**: Make sure to run `017_fix_recursive_policies.sql` to fix RLS issues
 
-5. Configure Google OAuth in Supabase Dashboard:
-   - Go to Authentication > Providers > Google
-   - Enable Google provider
-   - Add your Google OAuth credentials
+4. **Storage Setup**:
+   - Create buckets: `items`, `canteens`, `reviews`
+   - Set public read access
 
-6. Run the development server:
+5. **Run Development Server**:
 ```bash
 npm run dev
 ```
 
-7. Open [http://localhost:3000](http://localhost:3000) in your browser.
+Visit [http://localhost:3000](http://localhost:3000)
+
+📖 **For detailed setup instructions, see [SETUP_GUIDE.md](./SETUP_GUIDE.md)**
 
 ## Project Structure
 

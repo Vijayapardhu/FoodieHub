@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Database } from "@/types/database.types"
+import { ImagePlaceholder } from "@/components/ui/image-placeholder"
 
 type Item = Database["public"]["Tables"]["items"]["Row"]
 
@@ -61,7 +62,7 @@ export function FeaturedItemsRail({
                     sizes="288px"
                   />
                 ) : (
-                  <div className="flex h-full items-center justify-center text-5xl">🍱</div>
+                  <ImagePlaceholder type="item" size="xl" />
                 )}
                 {!isAvailable && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">

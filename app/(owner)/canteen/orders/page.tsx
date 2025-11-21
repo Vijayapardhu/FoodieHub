@@ -41,17 +41,19 @@ export default async function OrdersPage() {
     .limit(20)
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 via-white to-gray-50/30 p-4 md:p-6">
       <div className="mb-4 flex flex-col gap-4 md:mb-6 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold md:text-3xl">Order Management</h1>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent md:text-3xl">
+            Order Management
+          </h1>
           <p className="text-sm text-muted-foreground md:text-base">
             Manage and track all orders for your canteen
           </p>
         </div>
         <Link
           href="/canteen"
-          className="inline-flex items-center gap-2 self-start rounded-full border border-orange-100 px-3 py-2 text-xs font-semibold text-primary md:px-4 md:text-sm"
+          className="inline-flex items-center gap-2 self-start rounded-full border border-primary/20 bg-white px-3 py-2 text-xs font-semibold text-primary transition-all hover:bg-primary/5 hover:shadow-sm md:px-4 md:text-sm"
         >
           <ArrowLeft className="h-4 w-4" />
           <span className="hidden sm:inline">Back to dashboard</span>

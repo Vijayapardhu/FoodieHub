@@ -18,8 +18,14 @@ async function getRedirectPath(userId: string) {
     case "admin":
       return "/admin"
     case "canteen_owner":
-      return "/canteen"
-    case "student":
+      // Check if owner has a canteen
+      const { data: canteen } = await supabase
+        .from("canteens")
+        .select("id")
+        .eq("owner_id", userId)
+        .maybeSingle()
+      return canteen ? "/canteen" : "/canteen/register"
+    case "user":
     default:
       return "/home"
   }

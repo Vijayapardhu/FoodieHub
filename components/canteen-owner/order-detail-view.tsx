@@ -103,7 +103,7 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
 
   const handleCancelOrder = async () => {
     const canProceed = window.confirm(
-      "Cancel this order? This will notify the student and cannot be undone."
+      "Cancel this order? This will notify the user and cannot be undone."
     )
     if (!canProceed) return
 

@@ -22,6 +22,10 @@ import { ImageUpload } from "@/components/ui/image-upload"
 
 type Canteen = Database["public"]["Tables"]["canteens"]["Row"] & {
   users: { email: string; full_name: string | null } | null
+  is_approved?: boolean
+  approved_by?: string | null
+  approved_at?: string | null
+  rejection_reason?: string | null
 }
 
 interface CanteensTableProps {
@@ -115,6 +119,42 @@ export function CanteensTable({ canteens: initialCanteens }: CanteensTableProps)
       toast.success("Canteen status updated")
     } catch (error: any) {
       toast.error(error.message || "Failed to update status")
+    }
+  }
+
+  const handleApproval = async (canteenId: string, approve: boolean, reason?: string) => {
+    try {
+      const response = await fetch(`/api/canteens/${canteenId}/approve`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ approve, reason }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update approval status")
+      }
+
+      // Update local state
+      setCanteens((prev) =>
+        prev.map((c) =>
+          c.id === canteenId
+            ? {
+                ...c,
+                is_approved: approve,
+                approved_at: approve ? new Date().toISOString() : null,
+                rejection_reason: approve ? null : reason || null,
+              }
+            : c,
+        ),
+      )
+
+      toast.success(approve ? "Canteen approved" : "Canteen rejected")
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update approval status")
     }
   }
 
@@ -258,6 +298,21 @@ export function CanteensTable({ canteens: initialCanteens }: CanteensTableProps)
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <Badge
+                  className={
+                    canteen.is_approved === false
+                      ? "bg-yellow-500"
+                      : canteen.is_approved === true
+                      ? "bg-green-500"
+                      : "bg-gray-500"
+                  }
+                >
+                  {canteen.is_approved === false
+                    ? "Pending"
+                    : canteen.is_approved === true
+                    ? "Approved"
+                    : "Unknown"}
+                </Badge>
                 <Badge className={canteen.is_open ? "bg-success" : "bg-destructive"}>
                   {canteen.is_open ? "Open" : "Closed"}
                 </Badge>
@@ -266,6 +321,38 @@ export function CanteensTable({ canteens: initialCanteens }: CanteensTableProps)
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
+                {canteen.is_approved === false && (
+                  <>
+                    <Button
+                      size="sm"
+                      className="bg-green-500 hover:bg-green-600"
+                      onClick={() => handleApproval(canteen.id, true)}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => {
+                        const reason = prompt("Rejection reason (optional):")
+                        if (reason !== null) {
+                          handleApproval(canteen.id, false, reason)
+                        }
+                      }}
+                    >
+                      Reject
+                    </Button>
+                  </>
+                )}
+                {canteen.is_approved === true && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleApproval(canteen.id, false)}
+                  >
+                    Revoke
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="outline"
@@ -362,11 +449,28 @@ export function CanteensTable({ canteens: initialCanteens }: CanteensTableProps)
                       {canteen.users?.full_name || canteen.users?.email || "Unknown"}
                     </td>
                     <td className="px-6 py-4">
-                      <Badge
-                        className={canteen.is_open ? "bg-success" : "bg-destructive"}
-                      >
-                        {canteen.is_open ? "Open" : "Closed"}
-                      </Badge>
+                      <div className="flex flex-col gap-2">
+                        <Badge
+                          className={
+                            canteen.is_approved === false
+                              ? "bg-yellow-500"
+                              : canteen.is_approved === true
+                              ? "bg-green-500"
+                              : "bg-gray-500"
+                          }
+                        >
+                          {canteen.is_approved === false
+                            ? "Pending"
+                            : canteen.is_approved === true
+                            ? "Approved"
+                            : "Unknown"}
+                        </Badge>
+                        <Badge
+                          className={canteen.is_open ? "bg-success" : "bg-destructive"}
+                        >
+                          {canteen.is_open ? "Open" : "Closed"}
+                        </Badge>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1">
@@ -381,24 +485,60 @@ export function CanteensTable({ canteens: initialCanteens }: CanteensTableProps)
                     <td className="px-6 py-4 text-sm text-muted-foreground">
                       {format(new Date(canteen.created_at), "MMM dd, yyyy")}
                     </td>
-                    <td className="px-6 py-4 space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => toggleStatus(canteen.id, canteen.is_open)}
-                      >
-                        {canteen.is_open ? "Close" : "Open"}
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => openEdit(canteen)}>
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => deleteCanteen(canteen.id)}
-                      >
-                        Delete
-                      </Button>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-2">
+                        {canteen.is_approved === false && (
+                          <>
+                            <Button
+                              size="sm"
+                              className="bg-green-500 hover:bg-green-600"
+                              onClick={() => handleApproval(canteen.id, true)}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => {
+                                const reason = prompt("Rejection reason (optional):")
+                                if (reason !== null) {
+                                  handleApproval(canteen.id, false, reason)
+                                }
+                              }}
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                        {canteen.is_approved === true && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleApproval(canteen.id, false)}
+                          >
+                            Revoke
+                          </Button>
+                        )}
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => toggleStatus(canteen.id, canteen.is_open)}
+                          >
+                            {canteen.is_open ? "Close" : "Open"}
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => openEdit(canteen)}>
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => deleteCanteen(canteen.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 ))}

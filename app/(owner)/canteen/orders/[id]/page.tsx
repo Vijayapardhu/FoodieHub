@@ -38,7 +38,7 @@ export default async function OrderDetailPage({
   }
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 via-white to-gray-50/30 p-4 md:p-6">
       <OrderDetailView order={order} />
     </div>
   )

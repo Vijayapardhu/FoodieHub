@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Plus, ShoppingBag } from "lucide-react"
 import { useCartStore } from "@/store/cart-store"
 import { FavoriteButton } from "@/components/menu/favorite-button"
+import { ImagePlaceholder } from "@/components/ui/image-placeholder"
 import { Skeleton } from "@/components/ui/loading-state"
 
 type Favorite = Database["public"]["Tables"]["favorites"]["Row"] & {
@@ -82,9 +83,7 @@ export function FavoritesList({ favorites, loading }: FavoritesListProps) {
                       className="object-cover"
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
-                      <span className="text-4xl">🍔</span>
-                    </div>
+                    <ImagePlaceholder type="item" size="xl" />
                   )}
                 </div>
                 <CardContent className="p-4">
@@ -136,9 +135,7 @@ export function FavoritesList({ favorites, loading }: FavoritesListProps) {
                       className="object-cover"
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
-                      <span className="text-4xl">🍽️</span>
-                    </div>
+                    <ImagePlaceholder type="canteen" size="xl" />
                   )}
                 </div>
                 <CardContent className="p-4">

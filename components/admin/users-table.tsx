@@ -6,7 +6,6 @@ import { Database } from "@/types/database.types"
 import { format } from "date-fns"
 import Image from "next/image"
 import { useState } from "react"
-import { createClient } from "@/lib/supabase/client"
 import toast from "react-hot-toast"
 
 type User = Database["public"]["Tables"]["users"]["Row"]
@@ -17,30 +16,36 @@ interface UsersTableProps {
 
 export function UsersTable({ users: initialUsers }: UsersTableProps) {
   const [users, setUsers] = useState(initialUsers)
-  const supabase = createClient()
 
   const updateRole = async (userId: string, newRole: string) => {
     try {
-      const { error } = await supabase
-        .from("users")
-        .update({ role: newRole as any })
-        .eq("id", userId)
+      const response = await fetch(`/api/users/${userId}/role`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ role: newRole }),
+      })
 
-      if (error) throw error
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update role")
+      }
 
       setUsers((prev) =>
         prev.map((user) =>
           user.id === userId ? { ...user, role: newRole as any } : user,
         ),
       )
-      toast.success("User role updated")
+      toast.success("User role updated successfully")
     } catch (error: any) {
       toast.error(error.message || "Failed to update role")
     }
   }
 
   const roleColors: Record<string, string> = {
-    student: "bg-blue-500",
+    user: "bg-blue-500",
     canteen_owner: "bg-green-500",
     admin: "bg-purple-500",
   }
@@ -85,7 +90,7 @@ export function UsersTable({ users: initialUsers }: UsersTableProps) {
                       onChange={(e) => updateRole(user.id, e.target.value)}
                       className="rounded-md border px-2 py-1 text-sm"
                     >
-                      <option value="student">Student</option>
+                      <option value="user">User</option>
                       <option value="canteen_owner">Canteen Owner</option>
                       <option value="admin">Admin</option>
                     </select>
@@ -122,7 +127,7 @@ export function UsersTable({ users: initialUsers }: UsersTableProps) {
                   onChange={(e) => updateRole(user.id, e.target.value)}
                   className="w-full rounded-md border px-2 py-2 text-sm"
                 >
-                  <option value="student">Student</option>
+                  <option value="user">User</option>
                   <option value="canteen_owner">Canteen Owner</option>
                   <option value="admin">Admin</option>
                 </select>

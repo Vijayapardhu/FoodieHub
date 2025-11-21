@@ -7,10 +7,16 @@ import { Database } from "@/types/database.types"
 import { format } from "date-fns"
 import Image from "next/image"
 import { QRCodeSVG } from "qrcode.react"
-import { ArrowLeft, Phone } from "lucide-react"
+import { ArrowLeft, Phone, X, RotateCcw, Printer, Download, FileText } from "lucide-react"
 import Link from "next/link"
 import { useRealtimeOrders } from "@/lib/hooks/use-realtime-orders"
 import { useEffect, useState } from "react"
+import { createClient } from "@/lib/supabase/client"
+import toast from "react-hot-toast"
+import { useRouter } from "next/navigation"
+import { useCartStore } from "@/store/cart-store"
+import { downloadInvoice, printInvoice } from "@/lib/utils/invoice"
+import { ImagePlaceholder } from "@/components/ui/image-placeholder"
 
 type Order = Database["public"]["Tables"]["orders"]["Row"] & {
   canteens: Database["public"]["Tables"]["canteens"]["Row"]
@@ -19,6 +25,10 @@ type Order = Database["public"]["Tables"]["orders"]["Row"] & {
       items: Database["public"]["Tables"]["items"]["Row"]
     }
   >
+  users?: {
+    full_name: string | null
+    email: string | null
+  } | null
 }
 
 interface TokenTrackingProps {
@@ -35,6 +45,11 @@ const statusSteps = [
 
 export function TokenTracking({ order: initialOrder }: TokenTrackingProps) {
   const [order, setOrder] = useState(initialOrder)
+  const [cancelling, setCancelling] = useState(false)
+  const router = useRouter()
+  const supabase = createClient()
+  const { addItem, clearCart } = useCartStore()
+
   const realtimeOrder = useRealtimeOrders(order.id, (updatedOrder) => {
     setOrder(updatedOrder as Order)
   })
@@ -47,6 +62,80 @@ export function TokenTracking({ order: initialOrder }: TokenTrackingProps) {
 
   const currentStep = statusSteps.findIndex((step) => step.key === order.status)
   const progress = statusSteps[currentStep]?.progress || 0
+
+  const canCancel = order.status === "pending" || order.status === "confirmed"
+  const canReorder = order.status === "completed" || order.status === "cancelled"
+
+  const handleCancelOrder = async () => {
+    if (!confirm("Are you sure you want to cancel this order?")) {
+      return
+    }
+
+    try {
+      setCancelling(true)
+      const { error } = await supabase
+        .from("orders")
+        .update({ status: "cancelled" })
+        .eq("id", order.id)
+
+      if (error) throw error
+
+      toast.success("Order cancelled successfully")
+      router.refresh()
+    } catch (error: any) {
+      toast.error(error.message || "Failed to cancel order")
+    } finally {
+      setCancelling(false)
+    }
+  }
+
+  const handleReorder = () => {
+    if (!order.order_items || order.order_items.length === 0) {
+      toast.error("No items to reorder")
+      return
+    }
+
+    // Clear current cart for this canteen
+    const canteenId = order.canteen_id
+    clearCart()
+
+    // Add all items from this order
+    order.order_items.forEach((orderItem) => {
+      for (let i = 0; i < orderItem.quantity; i++) {
+        addItem({
+          itemId: orderItem.item_id,
+          name: orderItem.items.name,
+          price: Number(orderItem.price),
+          imageUrl: orderItem.items.image_url,
+          canteenId: canteenId,
+          canteenName: order.canteens?.name || "Canteen",
+        })
+      }
+    })
+
+    toast.success("Items added to cart!")
+    router.push(`/cart?canteen=${canteenId}`)
+  }
+
+  const handlePrintReceipt = () => {
+    try {
+      printInvoice(order)
+      toast.success("Opening print dialog...")
+    } catch (error: any) {
+      toast.error("Failed to print invoice")
+      console.error("Print error:", error)
+    }
+  }
+
+  const handleDownloadInvoice = () => {
+    try {
+      downloadInvoice(order)
+      toast.success("Invoice downloaded successfully")
+    } catch (error: any) {
+      toast.error("Failed to download invoice")
+      console.error("Download error:", error)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -173,9 +262,7 @@ export function TokenTracking({ order: initialOrder }: TokenTrackingProps) {
                       sizes="64px"
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
-                      <span className="text-2xl">🍔</span>
-                    </div>
+                    <ImagePlaceholder type="item" size="sm" />
                   )}
                 </div>
                 <div className="flex-1">
@@ -208,12 +295,59 @@ export function TokenTracking({ order: initialOrder }: TokenTrackingProps) {
         </CardContent>
       </Card>
 
-      {/* Action Button */}
-      <Link href={`/orders/${order.id}/feedback`}>
-        <button className="w-full rounded-xl bg-primary px-6 py-4 text-lg font-semibold text-white transition-colors hover:bg-primary/90">
-          Submit Feedback
-        </button>
-      </Link>
+      {/* Action Buttons */}
+      <div className="flex flex-col gap-3 sm:flex-row">
+        {canCancel && (
+          <Button
+            onClick={handleCancelOrder}
+            disabled={cancelling}
+            variant="outline"
+            className="flex-1 gap-2 border-destructive text-destructive hover:bg-destructive/10"
+            size="lg"
+          >
+            <X className="h-4 w-4" />
+            {cancelling ? "Cancelling..." : "Cancel Order"}
+          </Button>
+        )}
+        {canReorder && (
+          <Button
+            onClick={handleReorder}
+            variant="outline"
+            className="flex-1 gap-2"
+            size="lg"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Reorder
+          </Button>
+        )}
+        <div className="flex gap-2">
+          <Button
+            onClick={handlePrintReceipt}
+            variant="outline"
+            className="gap-2"
+            size="lg"
+          >
+            <Printer className="h-4 w-4" />
+            Print Invoice
+          </Button>
+          <Button
+            onClick={handleDownloadInvoice}
+            variant="outline"
+            className="gap-2 bg-primary text-white hover:bg-primary/90"
+            size="lg"
+          >
+            <FileText className="h-4 w-4" />
+            Download Invoice
+          </Button>
+        </div>
+        {(order.status === "completed" || order.status === "cancelled") && (
+          <Link href={`/orders/${order.id}/feedback`} className="flex-1">
+            <Button className="w-full gap-2 bg-primary text-white hover:bg-primary/90" size="lg">
+              Submit Feedback
+            </Button>
+          </Link>
+        )}
+      </div>
 
       {/* Contact Canteen */}
       <Card>

@@ -7,6 +7,7 @@ import { Plus, Minus } from "lucide-react"
 import { useCartStore } from "@/store/cart-store"
 import { Database } from "@/types/database.types"
 import { FavoriteButton } from "./favorite-button"
+import { ImagePlaceholder } from "@/components/ui/image-placeholder"
 import { useState } from "react"
 
 type Item = Database["public"]["Tables"]["items"]["Row"]
@@ -81,7 +82,7 @@ export function ItemCard({ item, canteenId, canteenName }: ItemCardProps) {
               className="object-cover"
             />
           ) : (
-            <div className="h-full w-full bg-gradient-to-br from-primary/20 to-primary/5" />
+            <ImagePlaceholder type="item" size="lg" />
           )}
           <div className="absolute right-2 top-2 flex gap-2">
             <FavoriteButton itemId={item.id} />

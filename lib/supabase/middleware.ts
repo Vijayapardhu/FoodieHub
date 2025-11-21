@@ -55,9 +55,16 @@ export async function updateSession(request: NextRequest) {
         if (userProfile?.role === 'admin') {
           url.pathname = '/admin'
         } else if (userProfile?.role === 'canteen_owner') {
-          url.pathname = '/canteen'
+          // Check if owner has a canteen, if not redirect to register
+          const { data: canteen } = await supabase
+            .from('canteens')
+            .select('id')
+            .eq('owner_id', user.id)
+            .maybeSingle()
+          
+          url.pathname = canteen ? '/canteen' : '/canteen/register'
         } else {
-          // Default to student/home
+          // Default to user/home
           url.pathname = '/home'
         }
       } catch {

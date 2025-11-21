@@ -5,7 +5,7 @@ export default async function PublicLayout({
 }: {
   children: React.ReactNode
 }) {
-  await requireRole(["student", "canteen_owner", "admin"])
+  await requireRole(["user", "canteen_owner", "admin"])
 
   return <>{children}</>
 }

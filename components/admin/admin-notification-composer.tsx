@@ -21,7 +21,7 @@ interface AdminNotificationComposerProps {
 
 const audienceOptions = [
   { value: "all", label: "All users" },
-  { value: "students", label: "Students" },
+  { value: "students", label: "Users" },
   { value: "canteen_owner", label: "Canteen owners" },
   { value: "single", label: "Specific email" },
 ]

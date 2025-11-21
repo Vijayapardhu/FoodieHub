@@ -10,7 +10,7 @@ export default async function FeedbackPage({
   params: { id: string }
 }) {
   const { supabase, user } = await requireRole([
-    "student",
+    "user",
     "canteen_owner",
     "admin",
   ])
@@ -51,7 +51,7 @@ export default async function FeedbackPage({
     .maybeSingle()
 
   return (
-    <div className="min-h-screen bg-muted/20 pb-20">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 via-white to-gray-50/30 pb-20">
       <Navbar />
       <div className="container mx-auto px-4 py-6">
         <FeedbackForm order={order} existingReview={existingReview} />

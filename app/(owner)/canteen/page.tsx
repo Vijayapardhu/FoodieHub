@@ -28,11 +28,17 @@ export default async function CanteenDashboardPage() {
   if (!canteen) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold">No Canteen Found</h2>
-          <p className="mt-2 text-muted-foreground">
-            Please contact admin to set up your canteen.
+        <div className="text-center max-w-md">
+          <h2 className="text-2xl font-bold mb-4">No Canteen Found</h2>
+          <p className="mt-2 text-muted-foreground mb-6">
+            You haven't registered a canteen yet. Register your canteen to start accepting orders.
           </p>
+          <a
+            href="/canteen/register"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Register Your Canteen
+          </a>
         </div>
       </div>
     )
@@ -190,9 +196,11 @@ export default async function CanteenDashboardPage() {
   }
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 via-white to-gray-50/30 p-4 md:p-6">
       <div className="mb-4 md:mb-6">
-        <h1 className="text-2xl font-bold md:text-3xl">Dashboard</h1>
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent md:text-3xl">
+          Dashboard
+        </h1>
         <p className="text-sm text-muted-foreground md:text-base">
           Welcome back, {canteen.name}
         </p>

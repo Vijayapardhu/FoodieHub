@@ -47,7 +47,7 @@ export function DashboardStats({ metrics }: DashboardStatsProps) {
     {
       label: "Rating",
       value: metrics.rating.toFixed(1),
-      helper: "Student satisfaction",
+      helper: "User satisfaction",
       icon: Star,
       accent: "text-yellow-500",
     },

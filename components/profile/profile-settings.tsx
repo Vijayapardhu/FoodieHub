@@ -75,7 +75,7 @@ export function ProfileSettings({ user, profile }: ProfileSettingsProps) {
         {
           id: user.id,
           email: user.email ?? "",
-          role: profile.role ?? "student",
+          role: profile.role ?? "user",
           full_name: fullName || null,
           phone_number: sanitizedPhoneNumber || null,
           avatar_url: nextAvatarUrl,

@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   let userQuery = supabase.from("users").select("id")
 
   if (audience === "students") {
-    userQuery = userQuery.eq("role", "student")
+    userQuery = userQuery.eq("role", "user")
   } else if (audience === "canteen_owner") {
     userQuery = userQuery.eq("role", "canteen_owner")
   } else if (audience === "single") {

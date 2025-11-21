@@ -15,7 +15,7 @@ export interface Database {
           email: string
           full_name: string | null
           avatar_url: string | null
-          role: 'student' | 'canteen_owner' | 'admin'
+          role: 'user' | 'canteen_owner' | 'admin'
           created_at: string
           updated_at: string
           phone_number: string | null
@@ -418,7 +418,7 @@ export interface Database {
       [_ in never]: never
     }
     Enums: {
-      user_role: 'student' | 'canteen_owner' | 'admin'
+      user_role: 'user' | 'canteen_owner' | 'admin'
       order_status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled'
       payment_status: 'pending' | 'completed'
       notification_type: 'order' | 'promotion' | 'system' | 'feedback'

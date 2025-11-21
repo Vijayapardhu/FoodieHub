@@ -2,6 +2,7 @@ import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ImagePlaceholder } from "@/components/ui/image-placeholder"
 import Link from "next/link"
 
 interface AttentionItemsCardProps {
@@ -39,15 +40,13 @@ export function AttentionItemsCard({ items }: AttentionItemsCardProps) {
                       sizes="48px"
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center text-xl">
-                      🍽️
-                    </div>
+                    <ImagePlaceholder type="item" size="sm" />
                   )}
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-foreground">{item.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    Hidden from students · update availability
+                    Hidden from users · update availability
                   </p>
                 </div>
                 <Link href={`/canteen/menu/${item.id}/edit`}>

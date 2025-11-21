@@ -10,6 +10,7 @@ import { FavoriteButton } from "@/components/menu/favorite-button"
 import { useCartStore } from "@/store/cart-store"
 import { Database } from "@/types/database.types"
 import { Minus, Plus, MapPin, Utensils, Flame } from "lucide-react"
+import { ImagePlaceholder } from "@/components/ui/image-placeholder"
 import { cn } from "@/lib/utils/cn"
 
 type Item = Database["public"]["Tables"]["items"]["Row"]
@@ -90,9 +91,7 @@ export function ItemDetail({
               priority
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-5xl">
-              🍽️
-            </div>
+            <ImagePlaceholder type="item" size="xl" />
           )}
           <div className="absolute left-4 top-4 flex gap-2">
             {item.is_featured && (
@@ -139,9 +138,7 @@ export function ItemDetail({
                     sizes="80px"
                   />
                 ) : (
-                  <div className="flex h-full items-center justify-center bg-orange-50 text-2xl">
-                    🍽️
-                  </div>
+                  <ImagePlaceholder type="item" size="sm" className="bg-orange-50" />
                 )}
               </button>
             ))}
@@ -337,9 +334,7 @@ export function ItemDetail({
                         sizes="224px"
                       />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-3xl">
-                        🍱
-                      </div>
+                      <ImagePlaceholder type="item" size="md" />
                     )}
                   </div>
                 </Link>

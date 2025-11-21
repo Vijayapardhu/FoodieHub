@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client"
 import toast from "react-hot-toast"
 import { useRouter } from "next/navigation"
 import { CartSummary } from "@/components/cart/cart-summary"
+import { ImagePlaceholder } from "@/components/ui/image-placeholder"
 import Link from "next/link"
 
 interface CartPageContentProps {
@@ -90,9 +91,7 @@ export function CartPageContent({ canteenId }: CartPageContentProps) {
                       sizes="80px"
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
-                      <span className="text-2xl">🍔</span>
-                    </div>
+                    <ImagePlaceholder type="item" size="sm" />
                   )}
                 </div>
                 <div className="flex flex-1 flex-col justify-between">
@@ -152,7 +151,7 @@ export function CartPageContent({ canteenId }: CartPageContentProps) {
         </div>
       </div>
 
-      {/* Cart Summary */}
+      {/* Cart Summary with Advanced Features */}
       <CartSummary canteenId={canteenId} />
     </div>
   )

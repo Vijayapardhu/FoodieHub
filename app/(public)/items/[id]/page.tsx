@@ -12,7 +12,7 @@ export default async function ItemDetailPage({
   params: { id: string }
 }) {
   const { supabase } = await requireRole([
-    "student",
+    "user",
     "canteen_owner",
     "admin",
   ])

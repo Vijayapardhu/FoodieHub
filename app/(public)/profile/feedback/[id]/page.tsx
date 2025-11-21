@@ -10,7 +10,7 @@ export default async function EditFeedbackPage({
   params: { id: string }
 }) {
   const { supabase, user } = await requireRole([
-    "student",
+    "user",
     "canteen_owner",
     "admin",
   ])

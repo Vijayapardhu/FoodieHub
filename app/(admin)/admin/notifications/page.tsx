@@ -11,9 +11,11 @@ export default async function AdminNotificationsPage() {
     .limit(40)
 
   return (
-    <div className="p-6">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 via-white to-gray-50/30 p-6">
       <header className="mb-6">
-        <h1 className="text-3xl font-bold">Notifications</h1>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
+          Notifications
+        </h1>
         <p className="text-sm text-muted-foreground">
           Broadcast announcements or targeted updates to any audience.
         </p>

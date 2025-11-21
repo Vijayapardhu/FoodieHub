@@ -95,7 +95,7 @@ export function CanteenSettings({ canteen, categories }: CanteenSettingsProps) {
               placeholder="+91 98765 43210"
             />
             <p className="text-xs text-muted-foreground">
-              Shown to students so they can reach the counter quickly.
+              Shown to users so they can reach the counter quickly.
             </p>
           </div>
           <div className="flex items-center gap-2">

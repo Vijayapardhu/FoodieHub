@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth/require-role"
 
 export default async function HomePage() {
   const { supabase } = await requireRole([
-    "student",
+    "user",
     "canteen_owner",
     "admin",
   ])
@@ -39,7 +39,7 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white pb-20">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 via-white to-gray-50/30 pb-20">
       <Navbar />
       <HomePageContent
         canteens={canteens ?? []}

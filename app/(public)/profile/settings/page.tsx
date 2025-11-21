@@ -6,7 +6,7 @@ import { requireRole } from "@/lib/auth/require-role"
 
 export default async function ProfileSettingsPage() {
   const { supabase, user } = await requireRole([
-    "student",
+    "user",
     "canteen_owner",
     "admin",
   ])
@@ -24,7 +24,7 @@ export default async function ProfileSettingsPage() {
       full_name: null,
       avatar_url: null,
       phone_number: null,
-      role: "student",
+      role: "user",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }

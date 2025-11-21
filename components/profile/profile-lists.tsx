@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Database } from "@/types/database.types"
 import { format } from "date-fns"
 import { Skeleton } from "@/components/ui/loading-state"
+import { ImagePlaceholder } from "@/components/ui/image-placeholder"
 
 type OrderSummary =
   Database["public"]["Tables"]["orders"]["Row"] & {
@@ -145,9 +146,7 @@ export function ProfileLists({
                         className="object-cover"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-2xl">
-                        {fav.type === "item" ? "🍱" : "🍽️"}
-                      </div>
+                      <ImagePlaceholder type={fav.type === "item" ? "item" : "canteen"} size="md" />
                     )}
                   </div>
                   <div>

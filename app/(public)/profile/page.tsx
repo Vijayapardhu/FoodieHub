@@ -27,7 +27,7 @@ type FeedbackSummary =
 
 export default async function ProfilePage() {
   const { supabase, user } = await requireRole([
-    "student",
+    "user",
     "canteen_owner",
     "admin",
   ])
@@ -116,7 +116,7 @@ const feedbackPromise = supabase
       full_name: null,
       avatar_url: null,
       phone_number: null,
-      role: "student",
+      role: "user",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }

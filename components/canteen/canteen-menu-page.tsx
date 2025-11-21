@@ -1,11 +1,12 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Plus, Minus, RefreshCw } from "lucide-react"
+import { Plus, Minus, RefreshCw, Search, ArrowUpDown } from "lucide-react"
 import { useCartStore } from "@/store/cart-store"
+import { Input } from "@/components/ui/input"
 import { Database } from "@/types/database.types"
 import Image from "next/image"
 import Link from "next/link"
@@ -13,6 +14,7 @@ import { Skeleton } from "@/components/ui/loading-state"
 import { CanteenHero } from "@/components/canteen/canteen-hero"
 import { FeaturedItemsRail } from "@/components/canteen/featured-items-rail"
 import { FeedbackCarousel } from "@/components/canteen/feedback-carousel"
+import { ImagePlaceholder } from "@/components/ui/image-placeholder"
 
 type Canteen = Database["public"]["Tables"]["canteens"]["Row"]
 type Category = Database["public"]["Tables"]["categories"]["Row"]
@@ -32,6 +34,8 @@ interface CanteenMenuPageProps {
   reviews: Review[]
 }
 
+type SortOption = "name" | "price-asc" | "price-desc" | "rating"
+
 export function CanteenMenuPage({
   canteen,
   categories,
@@ -42,11 +46,46 @@ export function CanteenMenuPage({
 }: CanteenMenuPageProps) {
   const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [sortBy, setSortBy] = useState<SortOption>("name")
   const { addItem, updateQuantity, items: cartItems } = useCartStore()
 
-  const filteredItems = selectedCategory
-    ? items.filter((item) => item.category_id === selectedCategory)
-    : items
+  const filteredItems = useMemo(() => {
+    let filtered = items
+
+    // Filter by category
+    if (selectedCategory) {
+      filtered = filtered.filter((item) => item.category_id === selectedCategory)
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filtered = filtered.filter(
+        (item) =>
+          item.name.toLowerCase().includes(query) ||
+          item.description?.toLowerCase().includes(query)
+      )
+    }
+
+    // Sort items
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case "name":
+          return a.name.localeCompare(b.name)
+        case "price-asc":
+          return Number(a.price) - Number(b.price)
+        case "price-desc":
+          return Number(b.price) - Number(a.price)
+        case "rating":
+          return (b.rating || 0) - (a.rating || 0)
+        default:
+          return 0
+      }
+    })
+
+    return sorted
+  }, [items, selectedCategory, searchQuery, sortBy])
 
   const showGlobalPlaceholder = categories.length === 0 && items.length === 0
 
@@ -128,6 +167,35 @@ export function CanteenMenuPage({
         <div className="mb-3 md:mb-4">
           <h2 className="text-xl font-bold text-foreground md:text-2xl">Menu</h2>
           <p className="mt-1 text-xs text-muted-foreground md:text-sm">Explore our delicious offerings</p>
+        </div>
+
+        {/* Search and Sort */}
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search items..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-10 rounded-full border-2 border-gray-200 pl-10 pr-4 focus:border-primary"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="h-10 rounded-full border-2 border-gray-200 bg-white px-4 text-sm font-medium focus:border-primary focus:outline-none"
+              aria-label="Sort menu items"
+              title="Sort menu items"
+            >
+              <option value="name">Name (A-Z)</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="rating">Highest Rated</option>
+            </select>
+          </div>
         </div>
         <div
           className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide md:gap-3 md:pb-3"
@@ -233,9 +301,7 @@ export function CanteenMenuPage({
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         />
                       ) : (
-                        <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5 text-4xl md:text-5xl">
-                          🍔
-                        </div>
+                        <ImagePlaceholder type="item" size="xl" />
                       )}
                       {!isAvailable && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">

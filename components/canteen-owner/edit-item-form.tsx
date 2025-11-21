@@ -135,66 +135,66 @@ export function EditItemForm({ canteenId, item, categories }: EditItemFormProps)
       </div>
       <div className="space-y-4">
         <div className="w-full space-y-2">
-          <label className="text-sm font-medium">Image</label>
+        <label className="text-sm font-medium">Image</label>
           <div className="max-w-md">
-            <ImageUpload
-              bucket="items"
-              folder={canteenId}
-              currentImageUrl={form.imageUrl}
-              onUploadComplete={(url) => handleChange("imageUrl", url)}
-              className="max-h-72"
-            />
-          </div>
+        <ImageUpload
+          bucket="items"
+          folder={canteenId}
+          currentImageUrl={form.imageUrl}
+          onUploadComplete={(url) => handleChange("imageUrl", url)}
+          className="max-h-72"
+        />
+      </div>
         </div>
         
         <div className="w-full space-y-4">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium">Gallery Images</label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowGalleryUploader(true)}
-              disabled={galleryImages.length >= 4}
-            >
-              Add image
-            </Button>
-          </div>
-          {showGalleryUploader && (
+          <label className="text-sm font-medium">Gallery Images</label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowGalleryUploader(true)}
+            disabled={galleryImages.length >= 4}
+          >
+            Add image
+          </Button>
+        </div>
+        {showGalleryUploader && (
             <div className="max-w-md">
-              <ImageUpload
-                bucket="items"
-                folder="menu-gallery"
-                onUploadComplete={(url) => {
-                  setGalleryImages((prev) => [...prev, url])
-                  setShowGalleryUploader(false)
-                }}
-                className="max-h-60"
-              />
-            </div>
-          )}
-          {galleryImages.length > 0 && (
-            <div className="grid gap-3 sm:grid-cols-3">
-              {galleryImages.map((img, idx) => (
-                <div key={img} className="relative overflow-hidden rounded-lg border">
-                  <div className="relative h-40 w-full">
-                    <Image src={img} alt={`gallery-${idx}`} fill className="object-cover" />
-                  </div>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="destructive"
-                    className="absolute right-2 top-2 z-10 h-6 w-6"
-                    onClick={() =>
-                      setGalleryImages((prev) => prev.filter((_, i) => i !== idx))
-                    }
-                  >
-                    ×
-                  </Button>
+            <ImageUpload
+              bucket="items"
+              folder="menu-gallery"
+              onUploadComplete={(url) => {
+                setGalleryImages((prev) => [...prev, url])
+                setShowGalleryUploader(false)
+              }}
+              className="max-h-60"
+            />
+          </div>
+        )}
+        {galleryImages.length > 0 && (
+          <div className="grid gap-3 sm:grid-cols-3">
+            {galleryImages.map((img, idx) => (
+              <div key={img} className="relative overflow-hidden rounded-lg border">
+                <div className="relative h-40 w-full">
+                  <Image src={img} alt={`gallery-${idx}`} fill className="object-cover" />
                 </div>
-              ))}
-            </div>
-          )}
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="destructive"
+                    className="absolute right-2 top-2 z-10 h-6 w-6"
+                  onClick={() =>
+                    setGalleryImages((prev) => prev.filter((_, i) => i !== idx))
+                  }
+                >
+                  ×
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
         </div>
       </div>
       <label className="flex items-center gap-2 text-sm">

@@ -8,6 +8,11 @@ import { createClient } from "@/lib/supabase/client"
 import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { OffersSelector } from "./offers-selector"
+import { Textarea } from "@/components/ui/textarea"
+import { OrderScheduling } from "./order-scheduling"
+import { OrderTemplates } from "./order-templates"
+import { DietaryPreferences } from "./dietary-preferences"
+import { LoyaltyPointsDisplay } from "./loyalty-points-display"
 
 interface CartSummaryProps {
   canteenId: string | null
@@ -20,6 +25,10 @@ export function CartSummary({ canteenId }: CartSummaryProps) {
   const [loading, setLoading] = useState(false)
   const [selectedOffer, setSelectedOffer] = useState<any>(null)
   const [discount, setDiscount] = useState(0)
+  const [specialInstructions, setSpecialInstructions] = useState("")
+  const [scheduledPickupTime, setScheduledPickupTime] = useState<Date | null>(null)
+  const [preferredTimeSlot, setPreferredTimeSlot] = useState<string | null>(null)
+  const [dietaryNotes, setDietaryNotes] = useState("")
 
   const cartItems = canteenId ? getItemsByCanteen(canteenId) : items
 
@@ -90,19 +99,29 @@ export function CartSummary({ canteenId }: CartSummaryProps) {
 
         const token = Math.random().toString(36).substring(2, 8).toUpperCase()
 
+        const orderData: any = {
+          user_id: user.id,
+          canteen_id: groupCanteenId,
+          token,
+          status: "pending",
+          total_amount: groupTotal,
+          payment_method: "on_shop",
+          payment_status: "pending",
+          customer_name: customerName,
+          customer_phone: customerPhone,
+          order_type: scheduledPickupTime ? "scheduled" : "immediate",
+          special_instructions: specialInstructions.trim() || null,
+          dietary_notes: dietaryNotes.trim() || null,
+        }
+
+        if (scheduledPickupTime && groupCanteenId === canteenId) {
+          orderData.scheduled_pickup_time = scheduledPickupTime.toISOString()
+          orderData.preferred_time_slot = preferredTimeSlot
+        }
+
         const { data: order, error: orderError } = await supabase
           .from("orders")
-          .insert({
-            user_id: user.id,
-            canteen_id: groupCanteenId,
-            token,
-            status: "pending",
-            total_amount: groupTotal,
-            payment_method: "on_shop",
-            payment_status: "pending",
-            customer_name: customerName,
-            customer_phone: customerPhone,
-          })
+          .insert(orderData)
           .select()
           .single()
 
@@ -178,15 +197,48 @@ export function CartSummary({ canteenId }: CartSummaryProps) {
           </div>
         )}
         {canteenId && (
-          <OffersSelector
-            canteenId={canteenId}
-            orderAmount={subtotal}
-            onOfferSelected={(offer, discountAmount) => {
-              setSelectedOffer(offer)
-              setDiscount(discountAmount)
-            }}
-          />
+          <>
+            <LoyaltyPointsDisplay canteenId={canteenId} orderAmount={total} />
+            <OrderTemplates canteenId={canteenId} />
+            <OffersSelector
+              canteenId={canteenId}
+              orderAmount={subtotal}
+              onOfferSelected={(offer, discountAmount) => {
+                setSelectedOffer(offer)
+                setDiscount(discountAmount)
+              }}
+            />
+            <OrderScheduling
+              onScheduleChange={(scheduledTime, timeSlot) => {
+                setScheduledPickupTime(scheduledTime)
+                setPreferredTimeSlot(timeSlot)
+              }}
+            />
+            <DietaryPreferences
+              cartItems={cartItems.map((item) => ({
+                itemId: item.itemId,
+                name: item.name,
+              }))}
+              onNotesChange={setDietaryNotes}
+            />
+          </>
         )}
+        <div className="space-y-2">
+          <label htmlFor="special-instructions" className="text-sm font-medium">
+            Special Instructions (Optional)
+          </label>
+          <Textarea
+            id="special-instructions"
+            placeholder="Add any special instructions for your order..."
+            value={specialInstructions}
+            onChange={(e) => setSpecialInstructions(e.target.value)}
+            className="min-h-[80px] resize-none rounded-lg"
+            maxLength={500}
+          />
+          <p className="text-xs text-muted-foreground">
+            {specialInstructions.length}/500 characters
+          </p>
+        </div>
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Subtotal</span>
