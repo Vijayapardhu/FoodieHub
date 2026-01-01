@@ -8,7 +8,7 @@ BEGIN
   -- Get role from metadata, default to 'user'
   user_role_val := COALESCE(
     (NEW.raw_user_meta_data->>'role')::user_role,
-    'user'
+    'student'
   );
 
   -- Prevent non-admin users from registering as admin
@@ -16,7 +16,7 @@ BEGIN
   IF user_role_val = 'admin' THEN
     -- Check if there's an existing admin who approved this
     -- For now, default to user and require admin approval
-    user_role_val := 'user';
+    user_role_val := 'student';
   END IF;
 
   -- Get full name from metadata

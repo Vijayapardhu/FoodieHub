@@ -16,6 +16,23 @@ self.addEventListener('install', (event) => {
 })
 
 self.addEventListener('fetch', (event) => {
+  // Skip cross-origin requests
+  if (!event.request.url.startsWith(self.location.origin)) {
+    return
+  }
+
+  // Network-first strategy for navigation requests (HTML pages)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => {
+          return caches.match(event.request)
+        })
+    )
+    return
+  }
+
+  // Cache-first strategy for static assets
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request)
