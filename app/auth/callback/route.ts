@@ -14,7 +14,7 @@ async function getRedirectPath(userId: string) {
   }
 
   // Check if profile is complete (specifically phone number)
-  if (!userProfile.phone_number && userProfile.role === 'user') {
+  if (!userProfile.phone_number && (userProfile.role === 'user' || userProfile.role === 'student')) {
     return "/complete-profile"
   }
 
