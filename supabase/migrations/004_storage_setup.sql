@@ -10,10 +10,12 @@
 -- 4. 'reviews' - for user-submitted feedback photos
 
 -- Storage Policies for 'items' bucket
+DROP POLICY IF EXISTS "Public read access for items" ON storage.objects;
 CREATE POLICY "Public read access for items"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'items');
 
+DROP POLICY IF EXISTS "Authenticated users can upload items" ON storage.objects;
 CREATE POLICY "Authenticated users can upload items"
 ON storage.objects FOR INSERT
 WITH CHECK (
@@ -21,6 +23,7 @@ WITH CHECK (
   auth.role() = 'authenticated'
 );
 
+DROP POLICY IF EXISTS "Authenticated users can update their items" ON storage.objects;
 CREATE POLICY "Authenticated users can update their items"
 ON storage.objects FOR UPDATE
 USING (
@@ -28,6 +31,7 @@ USING (
   auth.role() = 'authenticated'
 );
 
+DROP POLICY IF EXISTS "Authenticated users can delete their items" ON storage.objects;
 CREATE POLICY "Authenticated users can delete their items"
 ON storage.objects FOR DELETE
 USING (
@@ -36,10 +40,12 @@ USING (
 );
 
 -- Storage Policies for 'avatars' bucket
+DROP POLICY IF EXISTS "Public read access for avatars" ON storage.objects;
 CREATE POLICY "Public read access for avatars"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'avatars');
 
+DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
 CREATE POLICY "Users can upload their own avatar"
 ON storage.objects FOR INSERT
 WITH CHECK (
@@ -47,6 +53,7 @@ WITH CHECK (
   auth.role() = 'authenticated'
 );
 
+DROP POLICY IF EXISTS "Users can update their own avatar" ON storage.objects;
 CREATE POLICY "Users can update their own avatar"
 ON storage.objects FOR UPDATE
 USING (
@@ -54,6 +61,7 @@ USING (
   auth.role() = 'authenticated'
 );
 
+DROP POLICY IF EXISTS "Users can delete their own avatar" ON storage.objects;
 CREATE POLICY "Users can delete their own avatar"
 ON storage.objects FOR DELETE
 USING (
@@ -62,10 +70,12 @@ USING (
 );
 
 -- Storage Policies for 'canteens' bucket
+DROP POLICY IF EXISTS "Public read access for canteens" ON storage.objects;
 CREATE POLICY "Public read access for canteens"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'canteens');
 
+DROP POLICY IF EXISTS "Canteen owners can upload canteen images" ON storage.objects;
 CREATE POLICY "Canteen owners can upload canteen images"
 ON storage.objects FOR INSERT
 WITH CHECK (
@@ -73,6 +83,7 @@ WITH CHECK (
   auth.role() = 'authenticated'
 );
 
+DROP POLICY IF EXISTS "Canteen owners can update their canteen images" ON storage.objects;
 CREATE POLICY "Canteen owners can update their canteen images"
 ON storage.objects FOR UPDATE
 USING (
@@ -80,6 +91,7 @@ USING (
   auth.role() = 'authenticated'
 );
 
+DROP POLICY IF EXISTS "Canteen owners can delete their canteen images" ON storage.objects;
 CREATE POLICY "Canteen owners can delete their canteen images"
 ON storage.objects FOR DELETE
 USING (
@@ -88,10 +100,12 @@ USING (
 );
 
 -- Storage Policies for 'reviews' bucket
+DROP POLICY IF EXISTS "Public read access for reviews" ON storage.objects;
 CREATE POLICY "Public read access for reviews"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'reviews');
 
+DROP POLICY IF EXISTS "Authenticated users can upload review photos" ON storage.objects;
 CREATE POLICY "Authenticated users can upload review photos"
 ON storage.objects FOR INSERT
 WITH CHECK (
@@ -99,6 +113,7 @@ WITH CHECK (
   auth.role() = 'authenticated'
 );
 
+DROP POLICY IF EXISTS "Authenticated users can update their review photos" ON storage.objects;
 CREATE POLICY "Authenticated users can update their review photos"
 ON storage.objects FOR UPDATE
 USING (
@@ -106,6 +121,7 @@ USING (
   auth.role() = 'authenticated'
 );
 
+DROP POLICY IF EXISTS "Authenticated users can delete their review photos" ON storage.objects;
 CREATE POLICY "Authenticated users can delete their review photos"
 ON storage.objects FOR DELETE
 USING (

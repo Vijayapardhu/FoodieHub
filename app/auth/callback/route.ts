@@ -5,12 +5,17 @@ async function getRedirectPath(userId: string) {
   const supabase = await createClient()
   const { data: userProfile } = await supabase
     .from("users")
-    .select("role")
+    .select("role, phone_number")
     .eq("id", userId)
     .single()
 
   if (!userProfile) {
     return "/home" // Default fallback
+  }
+
+  // Check if profile is complete (specifically phone number)
+  if (!userProfile.phone_number && userProfile.role === 'user') {
+    return "/complete-profile"
   }
 
   // Redirect based on role
