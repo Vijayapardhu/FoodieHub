@@ -36,3 +36,4 @@ CREATE POLICY "Owners can view their own canteen"
   ON public.canteens FOR SELECT
   USING (auth.uid() = owner_id);
 
+

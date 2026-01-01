@@ -143,3 +143,4 @@ export function LoyaltyPointsDisplay({ canteenId, orderAmount }: LoyaltyPointsDi
   )
 }
 
+

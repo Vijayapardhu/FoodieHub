@@ -34,7 +34,15 @@ async function getRedirectPath(userId: string) {
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
+  const error = requestUrl.searchParams.get("error")
+  const errorDescription = requestUrl.searchParams.get("error_description")
   const origin = requestUrl.origin
+
+  if (error) {
+    return NextResponse.redirect(
+      `${origin}/login?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(errorDescription || "An error occurred during sign in")}`
+    )
+  }
 
   if (code) {
     const supabase = await createClient()

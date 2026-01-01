@@ -294,3 +294,4 @@ export function OrderTemplates({ canteenId, onTemplateSelect }: OrderTemplatesPr
   )
 }
 
+
