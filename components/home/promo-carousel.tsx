@@ -124,7 +124,7 @@ export function PromoCarousel({ slides }: PromoCarouselProps) {
             aria-label={`${index + 1} of ${slides.length}: ${slide.headline}`}
             aria-hidden={index !== active ? true : undefined}
             tabIndex={index !== active ? -1 : undefined}
-            className="group relative aspect-[2/1] w-full shrink-0 snap-center overflow-hidden rounded-2xl bg-brand-gradient sm:aspect-[3/1]"
+            className="group relative aspect-[21/9] w-full shrink-0 snap-center overflow-hidden rounded-2xl bg-brand-gradient sm:aspect-[3/1]"
           >
             {slide.imageUrl ? (
               <Image

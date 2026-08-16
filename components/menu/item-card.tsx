@@ -50,8 +50,11 @@ export function ItemCard({
   return (
     <article
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card",
-        compact && "w-44 shrink-0 sm:w-52",
+        // Shadow instead of a border: the border was doing the work of
+        // separating the card from a cream page that is already lighter than
+        // the card, so it only added weight.
+        "group relative flex flex-col overflow-hidden rounded-2xl bg-card shadow-card",
+        compact && "w-card-dish shrink-0",
         unavailable && "opacity-60",
         className
       )}
@@ -81,7 +84,7 @@ export function ItemCard({
         {/* Brand green, not --warning: amber on a photo reads as the old
             orange palette, and "featured" is a promotion, not a caution. */}
         {item.is_featured && !unavailable ? (
-          <span className="absolute left-2 top-2 rounded-full bg-primary px-2 py-0.5 text-2xs font-bold text-primary-foreground">
+          <span className="absolute left-2 top-2 rounded-full bg-primary px-2.5 py-1 text-2xs font-bold text-primary-foreground">
             Featured
           </span>
         ) : null}
@@ -93,7 +96,7 @@ export function ItemCard({
         className="absolute right-2 top-2"
       />
 
-      <div className="flex flex-1 flex-col gap-1.5 p-3">
+      <div className="flex flex-1 flex-col gap-1 p-2.5">
         <VegMark vegetarian={item.is_vegetarian} />
 
         <Link href={itemPath(item)}>
@@ -110,7 +113,7 @@ export function ItemCard({
           </p>
         ) : null}
 
-        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+        <div className="mt-auto flex items-center justify-between gap-2 pt-0.5">
           <span className="text-base font-bold text-foreground">
             ₹{Number(item.price)}
           </span>
@@ -124,11 +127,10 @@ export function ItemCard({
 
         {unavailable ? null : quantity === 0 ? (
           <Button
-            size="sm"
             variant="soft"
             block
             onClick={increment}
-            className="mt-1 font-bold uppercase tracking-wide"
+            className="mt-0.5 h-10 rounded-xl text-sm font-bold uppercase tracking-wide"
           >
             Add
           </Button>
@@ -140,7 +142,7 @@ export function ItemCard({
             onDecrement={decrement}
             removeAtOne
             label={item.name}
-            className="mt-1 w-full"
+            className="mt-0.5 w-full"
           />
         )}
       </div>

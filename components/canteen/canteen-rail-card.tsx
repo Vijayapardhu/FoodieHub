@@ -39,17 +39,17 @@ export function CanteenRailCard({
     <Link
       href={canteenPath(canteen)}
       className={cn(
-        "group w-64 shrink-0 overflow-hidden rounded-2xl sm:w-72",
+        "group w-card-canteen max-w-[85vw] shrink-0 overflow-hidden rounded-2xl",
         className
       )}
     >
-      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-muted">
+      <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-muted">
         {image ? (
           <Image
             src={image}
             alt=""
             fill
-            sizes="(max-width: 640px) 70vw, 288px"
+            sizes="(max-width: 640px) 85vw, 350px"
             className={cn(
               "object-cover transition-transform duration-500 md:group-hover:scale-[1.04]",
               closed && "grayscale"
@@ -78,7 +78,7 @@ export function CanteenRailCard({
         ) : null}
       </div>
 
-      <div className="px-0.5 pt-2.5">
+      <div className="px-0.5 pt-2">
         <div className="flex items-start justify-between gap-2">
           <h3 className="min-w-0 truncate text-sm font-bold text-foreground">
             {canteen.name}

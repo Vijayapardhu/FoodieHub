@@ -261,8 +261,13 @@
   }
 
   /* Horizontal rails that bleed to the screen edge but keep aligned padding */
+  /*
+   * A rail starts flush with the page text on the left and runs off the right
+   * edge. The half-visible card at the end is the only honest signal that
+   * there is more — an arrow can be missed, a cut-off photograph cannot.
+   */
   .rail {
-    @apply -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-1 sm:-mx-5 sm:px-5;
+    @apply -mx-4 flex snap-x snap-mandatory gap-rail-gap overflow-x-auto scroll-smooth pb-1 pl-4 pr-2 sm:-mx-5 sm:pl-5 sm:pr-3;
     scrollbar-width: none;
   }
   .rail::-webkit-scrollbar {

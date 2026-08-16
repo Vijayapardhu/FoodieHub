@@ -79,7 +79,7 @@ export function ReorderRail({ usual }: { usual: UsualOrder }) {
     .join(", ")
 
   return (
-    <section className="flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary-soft p-4">
+    <section className="flex items-center gap-3 rounded-2xl bg-primary-soft px-4 py-3">
       <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">
           Your usual
@@ -92,7 +92,7 @@ export function ReorderRail({ usual }: { usual: UsualOrder }) {
         </p>
       </div>
 
-      <Button size="sm" onClick={orderAgain} className="shrink-0">
+      <Button onClick={orderAgain} className="h-10 shrink-0 rounded-xl px-4">
         <RotateCcw className="h-4 w-4" />
         Again
       </Button>

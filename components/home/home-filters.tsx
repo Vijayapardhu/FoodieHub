@@ -254,7 +254,7 @@ export function FilterButton({
         count > 0 ? `Filters, ${count} active` : "Filters and sorting"
       }
       className={cn(
-        "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-colors active:scale-95",
+        "relative flex h-field w-field shrink-0 items-center justify-center rounded-2xl border transition-colors active:scale-95",
         count > 0
           ? "border-primary bg-primary-soft text-primary"
           : "border-input bg-surface text-muted-foreground",

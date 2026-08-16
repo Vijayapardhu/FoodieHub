@@ -245,29 +245,29 @@ export function HomePageContent({
   }
 
   return (
-    <div className="space-y-5 sm:space-y-6">
+    <div className="space-y-7">
       {/* Anything already in flight comes first — that is what somebody
           opening the app mid-morning is checking on. */}
       {activeOrder}
 
       <InstallBanner />
 
-      <header className="space-y-3">
+      <header className="space-y-2.5">
         {/*
          * Campus framing, not a delivery address. Everything here is a short
          * walk away, so a "delivering to" row would be borrowed furniture
          * from an app this deliberately is not.
          */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+          <p className="text-2xs font-bold uppercase tracking-[0.16em] text-primary">
             Campus food · {canteens.length} canteen
             {canteens.length === 1 ? "" : "s"}
           </p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-foreground">
+          <h1 className="mt-0.5 text-[1.75rem] font-extrabold leading-tight tracking-tight text-foreground">
             {greeting()}
             {greetingName ? `, ${greetingName.split(" ")[0]}` : ""}
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-[0.9375rem] leading-snug text-muted-foreground">
             What are you craving today?
           </p>
         </div>
@@ -375,7 +375,7 @@ export function HomePageContent({
               compact
             />
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {matchedItems.slice(0, 40).map((item) => (
                 <ItemCard
                   key={item.id}
@@ -446,17 +446,17 @@ export function HomePageContent({
                     onClick={() =>
                       setFilters((f) => ({ ...f, categoryId: category.id }))
                     }
-                    className="group w-28 shrink-0 text-left"
+                    className="group w-card-craving shrink-0 text-left"
                   >
                     {/* A photograph of real food from that category, not an
                         icon: "Snacks" means nothing until you see the samosa. */}
-                    <span className="relative block aspect-square w-full overflow-hidden rounded-2xl bg-primary-soft">
+                    <span className="relative block h-20 w-full overflow-hidden rounded-2xl bg-primary-soft">
                       {cover ? (
                         <Image
                           src={cover}
                           alt=""
                           fill
-                          sizes="112px"
+                          sizes="104px"
                           className="object-cover transition-transform duration-300 md:group-hover:scale-105"
                         />
                       ) : (
@@ -465,7 +465,7 @@ export function HomePageContent({
                         </span>
                       )}
                     </span>
-                    <span className="mt-1.5 block truncate text-xs font-semibold text-foreground">
+                    <span className="mt-1.5 block truncate text-center text-xs font-semibold text-foreground">
                       {category.name}
                     </span>
                   </button>

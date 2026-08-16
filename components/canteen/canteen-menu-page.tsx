@@ -11,6 +11,7 @@ import { CanteenHero } from "@/components/canteen/canteen-hero"
 import { FeaturedItemsRail } from "@/components/canteen/featured-items-rail"
 import { FeedbackCarousel } from "@/components/canteen/feedback-carousel"
 import { MenuItemRow } from "@/components/menu/menu-item-row"
+import { MenuCategorySheet } from "@/components/canteen/menu-category-sheet"
 import { StickyCart } from "@/components/cart/sticky-cart"
 import {
   BrowseFilters,
@@ -123,6 +124,19 @@ export function CanteenMenuPage({
       .filter((group) => group.items.length > 0)
   }, [filtered, usedCategories, filters.categoryId, filters.sort, query])
 
+  /** Only the sections actually on screen can be jumped to. */
+  const menuSections = useMemo(
+    () =>
+      groups
+        .filter((group) => group.name)
+        .map((group) => ({
+          id: group.id,
+          name: group.name,
+          count: group.items.length,
+        })),
+    [groups]
+  )
+
   const clearAll = () => {
     setRawQuery("")
     setFilters(defaultFilters)
@@ -191,6 +205,7 @@ export function CanteenMenuPage({
                   ) : undefined
                 }
               />
+              <MenuCategorySheet sections={menuSections} />
               <FilterButton
                 count={activeCount}
                 onClick={() => setFiltersOpen(true)}
@@ -250,7 +265,13 @@ export function CanteenMenuPage({
           ) : (
             <div className="space-y-6">
               {groups.map((group) => (
-                <div key={group.id}>
+                <div
+                  key={group.id}
+                  id={`section-${group.id}`}
+                  // Clears the sticky search bar, so a jumped-to heading is
+                  // not hidden underneath it on arrival.
+                  className="scroll-mt-32"
+                >
                   {group.name ? (
                     <h3 className="muted-label pb-1 pt-2">
                       {group.name} · {group.items.length}

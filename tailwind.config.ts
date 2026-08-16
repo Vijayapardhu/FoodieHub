@@ -145,8 +145,23 @@ const config = {
         "safe-l": "env(safe-area-inset-left)",
         "safe-r": "env(safe-area-inset-right)",
         // Fixed chrome heights, referenced by scroll padding
-        appbar: "3.5rem",
-        tabbar: "4rem",
+        appbar: "3.75rem",
+        tabbar: "4.25rem",
+
+        /*
+         * Layout tokens for the discovery surfaces.
+         *
+         * Kept here rather than scattered through components so a card is the
+         * same width in every rail it appears in. A dish card that is 176px
+         * in one section and 208px in another is the kind of inconsistency
+         * that reads as sloppiness without anyone being able to name it.
+         */
+        // One full card plus most of the next on a 390px screen.
+        "card-dish": "14.0625rem", // 225px
+        "card-canteen": "21.875rem", // 350px
+        "card-craving": "6.5rem", // 104px
+        "rail-gap": "0.875rem", // 14px
+        field: "3.125rem", // 50px — search and its filter button
       },
       minHeight: {
         touch: "44px",

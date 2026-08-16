@@ -28,14 +28,14 @@ export function SectionRail({
   className?: string
 }) {
   return (
-    <section className={cn("space-y-2.5", className)}>
+    <section className={cn("space-y-2", className)}>
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-base font-extrabold tracking-tight text-foreground sm:text-lg">
+          <h2 className="text-xl font-extrabold leading-tight tracking-tight text-foreground">
             {title}
           </h2>
           {subtitle ? (
-            <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
+            <p className="mt-1 text-sm leading-snug text-muted-foreground">
               {subtitle}
             </p>
           ) : null}

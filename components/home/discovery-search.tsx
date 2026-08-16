@@ -58,7 +58,7 @@ export function DiscoverySearch({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         aria-label="Search dishes, canteens or cravings"
-        className="h-13 rounded-2xl bg-surface text-base shadow-card"
+        className="h-field rounded-2xl bg-surface text-base shadow-card"
         startAdornment={<Search />}
         endAdornment={
           value ? (
