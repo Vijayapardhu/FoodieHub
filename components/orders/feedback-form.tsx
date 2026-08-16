@@ -1,12 +1,13 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { ImagePlus, Loader2, X } from "@/components/ui/icons"
+import { Camera, ImagePlus, Loader2, X } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
 import { createClient } from "@/lib/supabase/client"
+import { formatBytes, prepareImageForUpload } from "@/lib/utils/image"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { StarPicker } from "@/components/ui/star-rating"
@@ -36,6 +37,8 @@ interface FeedbackFormProps {
 
 const MAX_PHOTOS = 4
 const REVIEW_BUCKET = "reviews"
+/** Matches the bucket's own limit, so the failure is caught before the trip. */
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 const ratingLabels: Record<number, string> = {
   1: "Bad — something went wrong",
@@ -47,7 +50,18 @@ const ratingLabels: Record<number, string> = {
 
 export function FeedbackForm({ order, existingReview }: FeedbackFormProps) {
   const router = useRouter()
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  // Two inputs, because they open two different things: `capture` goes
+  // straight to the camera, and its absence goes to the photo library.
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
+  const [hasCamera, setHasCamera] = useState(false)
+
+  // `capture` is ignored on a desktop browser, where the button would just
+  // open a file dialog that says "take photo" — so it is only offered on a
+  // device that plausibly has a camera to point at the food.
+  useEffect(() => {
+    setHasCamera(window.matchMedia("(pointer: coarse)").matches)
+  }, [])
 
   const [rating, setRating] = useState(existingReview?.rating ?? 0)
   const [comment, setComment] = useState(existingReview?.comment ?? "")
@@ -72,17 +86,33 @@ export function FeedbackForm({ order, existingReview }: FeedbackFormProps) {
       const supabase = createClient()
       const uploaded: string[] = []
 
-      for (const file of Array.from(files).slice(0, slots)) {
-        if (!file.type.startsWith("image/")) continue
+      for (const original of Array.from(files).slice(0, slots)) {
+        if (!original.type.startsWith("image/")) continue
 
-        const fileExt = file.name.split(".").pop()
+        // Downscale and re-encode before it leaves the phone: camera files
+        // are routinely larger than the 5MB bucket limit, and an iPhone's
+        // HEIC would upload fine and then fail to display for everybody else.
+        const { file } = await prepareImageForUpload(original)
+
+        if (file.size > MAX_UPLOAD_BYTES) {
+          toast.error(
+            `That photo is ${formatBytes(file.size)} — too large to upload.`
+          )
+          continue
+        }
+
+        const fileExt = file.name.split(".").pop() ?? "jpg"
         const filePath = `reviews/${order.id}/${Date.now()}-${Math.random()
           .toString(36)
           .slice(2)}.${fileExt}`
 
         const { error } = await supabase.storage
           .from(REVIEW_BUCKET)
-          .upload(filePath, file, { cacheControl: "3600", upsert: false })
+          .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: file.type,
+          })
         if (error) throw error
 
         const {
@@ -95,10 +125,16 @@ export function FeedbackForm({ order, existingReview }: FeedbackFormProps) {
         setPhotos((prev) => [...prev, ...uploaded])
       }
     } catch (error: any) {
-      toast.error(error?.message || "Could not upload those photos")
+      toast.error(
+        error?.message?.includes("Bucket not found")
+          ? "Photo storage isn't set up yet — your review will still post without photos."
+          : error?.message || "Could not upload those photos"
+      )
     } finally {
       setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ""
+      // Reset both, so picking the same file twice still fires a change.
+      if (cameraInputRef.current) cameraInputRef.current.value = ""
+      if (galleryInputRef.current) galleryInputRef.current.value = ""
     }
   }
 
@@ -232,27 +268,46 @@ export function FeedbackForm({ order, existingReview }: FeedbackFormProps) {
             </div>
           ))}
 
-          {photos.length < MAX_PHOTOS ? (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-muted-foreground transition-colors active:border-primary"
-            >
-              {uploading ? (
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              ) : (
-                <ImagePlus className="h-5 w-5" />
-              )}
-              <span className="text-2xs font-semibold">
-                {uploading ? "Uploading" : "Add"}
-              </span>
-            </button>
-          ) : null}
         </div>
 
+        {photos.length < MAX_PHOTOS ? (
+          <div className="flex gap-2">
+            {hasCamera ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                loading={uploading}
+                onClick={() => cameraInputRef.current?.click()}
+              >
+                <Camera className="h-4 w-4" />
+                Take photo
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              loading={uploading && !hasCamera}
+              onClick={() => galleryInputRef.current?.click()}
+            >
+              <ImagePlus className="h-4 w-4" />
+              {hasCamera ? "Gallery" : "Add photos"}
+            </Button>
+          </div>
+        ) : null}
+
+        {/* Rear camera: the food is in front of you, not behind the phone. */}
         <input
-          ref={fileInputRef}
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handlePhotoSelect}
+        />
+        <input
+          ref={galleryInputRef}
           type="file"
           accept="image/*"
           multiple

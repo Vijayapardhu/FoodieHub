@@ -5,6 +5,7 @@ import Image from "next/image"
 import { Camera, ImagePlus, Loader2, X } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { createClient } from "@/lib/supabase/client"
+import { formatBytes, prepareImageForUpload } from "@/lib/utils/image"
 import { cn } from "@/lib/utils/cn"
 
 interface ImageUploadProps {
@@ -43,6 +44,12 @@ export function ImageUpload({
   const [preview, setPreview] = useState<string | null>(currentImageUrl || null)
   const [manualFileSelected, setManualFileSelected] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const [hasCamera, setHasCamera] = useState(false)
+
+  useEffect(() => {
+    setHasCamera(window.matchMedia("(pointer: coarse)").matches)
+  }, [])
   const isManual = mode === "manual"
 
   useEffect(() => {
@@ -54,15 +61,23 @@ export function ImageUpload({
   const handleFileSelect = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+    const original = event.target.files?.[0]
+    if (!original) return
 
-    if (!file.type.startsWith("image/")) {
+    if (!original.type.startsWith("image/")) {
       toast.error("Please choose an image file")
       return
     }
+
+    // Downscale and re-encode before the size check: a phone photo is often
+    // over the limit as taken, and rejecting it outright would be blaming
+    // the user for their camera.
+    const { file } = await prepareImageForUpload(original)
+
     if (file.size > maxSizeMB * 1024 * 1024) {
-      toast.error(`Images must be under ${maxSizeMB}MB`)
+      toast.error(
+        `That image is ${formatBytes(file.size)} — it needs to be under ${maxSizeMB}MB`
+      )
       return
     }
 
@@ -91,7 +106,11 @@ export function ImageUpload({
 
       const { error: uploadError } = await supabase.storage
         .from(bucket)
-        .upload(filePath, file, { cacheControl: "3600", upsert: false })
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type,
+        })
 
       if (uploadError) throw uploadError
 
@@ -103,7 +122,11 @@ export function ImageUpload({
       toast.success("Photo uploaded")
     } catch (error: any) {
       console.error("[upload] failed", error)
-      toast.error(error?.message || "Could not upload that photo")
+      toast.error(
+        error?.message?.includes("Bucket not found")
+          ? "Image storage isn't set up for this project yet."
+          : error?.message || "Could not upload that photo"
+      )
       setPreview(currentImageUrl || null)
     } finally {
       setUploading(false)
@@ -180,10 +203,33 @@ export function ImageUpload({
         </button>
       )}
 
+      {/* A second route to the same input, offered only where a camera is
+          plausible: an owner adding a dish is usually standing in front of it. */}
+      {!preview && hasCamera ? (
+        <button
+          type="button"
+          onClick={() => cameraInputRef.current?.click()}
+          disabled={uploading}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface py-2.5 text-sm font-semibold text-foreground active:scale-[0.99]"
+        >
+          <Camera className="h-4 w-4" />
+          Take a photo
+        </button>
+      ) : null}
+
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        onChange={handleFileSelect}
+        className="hidden"
+        disabled={uploading}
+      />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
         onChange={handleFileSelect}
         className="hidden"
         disabled={uploading}

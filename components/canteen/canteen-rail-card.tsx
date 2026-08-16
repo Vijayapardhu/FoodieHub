@@ -39,7 +39,10 @@ export function CanteenRailCard({
     <Link
       href={canteenPath(canteen)}
       className={cn(
-        "group w-card-canteen max-w-[85vw] shrink-0 overflow-hidden rounded-2xl",
+        // No overflow-hidden or radius on the wrapper: the image already
+        // clips itself, and rounding the whole card was cutting the corners
+        // off the canteen name and description sitting underneath it.
+        "group w-card-canteen max-w-[85vw] shrink-0",
         className
       )}
     >
