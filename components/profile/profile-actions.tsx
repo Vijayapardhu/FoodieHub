@@ -15,6 +15,7 @@ import {
 import { Database } from "@/types/database.types"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { PushOptIn } from "@/components/notifications/push-opt-in"
+import { InstallCard } from "@/components/pwa/install-card"
 import { LogoutButton } from "@/components/profile/logout-button"
 
 type Role = Database["public"]["Enums"]["user_role"]
@@ -102,6 +103,8 @@ export function ProfileActions({ role }: { role: Role }) {
       </div>
 
       <PushOptIn />
+
+      <InstallCard />
 
       <div className="rounded-2xl border border-border bg-card p-4">
         <p className="flex items-start gap-2 text-xs text-muted-foreground">

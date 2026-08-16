@@ -13,6 +13,7 @@ import { CanteenCard } from "@/components/canteen/canteen-card"
 import { ItemCard } from "@/components/menu/item-card"
 import { useDebounce } from "@/lib/hooks/use-debounce"
 import { PromoCarousel } from "@/components/home/promo-carousel"
+import { InstallBanner } from "@/components/pwa/install-card"
 import type { PromoSlide } from "@/lib/utils/promo-banners"
 import {
   BrowseFilters,
@@ -177,6 +178,8 @@ export function HomePageContent({
       {/* Anything already in flight comes first — that is what somebody
           opening the app mid-morning is checking on. */}
       {activeOrder}
+
+      <InstallBanner />
 
       <header className="space-y-3">
         {/* One line on a phone. The old two-line greeting pushed the search
