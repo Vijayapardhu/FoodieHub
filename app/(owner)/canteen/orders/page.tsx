@@ -4,6 +4,8 @@ import { QrCode } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { ConsoleHeader } from "@/components/layout/console-shell"
 import { OrderManagement } from "@/components/canteen-owner/order-management"
+import { KitchenQueue } from "@/components/canteen-owner/kitchen-queue"
+import type { QueueOrder } from "@/lib/hooks/use-live-queue"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ACTIVE_ORDER_STATUSES } from "@/lib/utils/order-status"
@@ -28,11 +30,13 @@ export default async function OrdersPage() {
   if (!canteen) redirect("/canteen")
 
   const select = "*, users(email, full_name)"
+  const queueSelect =
+    "id, token, status, total_amount, created_at, estimated_preparation_time, scheduled_pickup_time, special_instructions, dietary_notes, customer_name, customer_phone, users(email, full_name), order_items(quantity, items(name))"
 
   const [{ data: activeOrders }, { data: pastOrders }] = await Promise.all([
     supabase
       .from("orders")
-      .select(select)
+      .select(queueSelect)
       .eq("canteen_id", canteen.id)
       .in("status", ACTIVE_ORDER_STATUSES)
       .order("created_at", { ascending: true }),
@@ -73,7 +77,16 @@ export default async function OrdersPage() {
         </TabsList>
 
         <TabsContent value="active">
-          <OrderManagement orders={(activeOrders ?? []) as any} />
+          <KitchenQueue
+            canteenId={canteen.id}
+            initialOrders={((activeOrders ?? []) as any[]).map((order) => ({
+              ...order,
+              lines: (order.order_items ?? []).map((line: any) => ({
+                quantity: line.quantity,
+                name: line.items?.name ?? "Item",
+              })),
+            })) as QueueOrder[]}
+          />
         </TabsContent>
 
         <TabsContent value="past">
