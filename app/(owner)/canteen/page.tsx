@@ -3,15 +3,17 @@ import { Store } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { ConsoleHeader } from "@/components/layout/console-shell"
 import { EmptyState } from "@/components/ui/empty-state"
-import { Badge } from "@/components/ui/badge"
 import { DashboardStats } from "@/components/canteen-owner/dashboard-stats"
-import { RecentOrders } from "@/components/canteen-owner/recent-orders"
 import { QuickActions } from "@/components/canteen-owner/quick-actions"
 import { RevenueTrendCard } from "@/components/canteen-owner/revenue-trend-card"
 import { AttentionItemsCard } from "@/components/canteen-owner/attention-items-card"
 import { TopDishesCard } from "@/components/canteen-owner/top-dishes-card"
 import { OpsFeedCard } from "@/components/canteen-owner/ops-feed-card"
 import { ACTIVE_ORDER_STATUSES } from "@/lib/utils/order-status"
+import { NeedsYouNow } from "@/components/canteen-owner/needs-you-now"
+import { OpenToggle } from "@/components/canteen-owner/open-toggle"
+import { SoldOutSheet } from "@/components/canteen-owner/sold-out-sheet"
+import type { QueueOrder } from "@/lib/hooks/use-live-queue"
 
 export const metadata = { title: "Dashboard" }
 
@@ -59,11 +61,12 @@ export default async function CanteenDashboardPage() {
       .gte("created_at", startOfWeek.toISOString()),
     supabase
       .from("orders")
-      .select("*")
+      .select(
+        "id, token, status, total_amount, created_at, estimated_preparation_time, scheduled_pickup_time, special_instructions, dietary_notes, customer_name, customer_phone, users(email, full_name), order_items(quantity, items(name))"
+      )
       .eq("canteen_id", canteen.id)
       .in("status", ACTIVE_ORDER_STATUSES)
-      .order("created_at", { ascending: false })
-      .limit(5),
+      .order("created_at", { ascending: false }),
     supabase
       .from("orders")
       .select("id, status, created_at, total_amount, customer_name")
@@ -178,21 +181,33 @@ export default async function CanteenDashboardPage() {
         title={canteen.name}
         description="Today at a glance"
         actions={
-          <Badge variant={canteen.is_open ? "success" : "muted"}>
-            {canteen.is_open ? "Open" : "Closed"}
-          </Badge>
+          <>
+            <SoldOutSheet canteenId={canteen.id} />
+            <OpenToggle canteenId={canteen.id} isOpen={canteen.is_open} />
+          </>
         }
       />
 
       <div className="space-y-4">
+        {/* Live, and first: everything below it reports on the past. */}
+        <NeedsYouNow
+          canteenId={canteen.id}
+          initialOrders={
+            (activeOrders as any[]).map((order) => ({
+              ...order,
+              lines: (order.order_items ?? []).map((line: any) => ({
+                quantity: line.quantity,
+                name: line.items?.name ?? "Item",
+              })),
+            })) as QueueOrder[]
+          }
+        />
+
         <DashboardStats metrics={metrics} />
 
         <QuickActions canteenId={canteen.id} />
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <RecentOrders orders={activeOrders} />
-          <RevenueTrendCard weeklyData={weeklyRevenueByDay} />
-        </div>
+        <RevenueTrendCard weeklyData={weeklyRevenueByDay} />
 
         <div className="grid gap-4 lg:grid-cols-3">
           <TopDishesCard dishes={topDishes} />

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server"
 import { ConsoleHeader } from "@/components/layout/console-shell"
 import { OrderManagement } from "@/components/canteen-owner/order-management"
 import { KitchenQueue } from "@/components/canteen-owner/kitchen-queue"
+import { SoldOutSheet } from "@/components/canteen-owner/sold-out-sheet"
 import type { QueueOrder } from "@/lib/hooks/use-live-queue"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -55,12 +56,17 @@ export default async function OrdersPage() {
         title="Orders"
         description="Oldest first, so nobody waits longer than they should"
         actions={
-          <Button asChild>
-            <Link href="/canteen/orders/scan">
-              <QrCode className="h-4 w-4" />
-              Scan token
-            </Link>
-          </Button>
+          <>
+            {/* Running out mid-rush is the most time-critical thing that
+                happens here, so the fix lives on this screen. */}
+            <SoldOutSheet canteenId={canteen.id} />
+            <Button asChild>
+              <Link href="/canteen/orders/scan">
+                <QrCode className="h-4 w-4" />
+                Scan token
+              </Link>
+            </Button>
+          </>
         }
       />
 
