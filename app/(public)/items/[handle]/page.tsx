@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { UtensilsCrossed } from "lucide-react"
+import { UtensilsCrossed } from "@/components/ui/icons"
 import { AppShell } from "@/components/layout/app-shell"
 import { ItemDetail } from "@/components/menu/item-detail"
 import { EmptyState } from "@/components/ui/empty-state"

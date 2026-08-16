@@ -1,10 +1,10 @@
 import Link from "next/link"
-import { LucideIcon } from "lucide-react"
+import { IconComponent } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils/cn"
 
 interface EmptyStateProps {
-  icon?: LucideIcon
+  icon?: IconComponent
   title: string
   description?: string
   action?: {

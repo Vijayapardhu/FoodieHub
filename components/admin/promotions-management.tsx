@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
-import { TicketPercent } from "lucide-react"
+import { TicketPercent } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
 import { createClient } from "@/lib/supabase/client"

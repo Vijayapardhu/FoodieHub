@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { RotateCcw } from "lucide-react"
+import { RotateCcw } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { useCartStore } from "@/store/cart-store"
 import { Button } from "@/components/ui/button"

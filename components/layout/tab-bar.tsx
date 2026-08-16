@@ -2,16 +2,22 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Heart, Home, Receipt, ShoppingCart, User } from "lucide-react"
+import {
+  NavCart,
+  NavHome,
+  NavOrders,
+  NavProfile,
+  NavSaved,
+} from "@/components/ui/icons"
 import { cn } from "@/lib/utils/cn"
 import { useCartCount } from "@/lib/hooks/use-cart-count"
 
 const tabs = [
-  { href: "/home", icon: Home, label: "Home" },
-  { href: "/orders", icon: Receipt, label: "Orders" },
-  { href: "/cart", icon: ShoppingCart, label: "Cart", badge: "cart" as const },
-  { href: "/favorites", icon: Heart, label: "Saved" },
-  { href: "/profile", icon: User, label: "Profile" },
+  { href: "/home", icon: NavHome, label: "Home" },
+  { href: "/orders", icon: NavOrders, label: "Orders" },
+  { href: "/cart", icon: NavCart, label: "Cart", badge: "cart" as const },
+  { href: "/favorites", icon: NavSaved, label: "Saved" },
+  { href: "/profile", icon: NavProfile, label: "Profile" },
 ]
 
 /**

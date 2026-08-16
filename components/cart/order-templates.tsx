@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { BookmarkPlus, Trash2 } from "lucide-react"
+import { BookmarkPlus, Trash2 } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { useCartStore } from "@/store/cart-store"
 import { createClient } from "@/lib/supabase/client"

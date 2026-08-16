@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import Link from "next/link"
-import { AlertCircle, Home, RefreshCw, WifiOff } from "lucide-react"
+import { AlertCircle, Home, RefreshCw, WifiOff } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 
 /**

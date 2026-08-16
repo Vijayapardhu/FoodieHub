@@ -2,7 +2,14 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { ArrowLeft, Heart, Home, Receipt, ShoppingCart, User } from "lucide-react"
+import {
+  ArrowLeft,
+  NavCart,
+  NavHome,
+  NavOrders,
+  NavProfile,
+  NavSaved,
+} from "@/components/ui/icons"
 import { cn } from "@/lib/utils/cn"
 import { useCartCount } from "@/lib/hooks/use-cart-count"
 import { Logo } from "@/components/brand/logo"
@@ -10,10 +17,10 @@ import { NotificationBell } from "@/components/notifications/notification-center
 import { ThemeToggleButton } from "@/components/ui/theme-toggle"
 
 const desktopLinks = [
-  { href: "/home", icon: Home, label: "Home" },
-  { href: "/orders", icon: Receipt, label: "Orders" },
-  { href: "/favorites", icon: Heart, label: "Saved" },
-  { href: "/profile", icon: User, label: "Profile" },
+  { href: "/home", icon: NavHome, label: "Home" },
+  { href: "/orders", icon: NavOrders, label: "Orders" },
+  { href: "/favorites", icon: NavSaved, label: "Saved" },
+  { href: "/profile", icon: NavProfile, label: "Profile" },
 ]
 
 export interface AppBarProps {
@@ -123,7 +130,7 @@ export function AppBar({
                 aria-label={`Cart, ${count} ${count === 1 ? "item" : "items"}`}
                 className="relative flex h-11 w-11 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-muted active:scale-95"
               >
-                <ShoppingCart className="h-5 w-5" />
+                <NavCart className="h-5 w-5" />
                 {count > 0 ? (
                   <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground">
                     {count > 99 ? "99+" : count}

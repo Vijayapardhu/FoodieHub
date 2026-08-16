@@ -17,7 +17,7 @@ import {
   Share2,
   Star,
   XCircle,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
 import { Button } from "@/components/ui/button"

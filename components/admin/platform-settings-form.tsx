@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
-import { History, Save } from "lucide-react"
+import { History, Save } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
 import { createClient } from "@/lib/supabase/client"

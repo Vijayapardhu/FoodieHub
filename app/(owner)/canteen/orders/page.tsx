@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { QrCode } from "lucide-react"
+import { QrCode } from "@/components/ui/icons"
 import { createClient } from "@/lib/supabase/server"
 import { ConsoleHeader } from "@/components/layout/console-shell"
 import { OrderManagement } from "@/components/canteen-owner/order-management"

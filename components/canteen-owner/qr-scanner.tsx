@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Html5Qrcode } from "html5-qrcode"
-import { Camera, CameraOff, Keyboard, ScanLine } from "lucide-react"
+import { Camera, CameraOff, Keyboard, ScanLine } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"

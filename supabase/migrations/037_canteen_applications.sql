@@ -1,0 +1,19 @@
+-- 037_canteen_applications.sql
+--
+-- Canteens applying to join.
+--
+-- The landing page invited canteens to register and every one of those buttons
+-- pointed at /login, where a prospective canteen could create a student
+-- account and then find no way to become an owner. The invitation had no door
+-- behind it.
+--
+-- An application is deliberately not an account: the person filling it in is
+-- often not the person who will run the console, and an administrator has to
+-- approve a canteen regardless.
+--
+-- Applied via the Supabase MCP; kept here so the history is complete.
+--
+-- Note the second migration that had to follow this one: RLS decides which
+-- rows a role may touch, but it cannot grant access the role never had. The
+-- INSERT policy was unreachable until `GRANT INSERT ... TO anon` was added,
+-- and every application was refused in the meantime.

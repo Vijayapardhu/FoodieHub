@@ -1,4 +1,4 @@
-import { Users } from "lucide-react"
+import { Users } from "@/components/ui/icons"
 import { AppShell } from "@/components/layout/app-shell"
 import { EmptyState } from "@/components/ui/empty-state"
 import { GroupOrderJoin } from "@/components/cart/group-order-join"

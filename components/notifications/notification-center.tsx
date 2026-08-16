@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Bell, CheckCheck } from "lucide-react"
+import { Bell, CheckCheck } from "@/components/ui/icons"
 import {
   Sheet,
   SheetBody,

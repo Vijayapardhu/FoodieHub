@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { BookmarkCheck, Clock, MessageSquare, Sparkles, TicketPercent } from "lucide-react"
+import { BookmarkCheck, Clock, MessageSquare, Sparkles, TicketPercent } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
 import { useCartStore } from "@/store/cart-store"

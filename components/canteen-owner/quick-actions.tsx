@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Gift, Plus, QrCode, Utensils } from "lucide-react"
+import { Gift, Plus, QrCode, Utensils } from "@/components/ui/icons"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 const actions = [

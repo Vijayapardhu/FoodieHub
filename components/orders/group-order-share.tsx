@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Copy, Share2, Users } from "lucide-react"
+import { Copy, Share2, Users } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"

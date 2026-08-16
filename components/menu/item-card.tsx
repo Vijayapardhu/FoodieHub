@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { Star } from "lucide-react"
+import { Star } from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import { Button } from "@/components/ui/button"
 import { QuantityStepper } from "@/components/ui/quantity-stepper"

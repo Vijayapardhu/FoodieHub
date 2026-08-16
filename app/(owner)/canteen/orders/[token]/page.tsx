@@ -4,7 +4,7 @@ import { ConsoleHeader } from "@/components/layout/console-shell"
 import { OrderDetailView } from "@/components/canteen-owner/order-detail-view"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft } from "@/components/ui/icons"
 import { isUuid } from "@/lib/utils/public-id"
 
 export const metadata = { title: "Order" }

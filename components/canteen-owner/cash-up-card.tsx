@@ -1,4 +1,4 @@
-import { BadgeIndianRupee } from "lucide-react"
+import { BadgeIndianRupee } from "@/components/ui/icons"
 
 interface CashUpCardProps {
   collected: number

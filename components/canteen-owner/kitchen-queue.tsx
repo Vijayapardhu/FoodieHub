@@ -11,7 +11,7 @@ import {
   PackageCheck,
   Volume2,
   VolumeX,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"

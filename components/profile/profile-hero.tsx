@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { User } from "@supabase/supabase-js"
-import { Phone, Settings } from "lucide-react"
+import { Phone, Settings } from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"

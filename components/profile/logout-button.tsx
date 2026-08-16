@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { LogOut } from "lucide-react"
+import { LogOut } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"

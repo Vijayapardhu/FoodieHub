@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { Camera, ImagePlus, Loader2, X } from "lucide-react"
+import { Camera, ImagePlus, Loader2, X } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils/cn"

@@ -4,17 +4,18 @@ import { useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, ChevronRight, MapPin, Store } from "lucide-react"
+import { ArrowLeft, ChevronRight, MapPin, Store } from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { VegMark } from "@/components/ui/status-badge"
 import { StarRating } from "@/components/ui/star-rating"
 import { QuantityStepper } from "@/components/ui/quantity-stepper"
-import { canteenPath, cartPath } from "@/lib/utils/public-id"
+import { canteenPath, cartPath, itemPath } from "@/lib/utils/public-id"
 import { StickyBar } from "@/components/ui/sticky-bar"
 import { ImagePlaceholder } from "@/components/ui/image-placeholder"
 import { FavoriteButton } from "@/components/menu/favorite-button"
+import { ShareItemButton } from "@/components/menu/share-item-button"
 import { ItemCard } from "@/components/menu/item-card"
 import { Section, SectionHeader } from "@/components/ui/section-header"
 import { useCartItem } from "@/lib/hooks/use-cart-item"
@@ -95,7 +96,15 @@ export function ItemDetail({
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
-              <FavoriteButton itemId={item.id} />
+              <span className="flex items-center gap-2">
+                <ShareItemButton
+                  name={item.name}
+                  canteenName={canteenName}
+                  price={Number(item.price)}
+                  path={itemPath(item)}
+                />
+                <FavoriteButton itemId={item.id} />
+              </span>
             </div>
 
             {!item.is_available ? (

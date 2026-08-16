@@ -16,7 +16,7 @@ import {
   Trash2,
   UtensilsCrossed,
   X,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
 import { createClient } from "@/lib/supabase/client"

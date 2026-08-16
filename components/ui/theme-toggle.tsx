@@ -1,6 +1,6 @@
 "use client"
 
-import { Monitor, Moon, Sun } from "lucide-react"
+import { Monitor, Moon, Sun } from "@/components/ui/icons"
 import { useTheme, type Theme } from "@/components/theme-provider"
 import { cn } from "@/lib/utils/cn"
 

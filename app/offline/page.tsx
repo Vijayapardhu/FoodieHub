@@ -1,6 +1,6 @@
 "use client"
 
-import { WifiOff } from "lucide-react"
+import { WifiOff } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 
 export default function OfflinePage() {

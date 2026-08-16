@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Mail, Phone, User } from "lucide-react"
+import { Mail, Phone, User } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { LogoMark } from "@/components/brand/logo"
 import { Button } from "@/components/ui/button"

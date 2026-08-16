@@ -1,11 +1,11 @@
-import { LucideIcon, TrendingDown, TrendingUp } from "lucide-react"
+import { IconComponent, TrendingDown, TrendingUp } from "@/components/ui/icons"
 import { cn } from "@/lib/utils/cn"
 
 interface StatTileProps {
   label: string
   value: string | number
   hint?: string
-  icon?: LucideIcon
+  icon?: IconComponent
   /** Percentage change vs. the previous period. Positive renders as a rise. */
   delta?: number
   tone?: "default" | "primary" | "success" | "warning" | "destructive" | "info"

@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ChevronRight, Store } from "lucide-react"
+import { ChevronRight, Store } from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { OrderProgressBar } from "@/components/orders/order-timeline"

@@ -1,4 +1,4 @@
-import { IndianRupee, Receipt, Star, TrendingUp } from "lucide-react"
+import { IndianRupee, Receipt, Star, TrendingUp } from "@/components/ui/icons"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 
 interface DashboardStatsProps {

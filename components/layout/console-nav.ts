@@ -13,12 +13,12 @@ import {
   Users,
   Utensils,
   UtensilsCrossed,
-  type LucideIcon,
-} from "lucide-react"
+  type IconComponent,
+} from "@/components/ui/icons"
 
 export interface ConsoleNavItem {
   href: string
-  icon: LucideIcon
+  icon: IconComponent
   label: string
   /** Shown in the bottom tab bar on mobile. Keep to four per console. */
   primary?: boolean

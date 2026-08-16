@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Store } from "lucide-react"
+import { Store } from "@/components/ui/icons"
 import { AppShell } from "@/components/layout/app-shell"
 import { CanteenMenuPage } from "@/components/canteen/canteen-menu-page"
 import { EmptyState } from "@/components/ui/empty-state"

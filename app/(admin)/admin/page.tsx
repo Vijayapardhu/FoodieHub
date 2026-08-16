@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Store, TicketPercent } from "lucide-react"
+import { Store, TicketPercent } from "@/components/ui/icons"
 import { requireRole } from "@/lib/auth/require-role"
 import { ConsoleHeader } from "@/components/layout/console-shell"
 import { AdminDashboardStats } from "@/components/admin/admin-dashboard-stats"

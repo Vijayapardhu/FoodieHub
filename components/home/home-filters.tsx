@@ -1,6 +1,6 @@
 "use client"
 
-import { SlidersHorizontal } from "lucide-react"
+import { SlidersHorizontal } from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import {
   Sheet,

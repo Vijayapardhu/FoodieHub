@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Search, Store, UtensilsCrossed, X } from "lucide-react"
+import { Search, Store, UtensilsCrossed, X } from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import { Input } from "@/components/ui/input"
 import { Chip, ChipRail } from "@/components/ui/chip"

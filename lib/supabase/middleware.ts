@@ -9,7 +9,18 @@ import { NextResponse, type NextRequest } from 'next/server'
 // '/credits' carries the photo attribution the image licences require, so it
 // has to be reachable without an account — a licence obligation behind a
 // login wall is not discharged.
-const PUBLIC_PREFIXES = ['/login', '/auth', '/offline', '/credits']
+const PUBLIC_PREFIXES = [
+  '/login',
+  '/auth',
+  '/offline',
+  '/credits',
+  // A canteen applying to join has no account yet, and the legal pages have
+  // to be readable by somebody deciding whether to make one.
+  '/register-canteen',
+  '/terms',
+  '/privacy',
+  '/about',
+]
 
 /**
  * Supabase stores the session in `sb-<project-ref>-auth-token`, chunked across

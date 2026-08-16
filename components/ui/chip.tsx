@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check } from "lucide-react"
+import { Check } from "@/components/ui/icons"
 import { cn } from "@/lib/utils/cn"
 
 export interface ChipProps

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Copy, Save } from "lucide-react"
+import { Copy, Save } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
 import { createClient } from "@/lib/supabase/client"

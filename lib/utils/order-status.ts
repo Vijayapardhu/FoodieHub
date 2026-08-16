@@ -6,8 +6,8 @@ import {
   PackageCheck,
   ShoppingBag,
   XCircle,
-  type LucideIcon,
-} from "lucide-react"
+  type IconComponent,
+} from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 
 export type OrderStatus = Database["public"]["Enums"]["order_status"]
@@ -16,7 +16,7 @@ export interface OrderStatusMeta {
   label: string
   /** Shown to the customer on the tracking timeline. */
   customerHint: string
-  icon: LucideIcon
+  icon: IconComponent
   /** Badge variant from components/ui/badge. */
   badge: "muted" | "info" | "warning" | "success" | "destructive" | "soft"
   /** Position in the happy path; -1 for terminal non-success states. */

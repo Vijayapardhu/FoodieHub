@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { MessageSquare, Star } from "lucide-react"
+import { MessageSquare, Star } from "@/components/ui/icons"
 import { format } from "date-fns"
 import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"

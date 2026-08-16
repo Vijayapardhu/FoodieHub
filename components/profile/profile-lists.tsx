@@ -1,6 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
-import { Heart, Receipt, Star } from "lucide-react"
+import { Heart, Receipt, Star } from "@/components/ui/icons"
 import { format } from "date-fns"
 import { Database } from "@/types/database.types"
 import { StatusBadge } from "@/components/ui/status-badge"

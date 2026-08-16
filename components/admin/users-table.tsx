@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { format } from "date-fns"
-import { Download, Search, Users, X } from "lucide-react"
+import { Download, Search, Users, X } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
 import { Avatar } from "@/components/ui/avatar"

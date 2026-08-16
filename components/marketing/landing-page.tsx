@@ -20,6 +20,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { Database } from "@/types/database.types"
 import { Logo } from "@/components/brand/logo"
+import { Plus } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 import { Reveal } from "@/components/ui/reveal"
 import { VegMark } from "@/components/ui/status-badge"
@@ -767,7 +768,7 @@ export function LandingPage({
             <Reveal delay={180}>
               <div className="mt-12 flex flex-wrap items-center gap-4">
                 <Button size="lg" asChild>
-                  <Link href="/login">Register a canteen</Link>
+                  <Link href="/register-canteen">Register a canteen</Link>
                 </Button>
                 <p className="text-sm text-muted-foreground">
                   An administrator approves new canteens before students see them.
@@ -930,20 +931,36 @@ export function LandingPage({
             </h2>
           </Reveal>
 
-          <dl className="mt-14 grid gap-x-16 sm:grid-cols-2">
+          <div className="mt-14 grid gap-x-16 sm:grid-cols-2">
             {faqs.map((faq, index) => (
               <Reveal
                 key={faq.q}
                 delay={index * 40}
-                className="border-t border-border py-6"
+                className="border-t border-border"
               >
-                <dt className="text-sm font-semibold text-foreground">{faq.q}</dt>
-                <dd className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {faq.a}
-                </dd>
+                {/*
+                 * Native details/summary rather than a state-driven accordion:
+                 * it needs no JavaScript, it is keyboard and screen-reader
+                 * accessible for free, and the browser's own find-in-page can
+                 * still reach answers that are closed.
+                 */}
+                <details className="group py-5">
+                  <summary className="flex cursor-pointer list-none items-start justify-between gap-4 text-sm font-semibold text-foreground marker:hidden">
+                    {faq.q}
+                    <span
+                      aria-hidden
+                      className="mt-0.5 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-45"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </span>
+                  </summary>
+                  <p className="mt-3 pr-8 text-sm leading-relaxed text-muted-foreground">
+                    {faq.a}
+                  </p>
+                </details>
               </Reveal>
             ))}
-          </dl>
+          </div>
         </section>
 
         {/* -------------------------------------------------------------- */}
@@ -963,7 +980,7 @@ export function LandingPage({
                 <Link href="/login">Create your account</Link>
               </Button>
               <Button size="lg" variant="outline" asChild className="w-full sm:w-auto sm:px-7">
-                <Link href="/login">Register a canteen</Link>
+                <Link href="/register-canteen">Register a canteen</Link>
               </Button>
             </div>
           </Reveal>
@@ -1002,7 +1019,7 @@ export function LandingPage({
                 </Link>
               </li>
               <li>
-                <Link href="/login" className="transition-colors hover:text-foreground">
+                <Link href="/register-canteen" className="transition-colors hover:text-foreground">
                   Register a canteen
                 </Link>
               </li>
@@ -1015,12 +1032,22 @@ export function LandingPage({
             <p className="text-xs text-muted-foreground">
               No service fee · No commission · No online payment
             </p>
-            <Link
-              href="/credits"
-              className="text-xs text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
-            >
-              Photo credits
-            </Link>
+            <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-1">
+              {[
+                { href: "/about", label: "About" },
+                { href: "/terms", label: "Terms" },
+                { href: "/privacy", label: "Privacy" },
+                { href: "/credits", label: "Photo credits" },
+              ].map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-xs text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
           </div>
 
           <p className="mt-5 text-center text-xs text-muted-foreground">

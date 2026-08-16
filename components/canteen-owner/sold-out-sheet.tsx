@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { PackageX, Search, Undo2, X } from "lucide-react"
+import { PackageX, Search, Undo2, X } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"

@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Download, IndianRupee, Receipt, TrendingUp, XCircle } from "lucide-react"
+import { Download, IndianRupee, Receipt, TrendingUp, XCircle } from "@/components/ui/icons"
 import { format } from "date-fns"
 import { Database } from "@/types/database.types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

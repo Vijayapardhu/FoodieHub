@@ -1,4 +1,4 @@
-import { Heart, Receipt, Ticket, Wallet } from "lucide-react"
+import { Heart, Receipt, Ticket, Wallet } from "@/components/ui/icons"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 
 const iconMap = {

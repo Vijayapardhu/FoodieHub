@@ -1,6 +1,6 @@
 "use client"
 
-import { Star } from "lucide-react"
+import { Star } from "@/components/ui/icons"
 import { cn } from "@/lib/utils/cn"
 
 const sizes = {

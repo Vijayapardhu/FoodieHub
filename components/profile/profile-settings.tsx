@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { User } from "@supabase/supabase-js"
-import { Save } from "lucide-react"
+import { Save } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
 import { createClient } from "@/lib/supabase/client"

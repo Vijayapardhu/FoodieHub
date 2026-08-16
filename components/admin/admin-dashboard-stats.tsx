@@ -5,7 +5,7 @@ import {
   TicketPercent,
   TriangleAlert,
   Users,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 
 interface AdminDashboardStatsProps {

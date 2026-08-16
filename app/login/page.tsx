@@ -1,8 +1,9 @@
 "use client"
 
 import { Suspense, useEffect, useState } from "react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Eye, EyeOff, Lock, Mail, Phone, User } from "lucide-react"
+import { Eye, EyeOff, Lock, Mail, Phone, User } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { LogoMark } from "@/components/brand/logo"
 import { Button } from "@/components/ui/button"
@@ -359,7 +360,15 @@ function LoginForm() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
-          By continuing you agree to the Terms of Service and Privacy Policy.
+          By continuing you agree to our{" "}
+          <Link href="/terms" className="underline underline-offset-4 hover:text-foreground">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="underline underline-offset-4 hover:text-foreground">
+            Privacy Policy
+          </Link>
+          .
         </p>
       </div>
     </main>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Check, Download, Share, SquarePlus, X } from "lucide-react"
+import { Check, Download, Share, SquarePlus, X } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { Button } from "@/components/ui/button"
 import {

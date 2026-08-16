@@ -11,7 +11,7 @@ import {
   BadgeIndianRupee,
   Megaphone,
   MousePointerClick,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { createClient } from "@/lib/supabase/client"
 import { Badge } from "@/components/ui/badge"

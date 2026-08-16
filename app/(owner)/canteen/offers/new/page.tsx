@@ -1,4 +1,4 @@
-import { Store } from "lucide-react"
+import { Store } from "@/components/ui/icons"
 import { requireRole } from "@/lib/auth/require-role"
 import { ConsoleHeader } from "@/components/layout/console-shell"
 import { NewOfferForm } from "@/components/canteen-owner/new-offer-form"

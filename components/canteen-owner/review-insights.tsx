@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { Minus, TrendingDown, TrendingUp } from "lucide-react"
+import { Minus, TrendingDown, TrendingUp } from "@/components/ui/icons"
 import { StarRating } from "@/components/ui/star-rating"
 import { cn } from "@/lib/utils/cn"
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ArrowRight, BellRing, CheckCircle2, PackageCheck } from "lucide-react"
+import { ArrowRight, BellRing, CheckCircle2, PackageCheck } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 import { useLiveQueue, type QueueOrder } from "@/lib/hooks/use-live-queue"
 import { cn } from "@/lib/utils/cn"

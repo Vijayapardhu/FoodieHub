@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { CheckCheck } from "lucide-react"
+import { CheckCheck } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 import { Chip, ChipRail } from "@/components/ui/chip"
 import { ListSkeleton } from "@/components/ui/loading-state"

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight } from "@/components/ui/icons"
 import { createClient } from "@/lib/supabase/client"
 import { canteenPath } from "@/lib/utils/public-id"
 import { cn } from "@/lib/utils/cn"

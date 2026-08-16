@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { Store } from "lucide-react"
+import { Store } from "@/components/ui/icons"
 import { createClient } from "@/lib/supabase/server"
 import { ConsoleHeader } from "@/components/layout/console-shell"
 import { EmptyState } from "@/components/ui/empty-state"

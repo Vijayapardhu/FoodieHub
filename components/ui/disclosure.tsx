@@ -1,14 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { ChevronDown, LucideIcon } from "lucide-react"
+import { ChevronDown, IconComponent } from "@/components/ui/icons"
 import { cn } from "@/lib/utils/cn"
 
 interface DisclosureProps {
   title: string
   /** Right-aligned summary shown while collapsed, e.g. "₹20 off applied". */
   summary?: React.ReactNode
-  icon?: LucideIcon
+  icon?: IconComponent
   defaultOpen?: boolean
   children: React.ReactNode
   className?: string

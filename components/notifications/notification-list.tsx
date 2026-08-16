@@ -9,7 +9,7 @@ import {
   MessageSquare,
   Receipt,
   Settings2,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { formatDistanceToNow } from "date-fns"
 import { Database } from "@/types/database.types"
 import { EmptyState } from "@/components/ui/empty-state"

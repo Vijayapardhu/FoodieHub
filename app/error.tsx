@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import Link from "next/link"
-import { AlertCircle, Home, RefreshCw } from "lucide-react"
+import { AlertCircle, Home, RefreshCw } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 
 export default function GlobalError({

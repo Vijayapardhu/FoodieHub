@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { MessageSquare } from "lucide-react"
+import { MessageSquare } from "@/components/ui/icons"
 import { AppShell } from "@/components/layout/app-shell"
 import { OrdersListWithFilters } from "@/components/orders/orders-list-with-filters"
 import { requireRole } from "@/lib/auth/require-role"

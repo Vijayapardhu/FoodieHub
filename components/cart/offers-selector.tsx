@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Check, TicketPercent } from "lucide-react"
+import { Check, TicketPercent } from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import { createClient } from "@/lib/supabase/client"
 import { Skeleton } from "@/components/ui/skeleton"

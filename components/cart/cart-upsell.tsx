@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Image from "next/image"
-import { Plus } from "lucide-react"
+import { Plus } from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import { createClient } from "@/lib/supabase/client"
 import { useCartStore } from "@/store/cart-store"

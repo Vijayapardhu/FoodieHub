@@ -1,7 +1,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { format } from "date-fns"
-import { ChevronRight, MessageSquare } from "lucide-react"
+import { ChevronRight, MessageSquare } from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import { StarRating } from "@/components/ui/star-rating"
 import { EmptyState } from "@/components/ui/empty-state"

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ExternalLink, Menu, MoreHorizontal } from "lucide-react"
+import { ExternalLink, Menu, MoreHorizontal } from "@/components/ui/icons"
 import { LogoMark } from "@/components/brand/logo"
 import {
   Sheet,

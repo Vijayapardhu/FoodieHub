@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { AlertTriangle } from "lucide-react"
+import { AlertTriangle } from "@/components/ui/icons"
 import { createClient } from "@/lib/supabase/client"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"

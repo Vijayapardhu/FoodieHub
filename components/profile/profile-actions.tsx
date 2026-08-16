@@ -6,12 +6,12 @@ import {
   ChevronRight,
   HelpCircle,
   LayoutDashboard,
-  LucideIcon,
+  IconComponent,
   MessageSquare,
   Shield,
   Store,
   UserCog,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { PushOptIn } from "@/components/notifications/push-opt-in"
@@ -24,7 +24,7 @@ interface Row {
   href: string
   label: string
   description?: string
-  icon: LucideIcon
+  icon: IconComponent
 }
 
 const baseRows: Row[] = [

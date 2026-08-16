@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { Store, Trash2 } from "lucide-react"
+import { Store, Trash2 } from "@/components/ui/icons"
 import { CartItem, useCartStore } from "@/store/cart-store"
 import { QuantityStepper } from "@/components/ui/quantity-stepper"
 import { ImagePlaceholder } from "@/components/ui/image-placeholder"

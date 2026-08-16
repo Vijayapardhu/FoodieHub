@@ -1,4 +1,4 @@
-import { Check, XCircle } from "lucide-react"
+import { Check, XCircle } from "@/components/ui/icons"
 import {
   ORDER_FLOW,
   ORDER_STATUS_META,

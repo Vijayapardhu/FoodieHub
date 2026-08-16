@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Heart } from "lucide-react"
+import { Heart } from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import { Chip, ChipRail } from "@/components/ui/chip"
 import { EmptyState } from "@/components/ui/empty-state"

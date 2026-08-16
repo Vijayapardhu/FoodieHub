@@ -1,6 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
-import { Clock, MapPin, Star } from "lucide-react"
+import { Clock, MapPin, Star } from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import { FavoriteButton } from "@/components/menu/favorite-button"
 import { ImagePlaceholder } from "@/components/ui/image-placeholder"

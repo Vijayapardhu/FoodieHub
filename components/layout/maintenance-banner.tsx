@@ -1,4 +1,4 @@
-import { Megaphone } from "lucide-react"
+import { Megaphone } from "@/components/ui/icons"
 import { getPlatformSettings } from "@/lib/data/platform-settings"
 
 /**

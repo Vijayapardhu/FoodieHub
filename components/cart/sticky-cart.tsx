@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ShoppingCart } from "lucide-react"
+import { ShoppingCart } from "@/components/ui/icons"
 import { useCartStore } from "@/store/cart-store"
 import { useMounted } from "@/lib/hooks/use-mounted"
 import { StickyBar } from "@/components/ui/sticky-bar"

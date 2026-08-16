@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { format } from "date-fns"
-import { Download, IndianRupee, Receipt, Store, XCircle } from "lucide-react"
+import { Download, IndianRupee, Receipt, Store, XCircle } from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"

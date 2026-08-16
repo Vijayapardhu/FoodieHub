@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Receipt, Search, X } from "lucide-react"
+import { Receipt, Search, X } from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import { Input } from "@/components/ui/input"
 import { Chip, ChipRail } from "@/components/ui/chip"

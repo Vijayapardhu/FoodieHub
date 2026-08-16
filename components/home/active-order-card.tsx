@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight } from "@/components/ui/icons"
 import { orderPath } from "@/lib/utils/public-id"
 import { statusMeta, type OrderStatus } from "@/lib/utils/order-status"
 import { etaLabel, orderEta } from "@/lib/utils/eta"

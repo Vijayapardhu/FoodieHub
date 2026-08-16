@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { CheckCircle2, TriangleAlert } from "lucide-react"
+import { CheckCircle2, TriangleAlert } from "@/components/ui/icons"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ownerItemEditPath } from "@/lib/utils/public-id"

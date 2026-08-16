@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Store } from "lucide-react"
+import { Store } from "@/components/ui/icons"
 import { requireRole } from "@/lib/auth/require-role"
 import { getPlatformSettings } from "@/lib/data/platform-settings"
 import { ConsoleHeader } from "@/components/layout/console-shell"

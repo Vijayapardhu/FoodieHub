@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Clock, MapPin, Phone, Star } from "lucide-react"
+import { ArrowLeft, Clock, MapPin, Phone, Star } from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import { FavoriteButton } from "@/components/menu/favorite-button"
 import { ImagePlaceholder } from "@/components/ui/image-placeholder"

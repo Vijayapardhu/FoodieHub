@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Check, Users } from "lucide-react"
+import { Check, Users } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ImagePlaceholder } from "@/components/ui/image-placeholder"
 import { QuantityStepper } from "@/components/ui/quantity-stepper"
 import { VegMark } from "@/components/ui/status-badge"
-import { Search } from "lucide-react"
+import { Search } from "@/components/ui/icons"
 
 interface Dish {
   id: string
