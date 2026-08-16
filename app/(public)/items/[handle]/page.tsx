@@ -25,8 +25,7 @@ export async function generateMetadata({
 
     const canteenName = (item as any).canteens?.name
     const description =
-      item.description ||
-      `₹${Number(item.price)}${canteenName ? ` at ${canteenName}` : ""}`
+      item.description || `₹${Number(item.price)}${canteenName ? ` at ${canteenName}` : ""}`
 
     return {
       title: canteenName ? `${item.name} · ${canteenName}` : item.name,
@@ -42,11 +41,7 @@ export async function generateMetadata({
   }
 }
 
-export default async function ItemDetailPage({
-  params,
-}: {
-  params: { handle: string }
-}) {
+export default async function ItemDetailPage({ params }: { params: { handle: string } }) {
   const { supabase } = await requireRole(["user", "canteen_owner", "admin"])
 
   const { data: item, error: itemError } = await supabase
@@ -70,18 +65,10 @@ export default async function ItemDetailPage({
     )
   }
 
-  const [{ data: canteen }, { data: category }, { data: relatedItems }] =
+  const [{ data: canteen }, { data: category }, { data: relatedItems }, { data: reviews }] =
     await Promise.all([
-      supabase
-        .from("canteens")
-        .select("*")
-        .eq("id", item.canteen_id)
-        .maybeSingle(),
-      supabase
-        .from("categories")
-        .select("name")
-        .eq("id", item.category_id)
-        .maybeSingle(),
+      supabase.from("canteens").select("*").eq("id", item.canteen_id).maybeSingle(),
+      supabase.from("categories").select("name").eq("id", item.category_id).maybeSingle(),
       supabase
         .from("items")
         .select("*")
@@ -90,6 +77,15 @@ export default async function ItemDetailPage({
         .neq("id", item.id)
         .order("is_featured", { ascending: false })
         .limit(8),
+      // What people who ate this dish said about this dish. The page has
+      // always shown a star average with nothing behind it — and until now
+      // there was no way to write one either.
+      supabase
+        .from("reviews")
+        .select("id, rating, comment, photos, created_at, users(full_name)")
+        .eq("item_id", item.id)
+        .order("created_at", { ascending: false })
+        .limit(6),
     ])
 
   return (
@@ -99,6 +95,7 @@ export default async function ItemDetailPage({
         canteen={canteen ?? null}
         categoryName={category?.name}
         relatedItems={relatedItems ?? []}
+        reviews={(reviews ?? []) as any}
         promo={<PromoSlot placement="item_detail" limit={1} />}
       />
     </AppShell>

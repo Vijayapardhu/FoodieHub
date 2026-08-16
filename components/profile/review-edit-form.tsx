@@ -51,7 +51,10 @@ export function ReviewEditForm({
     setSaving(true)
     try {
       const supabase = createClient()
-      const { error } = await supabase
+      // Asking for the rows back is the only way to tell an edit that was
+      // refused from one that worked: RLS filters the row out rather than
+      // raising, so a blocked update reports success and changes nothing.
+      const { data, error } = await supabase
         .from("reviews")
         .update({
           rating,
@@ -60,8 +63,14 @@ export function ReviewEditForm({
           updated_at: new Date().toISOString(),
         })
         .eq("id", reviewId)
+        .select("id")
 
       if (error) throw error
+      if (!data || data.length === 0) {
+        throw new Error(
+          "Reviews can only be edited within 24 hours of posting. You can still delete this one."
+        )
+      }
 
       toast.success("Review updated")
       router.push("/profile/feedback")
@@ -77,12 +86,16 @@ export function ReviewEditForm({
     setDeleting(true)
     try {
       const supabase = createClient()
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("reviews")
         .delete()
         .eq("id", reviewId)
+        .select("id")
 
       if (error) throw error
+      if (!data || data.length === 0) {
+        throw new Error("That review could not be deleted")
+      }
 
       toast.success("Review deleted")
       router.push("/profile/feedback")

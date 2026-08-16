@@ -34,14 +34,12 @@ interface FeedbackFormProps {
   order: Order
   /** Ratings this student has already given the individual dishes. */
   existingItemReviews?: ItemReview[]
-  existingReview:
-    | {
-        id: string
-        rating: number
-        comment: string | null
-        photos: string[] | null
-      }
-    | null
+  existingReview: {
+    id: string
+    rating: number
+    comment: string | null
+    photos: string[] | null
+  } | null
 }
 
 const ratingLabels: Record<number, string> = {
@@ -138,10 +136,7 @@ export function FeedbackForm({
       if (error) throw error
     }
     if (removals.length > 0) {
-      const { error } = await supabase
-        .from("reviews")
-        .delete()
-        .in("id", removals)
+      const { error } = await supabase.from("reviews").delete().in("id", removals)
       if (error) throw error
     }
   }
@@ -202,9 +197,7 @@ export function FeedbackForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <section className="rounded-2xl border border-border bg-card p-4">
-        <p className="text-sm font-semibold text-foreground">
-          {order.canteens?.name ?? "Canteen"}
-        </p>
+        <p className="text-sm font-semibold text-foreground">{order.canteens?.name ?? "Canteen"}</p>
         <p className="text-xs text-muted-foreground">
           Token #{order.token} · {order.order_items?.length ?? 0} items · ₹
           {Number(order.total_amount).toFixed(2)}
@@ -212,9 +205,7 @@ export function FeedbackForm({
       </section>
 
       <section className="space-y-3 rounded-2xl border border-border bg-card p-4 text-center">
-        <h2 className="text-sm font-semibold text-foreground">
-          How was your order?
-        </h2>
+        <h2 className="text-sm font-semibold text-foreground">How was your order?</h2>
         <div className="flex justify-center">
           <StarPicker value={rating} onChange={setRating} />
         </div>
@@ -224,12 +215,8 @@ export function FeedbackForm({
       </section>
 
       <section className="space-y-2 rounded-2xl border border-border bg-card p-4">
-        <label
-          htmlFor="review-comment"
-          className="text-sm font-semibold text-foreground"
-        >
-          Tell them more{" "}
-          <span className="font-normal text-muted-foreground">(optional)</span>
+        <label htmlFor="review-comment" className="text-sm font-semibold text-foreground">
+          Tell them more <span className="font-normal text-muted-foreground">(optional)</span>
         </label>
         <Textarea
           id="review-comment"
@@ -239,7 +226,7 @@ export function FeedbackForm({
           rows={5}
           maxLength={1000}
         />
-        <p className="text-right text-xs text-muted-foreground tabular-nums">
+        <p className="text-right text-xs tabular-nums text-muted-foreground">
           {comment.length}/1000
         </p>
       </section>
@@ -247,12 +234,9 @@ export function FeedbackForm({
       {dishes.length > 0 ? (
         <section className="space-y-1 rounded-2xl border border-border bg-card p-4">
           <div>
-            <h2 className="text-sm font-semibold text-foreground">
-              Rate the dishes
-            </h2>
+            <h2 className="text-sm font-semibold text-foreground">Rate the dishes</h2>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Optional, and per dish — a great biryani and a cold chai deserve
-              different scores.
+              Optional, and per dish — a great biryani and a cold chai deserve different scores.
             </p>
           </div>
 
@@ -261,13 +245,7 @@ export function FeedbackForm({
               <li key={dish.id} className="flex items-center gap-3 py-2.5">
                 <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-muted">
                   {dish.imageUrl ? (
-                    <Image
-                      src={dish.imageUrl}
-                      alt=""
-                      fill
-                      sizes="44px"
-                      className="object-cover"
-                    />
+                    <Image src={dish.imageUrl} alt="" fill sizes="44px" className="object-cover" />
                   ) : (
                     <ImagePlaceholder type="item" size="sm" />
                   )}
@@ -294,20 +272,10 @@ export function FeedbackForm({
         </section>
       ) : null}
 
-      <ReviewPhotoPicker
-        photos={photos}
-        onChange={setPhotos}
-        pathPrefix={`reviews/${order.id}`}
-      />
+      <ReviewPhotoPicker photos={photos} onChange={setPhotos} pathPrefix={`reviews/${order.id}`} />
 
       <StickyBar>
-        <Button
-          type="submit"
-          size="lg"
-          block
-          loading={saving}
-          disabled={rating === 0}
-        >
+        <Button type="submit" size="lg" block loading={saving} disabled={rating === 0}>
           {existingReview ? "Update review" : "Post review"}
         </Button>
       </StickyBar>

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, ChevronRight, MapPin, Store } from "@/components/ui/icons"
+import { ArrowLeft, ChevronRight, Clock, MapPin, Star, Store } from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -25,10 +25,21 @@ import { cn } from "@/lib/utils/cn"
 type Item = Database["public"]["Tables"]["items"]["Row"]
 type Canteen = Database["public"]["Tables"]["canteens"]["Row"] | null
 
+export interface ItemReviewRow {
+  id: string
+  rating: number
+  comment: string | null
+  photos: string[] | null
+  created_at: string
+  users: { full_name: string | null } | null
+}
+
 interface ItemDetailProps {
   item: Item
   canteen: Canteen
   relatedItems: Item[]
+  /** Reviews of this dish, newest first. */
+  reviews?: ItemReviewRow[]
   categoryName?: string | null
   /** Advertising slot, rendered by the server so an unsold one costs nothing. */
   promo?: React.ReactNode
@@ -40,6 +51,7 @@ export function ItemDetail({
   relatedItems,
   categoryName,
   promo,
+  reviews = [],
 }: ItemDetailProps) {
   const router = useRouter()
   const canteenName = canteen?.name ?? "Canteen"
@@ -55,6 +67,9 @@ export function ItemDetail({
 
   const [activeIndex, setActiveIndex] = useState(0)
   const [zoomed, setZoomed] = useState(false)
+  /** Photos from a review, viewed in the same lightbox as the dish gallery. */
+  const [reviewPhotos, setReviewPhotos] = useState<string[] | null>(null)
+  const [reviewPhotoIndex, setReviewPhotoIndex] = useState(0)
   const activeImage = gallery[activeIndex] ?? null
 
   const { quantity, increment, decrement } = useCartItem(
@@ -151,22 +166,49 @@ export function ItemDetail({
                     activeIndex === idx ? "border-primary" : "border-transparent"
                   )}
                 >
-                  <Image
-                    src={src}
-                    alt=""
-                    fill
-                    sizes="64px"
-                    className="object-cover"
-                  />
+                  <Image src={src} alt="" fill sizes="64px" className="object-cover" />
                 </button>
               ))}
             </div>
           ) : null}
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <VegMark vegetarian={item.is_vegetarian} withLabel />
+        <div className="space-y-2.5">
+          {/* Name first. It was the fourth thing on the page, under a row of
+              badges — on a screen reached by tapping a photograph of the dish,
+              the one thing worth reading first is what the dish is called. */}
+          <div className="flex items-start gap-2.5">
+            <VegMark vegetarian={item.is_vegetarian} className="mt-1.5" />
+            <h1 className="min-w-0 flex-1 text-balance text-2xl font-extrabold leading-tight tracking-tight text-foreground">
+              {item.name}
+            </h1>
+          </div>
+
+          {/* Everything a decision actually turns on, in one line: what it
+              costs, how long it takes, how it has been rated. */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <span className="text-2xl font-bold text-foreground">₹{Number(item.price)}</span>
+
+            {item.prep_minutes ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-foreground">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground" />~{item.prep_minutes} min
+              </span>
+            ) : null}
+
+            {item.total_reviews > 0 ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-1 text-xs font-bold text-success">
+                <Star className="h-3.5 w-3.5 fill-current" />
+                {item.rating.toFixed(1)}
+                <span className="font-normal opacity-80">({item.total_reviews})</span>
+              </span>
+            ) : (
+              <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                Not rated yet
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
             {categoryName ? (
               <Badge variant="muted" size="sm">
                 {categoryName}
@@ -177,33 +219,11 @@ export function ItemDetail({
                 Chef&apos;s pick
               </Badge>
             ) : null}
-          </div>
-
-          <h1 className="text-2xl font-extrabold tracking-tight text-foreground text-balance">
-            {item.name}
-          </h1>
-
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <p className="text-2xl font-bold text-foreground">
-              ₹{Number(item.price)}
-            </p>
-            <span className="text-xs text-muted-foreground">
-              incl. all taxes
-            </span>
-            {item.total_reviews > 0 ? (
-              <span className="flex items-center gap-1.5">
-                <StarRating value={item.rating} />
-                <span className="text-xs text-muted-foreground">
-                  {item.rating.toFixed(1)} · {item.total_reviews} reviews
-                </span>
-              </span>
-            ) : null}
+            <span className="text-xs text-muted-foreground">incl. all taxes</span>
           </div>
 
           {item.description ? (
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              {item.description}
-            </p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>
           ) : null}
         </div>
 
@@ -239,19 +259,67 @@ export function ItemDetail({
             <SectionHeader title="Nutrition" />
             <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {nutritionEntries.map(([key, value]) => (
-                <div
-                  key={key}
-                  className="rounded-xl border border-border bg-card p-3"
-                >
+                <div key={key} className="rounded-xl border border-border bg-card p-3">
                   <dt className="text-xs capitalize text-muted-foreground">
                     {key.replace(/_/g, " ")}
                   </dt>
-                  <dd className="mt-0.5 text-sm font-bold text-foreground">
-                    {String(value)}
-                  </dd>
+                  <dd className="mt-0.5 text-sm font-bold text-foreground">{String(value)}</dd>
                 </div>
               ))}
             </dl>
+          </Section>
+        ) : null}
+
+        {/* What people who ate it said. The page has shown a star average
+            since it was built, with nothing behind it to read. */}
+        {reviews.length > 0 ? (
+          <Section>
+            <SectionHeader
+              title="What people said"
+              subtitle={`${item.total_reviews} ${
+                item.total_reviews === 1 ? "rating" : "ratings"
+              } for this dish`}
+            />
+            <ul className="space-y-2.5">
+              {reviews.map((review) => (
+                <li key={review.id} className="rounded-2xl border border-border bg-card p-3.5">
+                  <div className="flex items-center gap-2">
+                    <StarRating value={review.rating} />
+                    <span className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground">
+                      {review.users?.full_name || "A student"}
+                    </span>
+                    <span className="shrink-0 text-2xs text-muted-foreground">
+                      {new Date(review.created_at).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </span>
+                  </div>
+
+                  {review.comment ? (
+                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                      {review.comment}
+                    </p>
+                  ) : null}
+
+                  {review.photos && review.photos.length > 0 ? (
+                    <div className="mt-2 flex gap-2">
+                      {review.photos.slice(0, 4).map((photo) => (
+                        <button
+                          key={photo}
+                          type="button"
+                          onClick={() => setReviewPhotos(review.photos ?? [])}
+                          className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-muted"
+                          aria-label="View review photo"
+                        >
+                          <Image src={photo} alt="" fill sizes="56px" className="object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
           </Section>
         ) : null}
 
@@ -264,9 +332,7 @@ export function ItemDetail({
               title="Goes well with"
               action={{
                 label: "Full menu",
-                href: canteenPath(
-                  canteen ?? { id: item.canteen_id }
-                ),
+                href: canteenPath(canteen ?? { id: item.canteen_id }),
               }}
             />
             <div className="rail">
@@ -313,6 +379,19 @@ export function ItemDetail({
           </Button>
         )}
       </StickyBar>
+
+      {reviewPhotos ? (
+        <ImageLightbox
+          images={reviewPhotos}
+          index={reviewPhotoIndex}
+          onIndexChange={setReviewPhotoIndex}
+          onClose={() => {
+            setReviewPhotos(null)
+            setReviewPhotoIndex(0)
+          }}
+          alt={`Photo of ${item.name} from a review`}
+        />
+      ) : null}
 
       {zoomed ? (
         <ImageLightbox
