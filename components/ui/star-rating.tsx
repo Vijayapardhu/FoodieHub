@@ -9,6 +9,17 @@ const sizes = {
   lg: "h-8 w-8",
 } as const
 
+/**
+ * The tap target, which is not the same thing as the star. A picker rating one
+ * dish in a list of dishes has to fit beside a thumbnail and a name, and five
+ * 48px targets do not — but they must stay comfortably tappable.
+ */
+const targets = {
+  sm: "h-9 w-9",
+  md: "h-10 w-10",
+  lg: "h-12 w-12",
+} as const
+
 /** Read-only star row. */
 export function StarRating({
   value,
@@ -67,7 +78,10 @@ export function StarPicker({
           aria-checked={value === star}
           aria-label={`${star} star${star === 1 ? "" : "s"}`}
           onClick={() => onChange(star)}
-          className="flex h-12 w-12 items-center justify-center rounded-xl transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={cn(
+            "flex items-center justify-center rounded-xl transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            targets[size]
+          )}
         >
           <Star
             className={cn(

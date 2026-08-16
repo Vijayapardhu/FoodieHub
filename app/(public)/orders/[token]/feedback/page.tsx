@@ -36,12 +36,25 @@ export default async function FeedbackPage({
     notFound()
   }
 
-  const { data: existingReview } = await supabase
+  // Every review this student left for this order, in one read. It cannot be
+  // maybeSingle() any more: an order now carries one review of the canteen
+  // plus one per dish rated, and maybeSingle throws the moment there are two.
+  const { data: reviews } = await supabase
     .from("reviews")
-    .select("id, rating, comment, photos")
+    .select("id, rating, comment, photos, item_id")
     .eq("order_id", order.id)
     .eq("user_id", user.id)
-    .maybeSingle()
+
+  const existingReview =
+    (reviews ?? []).find((review) => review.item_id === null) ?? null
+
+  const existingItemReviews = (reviews ?? [])
+    .filter((review) => review.item_id !== null)
+    .map((review) => ({
+      id: review.id,
+      itemId: review.item_id as string,
+      rating: review.rating,
+    }))
 
   return (
     <AppShell
@@ -50,7 +63,11 @@ export default async function FeedbackPage({
       backHref={`/orders/${params.token}`}
       bottomPad="action-bar"
     >
-      <FeedbackForm order={order as any} existingReview={existingReview} />
+      <FeedbackForm
+        order={order as any}
+        existingReview={existingReview}
+        existingItemReviews={existingItemReviews}
+      />
     </AppShell>
   )
 }

@@ -1,19 +1,19 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Search, Store, UtensilsCrossed, X } from "@/components/ui/icons"
 import { Database } from "@/types/database.types"
 import { Input } from "@/components/ui/input"
 import { Chip, ChipRail } from "@/components/ui/chip"
+import { Switch } from "@/components/ui/switch"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Section, SectionHeader } from "@/components/ui/section-header"
 import { CanteenCard } from "@/components/canteen/canteen-card"
 import { ItemCard } from "@/components/menu/item-card"
 import { cn } from "@/lib/utils/cn"
 import { useDebounce } from "@/lib/hooks/use-debounce"
-import { useScrollDirection } from "@/lib/hooks/use-scroll-direction"
 import { PromoCarousel } from "@/components/home/promo-carousel"
 import { SectionRail } from "@/components/home/section-rail"
 import { DiscoverySearch } from "@/components/home/discovery-search"
@@ -77,10 +77,29 @@ export function HomePageContent({
   const [rawQuery, setRawQuery] = useState("")
   const [filters, setFilters] = useState<BrowseFilters>(defaultFilters)
 
-  // The filter row rides with the search box, but only while it is wanted.
-  const { direction, atTop } = useScrollDirection()
-  const filtersPinned = atTop || direction === "up"
   const [filtersOpen, setFiltersOpen] = useState(false)
+
+  /*
+   * How tall the pinned search block is, published as a custom property so the
+   * category rail further down the page knows where to come to rest.
+   *
+   * Measured rather than hard-coded: the block grows and shrinks with the veg
+   * toggle and with text size, and a magic number would put the categories
+   * either under the search box or floating below it. A ResizeObserver costs
+   * nothing here — unlike a scroll listener, it fires only when the box
+   * actually changes size.
+   */
+  const headerRef = useRef<HTMLDivElement>(null)
+  const [headerHeight, setHeaderHeight] = useState(0)
+
+  useEffect(() => {
+    const node = headerRef.current
+    if (!node) return
+    const observer = new ResizeObserver(() => setHeaderHeight(node.offsetHeight))
+    observer.observe(node)
+    setHeaderHeight(node.offsetHeight)
+    return () => observer.disconnect()
+  }, [])
   /** "Fast pickup" — dishes the kitchen can turn round quickly. */
   const [quickOnly, setQuickOnly] = useState(false)
 
@@ -187,7 +206,21 @@ export function HomePageContent({
    * cheap, quick, well liked — which is what turns a list of dishes into
    * something worth scrolling.
    */
-  const orderable = useMemo(() => items.filter((item) => item.canteens?.is_open !== false), [items])
+  // Veg mode is applied at the source rather than per rail, so switching it
+  // on empties the meat out of every collection on the page. A "mode" that
+  // only filtered the search results would be a filter wearing a mode's name.
+  const orderable = useMemo(
+    () =>
+      items.filter(
+        (item) => item.canteens?.is_open !== false && (!filters.vegOnly || item.is_vegetarian)
+      ),
+    [items, filters.vegOnly]
+  )
+
+  const featured = useMemo(
+    () => (filters.vegOnly ? featuredItems.filter((item) => item.is_vegetarian) : featuredItems),
+    [featuredItems, filters.vegOnly]
+  )
 
   const underHundred = useMemo(
     () =>
@@ -242,7 +275,10 @@ export function HomePageContent({
   }
 
   return (
-    <div className="space-y-7">
+    <div
+      className="space-y-7"
+      style={{ "--fh-pinned": `${headerHeight}px` } as React.CSSProperties}
+    >
       {/* Anything already in flight comes first — that is what somebody
           opening the app mid-morning is checking on. */}
       {activeOrder}
@@ -282,7 +318,10 @@ export function HomePageContent({
        * The offset carries the safe-area inset because the app bar above it
        * does too; without it the box tucks under the notch on an iPhone.
        */}
-      <div className="sticky top-[calc(theme(spacing.appbar)+env(safe-area-inset-top))] z-30 -mx-4 !mt-3 bg-background/95 px-4 py-2 backdrop-blur-md sm:-mx-5 sm:px-5">
+      <div
+        ref={headerRef}
+        className="sticky top-[calc(theme(spacing.appbar)+env(safe-area-inset-top))] z-30 -mx-4 !mt-3 bg-background/95 px-4 py-2 backdrop-blur-md sm:-mx-5 sm:px-5"
+      >
         <DiscoverySearch
           value={rawQuery}
           onChange={setRawQuery}
@@ -291,78 +330,29 @@ export function HomePageContent({
         />
 
         {/*
-         * The categories collapse on the way down and come back on the way up.
-         *
-         * The wrapper is the full-bleed element rather than the rail inside
-         * it: animating a height needs overflow hidden, and if the rail kept
-         * its own bleed that clip would land mid-tile instead of at the
-         * screen edge.
+         * Veg mode, not a veg filter. It sits with the search and stays put
+         * when the categories collapse, because somebody who eats only
+         * vegetarian food wants it on for the whole session rather than
+         * re-applied per search — and needs to be able to see at a glance
+         * that it is still on.
          */}
-        <div
-          className={cn(
-            "-mx-4 overflow-hidden transition-[max-height,opacity] duration-200 ease-out sm:-mx-5",
-            filtersPinned ? "max-h-48 opacity-100" : "max-h-0 opacity-0"
-          )}
-        >
-          {/* The categories are the one filter worth keeping on screen: a
-              row of photographs is faster to scan than a row of words, and it
-              is what somebody who has scrolled back up is usually reaching
-              for. No section heading — photographs with names under them do
-              not need to be introduced. */}
-          {categories.length > 0 ? (
-            <div className="rail rail-inset pb-1 pt-2.5">
-              {categories.map((category) => {
-                const cover = categoryCovers[category.id]
-                const active = filters.categoryId === category.id
-                return (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() =>
-                      setFilters((f) => ({
-                        ...f,
-                        categoryId: active ? null : category.id,
-                      }))
-                    }
-                    aria-pressed={active}
-                    className="group w-card-craving shrink-0 text-left"
-                  >
-                    {/* A photograph of real food from that category, not an
-                        icon: "Snacks" means nothing until you see the samosa. */}
-                    <span
-                      className={cn(
-                        "relative block aspect-square w-full overflow-hidden rounded-2xl bg-primary-soft ring-2 transition-all",
-                        active ? "ring-primary" : "ring-transparent"
-                      )}
-                    >
-                      {cover ? (
-                        <Image
-                          src={cover}
-                          alt=""
-                          fill
-                          sizes="104px"
-                          className="object-cover transition-transform duration-300 md:group-hover:scale-105"
-                        />
-                      ) : (
-                        <span className="flex h-full w-full items-center justify-center">
-                          <UtensilsCrossed className="h-6 w-6 text-primary" />
-                        </span>
-                      )}
-                    </span>
-                    <span
-                      className={cn(
-                        "mt-1.5 block truncate text-center text-xs font-semibold",
-                        active ? "text-primary" : "text-foreground"
-                      )}
-                    >
-                      {category.name}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          ) : null}
-        </div>
+        <label className="mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3 py-1.5">
+          <span className="flex min-w-0 items-center gap-2">
+            <span
+              aria-hidden
+              className="flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border-[1.5px] border-veg bg-surface"
+            >
+              <span className="h-2 w-2 rounded-full bg-veg" />
+            </span>
+            <span className="truncate text-sm font-semibold text-foreground">Pure veg mode</span>
+          </span>
+          <Switch
+            checked={filters.vegOnly}
+            onCheckedChange={(on) => setFilters((f) => ({ ...f, vegOnly: on }))}
+            aria-label="Show vegetarian dishes only"
+            className="h-6 w-11 shrink-0 [&>span]:h-5 [&>span]:w-5 [&>span]:data-[state=checked]:translate-x-5"
+          />
+        </label>
       </div>
 
       {/* Deliberately not sticky. These are occasional refinements, not
@@ -375,12 +365,6 @@ export function HomePageContent({
             onClick={() => setFilters((f) => ({ ...f, openOnly: !f.openOnly }))}
           >
             Open now
-          </Chip>
-          <Chip
-            active={filters.vegOnly}
-            onClick={() => setFilters((f) => ({ ...f, vegOnly: !f.vegOnly }))}
-          >
-            Pure veg
           </Chip>
           <Chip
             active={filters.sort === "rating"}
@@ -479,9 +463,9 @@ export function HomePageContent({
           {/* Fastest path to checkout for a returning student. */}
           {reorder}
 
-          {featuredItems.length > 0 ? (
+          {featured.length > 0 ? (
             <SectionRail title="Today's picks" subtitle="Hand-picked by the kitchens">
-              {featuredItems.map((item) => (
+              {featured.map((item) => (
                 <ItemCard
                   key={item.id}
                   item={item}
@@ -494,6 +478,72 @@ export function HomePageContent({
               ))}
             </SectionRail>
           ) : null}
+
+          {/*
+           * The categories keep their place on the page and pin to the search
+           * bar once it is reached — plain CSS sticky, so the browser owns the
+           * hand-off. The previous version watched the scroll position and
+           * animated a collapse, which flickered whenever a scroll changed
+           * direction mid-animation.
+           *
+           * The offset is the app bar plus whatever the pinned search block
+           * currently measures, published above as --fh-pinned.
+           */}
+          <div className="sticky top-[calc(theme(spacing.appbar)+env(safe-area-inset-top)+var(--fh-pinned,0px))] z-20 -mx-4 bg-background/95 px-4 py-1 backdrop-blur-md sm:-mx-5 sm:px-5">
+            {categories.length > 0 ? (
+              <div className="rail rail-inset pb-1 pt-2.5">
+                {categories.map((category) => {
+                  const cover = categoryCovers[category.id]
+                  const active = filters.categoryId === category.id
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() =>
+                        setFilters((f) => ({
+                          ...f,
+                          categoryId: active ? null : category.id,
+                        }))
+                      }
+                      aria-pressed={active}
+                      className="group w-card-craving shrink-0 text-left"
+                    >
+                      {/* A photograph of real food from that category, not an
+                        icon: "Snacks" means nothing until you see the samosa. */}
+                      <span
+                        className={cn(
+                          "relative block aspect-square w-full overflow-hidden rounded-2xl bg-primary-soft ring-2 transition-all",
+                          active ? "ring-primary" : "ring-transparent"
+                        )}
+                      >
+                        {cover ? (
+                          <Image
+                            src={cover}
+                            alt=""
+                            fill
+                            sizes="104px"
+                            className="object-cover transition-transform duration-300 md:group-hover:scale-105"
+                          />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center">
+                            <UtensilsCrossed className="h-6 w-6 text-primary" />
+                          </span>
+                        )}
+                      </span>
+                      <span
+                        className={cn(
+                          "mt-1.5 block truncate text-center text-xs font-semibold",
+                          active ? "text-primary" : "text-foreground"
+                        )}
+                      >
+                        {category.name}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : null}
+          </div>
 
           {openCanteens.length > 0 ? (
             <SectionRail title="Canteens on campus" subtitle="Open counters first">
