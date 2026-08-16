@@ -763,10 +763,15 @@ export interface Database {
         Args: { banner_id: string; event?: 'impression' | 'click' }
         Returns: undefined
       }
+      // Added by migration 039_cart_wait_preview
+      preview_order_wait: {
+        Args: { p_canteen_id: string; p_item_ids: string[] }
+        Returns: number | null
+      }
     }
     Enums: {
       user_role: 'user' | 'canteen_owner' | 'admin'
-      order_status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'no_show' | 'no_show'
+      order_status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'no_show'
       payment_status: 'pending' | 'completed'
       notification_type: 'order' | 'promotion' | 'system' | 'feedback'
       discount_type: 'percentage' | 'flat'

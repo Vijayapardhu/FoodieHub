@@ -21,9 +21,22 @@ type Offer = Database["public"]["Tables"]["offers"]["Row"]
 
 interface CartSummaryProps {
   canteenId: string | null
+  /** Lines the kitchen can no longer make; excluded from the bill entirely. */
+  unavailableIds: Set<string>
+  /** Something must be fixed before an order can be placed. */
+  blocked: boolean
+  /** The first check against the kitchen hasn't finished yet. */
+  checking: boolean
+  closedIds: Set<string>
 }
 
-export function CartSummary({ canteenId }: CartSummaryProps) {
+export function CartSummary({
+  canteenId,
+  unavailableIds,
+  blocked,
+  checking,
+  closedIds,
+}: CartSummaryProps) {
   const router = useRouter()
   const [supabase] = useState(() => createClient())
   const items = useCartStore((state) => state.items)
@@ -38,16 +51,26 @@ export function CartSummary({ canteenId }: CartSummaryProps) {
   const [preferredTimeSlot, setPreferredTimeSlot] = useState<string | null>(null)
   const [dietaryNotes, setDietaryNotes] = useState("")
 
+  // Sold-out lines are dropped here rather than at the point of insert, so
+  // the bill on screen and the order sent to the kitchen are the same thing.
+  const orderable = useMemo(
+    () => items.filter((i) => !unavailableIds.has(i.itemId)),
+    [items, unavailableIds]
+  )
+
   const cartItems = useMemo(
-    () => (canteenId ? items.filter((i) => i.canteenId === canteenId) : items),
-    [items, canteenId]
+    () =>
+      canteenId
+        ? orderable.filter((i) => i.canteenId === canteenId)
+        : orderable,
+    [orderable, canteenId]
   )
 
   const groups = useMemo(() => {
     if (canteenId) return [{ canteenId, items: cartItems }]
 
     const map = new Map<string, typeof items>()
-    for (const item of items) {
+    for (const item of orderable) {
       const list = map.get(item.canteenId) ?? []
       list.push(item)
       map.set(item.canteenId, list)
@@ -56,7 +79,7 @@ export function CartSummary({ canteenId }: CartSummaryProps) {
       canteenId: id,
       items: groupItems,
     }))
-  }, [items, cartItems, canteenId])
+  }, [orderable, cartItems, canteenId])
 
   const sum = (list: typeof items) =>
     list.reduce((total, item) => total + item.price * item.quantity, 0)
@@ -70,6 +93,17 @@ export function CartSummary({ canteenId }: CartSummaryProps) {
   const handlePlaceOrder = async () => {
     if (cartItems.length === 0) {
       toast.error("Your cart is empty")
+      return
+    }
+
+    // The database guards reject these too, but being turned away after the
+    // tap reads as a broken app rather than a closed kitchen.
+    if (blocked) {
+      toast.error(
+        closedIds.size > 0
+          ? "That canteen is closed right now"
+          : "Remove the sold-out items first"
+      )
       return
     }
 
@@ -313,6 +347,12 @@ export function CartSummary({ canteenId }: CartSummaryProps) {
               <dd className="tabular-nums">₹{total.toFixed(2)}</dd>
             </div>
           </dl>
+
+          {appliedDiscount > 0 ? (
+            <p className="rounded-xl bg-success-soft px-3 py-2 text-center text-xs font-bold text-success">
+              You save ₹{appliedDiscount.toFixed(2)} on this order
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -321,12 +361,22 @@ export function CartSummary({ canteenId }: CartSummaryProps) {
           size="lg"
           block
           loading={loading}
-          disabled={cartItems.length === 0}
+          disabled={cartItems.length === 0 || blocked || checking}
           onClick={handlePlaceOrder}
           className="justify-between"
         >
           <span className="tabular-nums">₹{total.toFixed(2)}</span>
-          <span>{loading ? "Placing order…" : "Place order"}</span>
+          <span>
+            {loading
+              ? "Placing order…"
+              : checking
+                ? "Checking…"
+                : blocked
+                  ? closedIds.size > 0
+                    ? "Canteen closed"
+                    : "Fix cart to continue"
+                  : "Place order"}
+          </span>
         </Button>
       </StickyBar>
     </>

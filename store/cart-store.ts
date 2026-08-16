@@ -22,6 +22,14 @@ interface CartStore {
   items: CartItem[]
   addItem: (item: Omit<CartItem, "quantity">) => void
   removeItem: (itemId: string) => void
+  /** Drops several lines at once, so clearing sold-out dishes is one tap. */
+  removeItems: (itemIds: string[]) => void
+  /**
+   * Takes a corrected price from the server. The cart captures the price at
+   * add-time but the order total is recomputed from live prices, so a line
+   * left stale would show a bill that isn't the one charged at the counter.
+   */
+  updatePrice: (itemId: string, price: number) => void
   updateQuantity: (itemId: string, quantity: number) => void
   clearCart: () => void
   getTotal: () => number
@@ -52,6 +60,19 @@ export const useCartStore = create<CartStore>()(
       removeItem: (itemId) => {
         set((state) => ({
           items: state.items.filter((i) => i.itemId !== itemId),
+        }))
+      },
+      removeItems: (itemIds) => {
+        const drop = new Set(itemIds)
+        set((state) => ({
+          items: state.items.filter((i) => !drop.has(i.itemId)),
+        }))
+      },
+      updatePrice: (itemId, price) => {
+        set((state) => ({
+          items: state.items.map((i) =>
+            i.itemId === itemId ? { ...i, price } : i
+          ),
         }))
       },
       updateQuantity: (itemId, quantity) => {
