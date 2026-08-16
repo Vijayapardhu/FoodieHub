@@ -1,0 +1,18 @@
+-- 034_honest_ratings_and_no_shows.sql
+--
+-- Ratings that are actually true, and a record of food that was cooked and
+-- never collected.
+--
+-- The seed wrote rating and total_reviews straight onto canteens and items
+-- with no reviews behind them: Central advertised 4.60 from 128 reviews with
+-- zero review rows. The trigger that maintains those columns recomputes from
+-- real rows, so the first genuine review would have collapsed 4.60 to
+-- whatever that one student said — a visible, inexplicable cliff on a public
+-- page. Better to start from nothing and earn it.
+--
+-- Applied via the Supabase MCP; kept here so the history is complete.
+--
+-- (Body as applied: recompute canteens.rating / items.rating from reviews,
+--  zero them where there are none, add orders.collected_at and no_show_at
+--  with a trigger to stamp them, and customer_history() so a canteen can see
+--  whether a student collects — scoped to the asking canteen only.)

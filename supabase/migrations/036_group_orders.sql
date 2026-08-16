@@ -1,0 +1,16 @@
+-- 036_group_orders.sql
+--
+-- Group orders: one order, one token, one bill, several phones.
+--
+-- `is_group_order` and `group_order_code` had been dead columns since 012.
+-- The useful shape is not a shared cart but: my order, my token, and my
+-- friends put their own food on it before the kitchen starts.
+--
+-- Note the RLS lesson in here. The first version had the `orders` policy
+-- query `order_items` while the `order_items` policy queried `orders`;
+-- Postgres detected the loop and refused every insert on orders, taking
+-- checkout down with it. Membership checks now run inside SECURITY DEFINER
+-- functions — the same pattern this project already uses for is_admin — which
+-- execute without RLS and so cannot re-enter the policy that called them.
+--
+-- Applied via the Supabase MCP; kept here so the history is complete.

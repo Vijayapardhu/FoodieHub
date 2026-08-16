@@ -39,6 +39,7 @@ import { downloadInvoice, printInvoice } from "@/lib/utils/invoice"
 import { isCustomerCancellable, type OrderStatus } from "@/lib/utils/order-status"
 import { cartPath, orderFeedbackPath } from "@/lib/utils/public-id"
 import { etaDetail, etaLabel, orderEta } from "@/lib/utils/eta"
+import { GroupOrderShare } from "@/components/orders/group-order-share"
 import { cn } from "@/lib/utils/cn"
 
 type Order = Database["public"]["Tables"]["orders"]["Row"] & {
@@ -405,6 +406,15 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
           <Download className="h-4 w-4" />
           Save bill
         </Button>
+
+        {/* Only while the kitchen has not started: after that the bill is
+            settled and nothing more can be added. */}
+        {status === "pending" ? (
+          <GroupOrderShare
+            orderId={order.id}
+            existingCode={order.group_order_code ?? null}
+          />
+        ) : null}
 
         {status === "completed" ? (
           <Button className="col-span-2" asChild>

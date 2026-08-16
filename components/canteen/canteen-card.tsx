@@ -49,11 +49,19 @@ export function CanteenCard({ canteen, className, compact }: CanteenCardProps) {
           <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/55 to-transparent" />
 
           <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-xs font-bold text-white backdrop-blur-sm">
-            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-            {canteen.rating.toFixed(1)}
-            <span className="font-normal text-white/70">
-              ({canteen.total_reviews})
-            </span>
+            {canteen.total_reviews > 0 ? (
+              <>
+                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                {canteen.rating.toFixed(1)}
+                <span className="font-normal text-white/70">
+                  ({canteen.total_reviews})
+                </span>
+              </>
+            ) : (
+              /* No reviews yet is a fact worth stating; 0.0 stars reads as
+                 "rated badly" rather than "not rated". */
+              <span className="font-semibold">New</span>
+            )}
           </span>
 
           {closed ? (

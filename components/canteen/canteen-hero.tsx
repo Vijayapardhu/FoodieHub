@@ -76,11 +76,17 @@ export function CanteenHero({ canteen }: { canteen: Canteen }) {
 
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-md">
-              <Star className="h-3.5 w-3.5 fill-amber-300 text-amber-300" />
-              {Number(canteen.rating).toFixed(1)}
-              <span className="font-normal text-white/70">
-                ({canteen.total_reviews})
-              </span>
+              {canteen.total_reviews > 0 ? (
+                <>
+                  <Star className="h-3.5 w-3.5 fill-amber-300 text-amber-300" />
+                  {Number(canteen.rating).toFixed(1)}
+                  <span className="font-normal text-white/70">
+                    ({canteen.total_reviews})
+                  </span>
+                </>
+              ) : (
+                <span>Not rated yet</span>
+              )}
             </span>
 
             <span

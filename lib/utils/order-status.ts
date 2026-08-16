@@ -1,5 +1,6 @@
 import {
   CheckCircle2,
+  UserX,
   ChefHat,
   CircleDashed,
   PackageCheck,
@@ -66,6 +67,13 @@ export const ORDER_STATUS_META: Record<OrderStatus, OrderStatusMeta> = {
     icon: CheckCircle2,
     badge: "success",
     step: 4,
+  },
+  no_show: {
+    label: "Not collected",
+    customerHint: "This order was never picked up",
+    icon: UserX,
+    badge: "warning",
+    step: -1,
   },
   cancelled: {
     label: "Cancelled",

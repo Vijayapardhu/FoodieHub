@@ -1,0 +1,16 @@
+-- 035_capacity_aware_eta.sql
+--
+-- Estimates that account for the queue.
+--
+-- The estimate was the slowest dish on the order, full stop — right for the
+-- first order of the day and increasingly a lie after that. A kitchen handed
+-- forty orders in five minutes quoted every one of them the same twenty
+-- minutes.
+--
+-- The model is deliberately simple, because one nobody can explain is worse
+-- than a rough one a cook agrees with: a kitchen works on `concurrent_orders`
+-- at a time, so an order with N ahead of it waits roughly
+-- floor(N / concurrency) rounds before its own cooking starts. Capped at two
+-- hours, past which the kitchen should be declining rather than quoting.
+--
+-- Applied via the Supabase MCP; kept here so the history is complete.

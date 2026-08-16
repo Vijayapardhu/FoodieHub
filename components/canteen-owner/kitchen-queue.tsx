@@ -382,6 +382,20 @@ export function KitchenQueue({
         </Link>
 
         <div className="flex gap-2 border-t border-border p-2.5">
+          {/* Food was cooked and nobody came. Distinct from a cancellation:
+              the kitchen bore the cost, and that is worth recording. */}
+          {order.status === "ready" ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-warning/50 text-warning hover:bg-warning-soft"
+              loading={busyId === order.id}
+              onClick={() => setStatus(order, "no_show")}
+            >
+              No-show
+            </Button>
+          ) : null}
+
           {order.status === "pending" || order.status === "confirmed" ? (
             <Button
               variant="outline"

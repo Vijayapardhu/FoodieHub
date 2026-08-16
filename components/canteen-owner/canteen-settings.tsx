@@ -48,6 +48,9 @@ export function CanteenSettings({ canteen }: CanteenSettingsProps) {
   const [prepMinutes, setPrepMinutes] = useState(
     canteen.prep_minutes ? String(canteen.prep_minutes) : ""
   )
+  const [concurrent, setConcurrent] = useState(
+    canteen.concurrent_orders ? String(canteen.concurrent_orders) : "3"
+  )
   // Added by migration 026. Sending the column to a database that hasn't had
   // it applied would fail the whole save, so the field waits for the column.
   const supportsPrepMinutes = canteen.prep_minutes !== undefined
@@ -96,7 +99,10 @@ export function CanteenSettings({ canteen }: CanteenSettingsProps) {
           is_open: isOpen,
           operating_hours: hours,
           ...(supportsPrepMinutes
-            ? { prep_minutes: prepMinutes ? Number(prepMinutes) : null }
+            ? {
+                prep_minutes: prepMinutes ? Number(prepMinutes) : null,
+                concurrent_orders: Number(concurrent) || 3,
+              }
             : {}),
         })
         .eq("id", canteen.id)
@@ -243,6 +249,24 @@ export function CanteenSettings({ canteen }: CanteenSettingsProps) {
           <p className="text-xs text-muted-foreground">
             Leave blank to use the platform default. An honest number beats an
             optimistic one — it is the promise the app makes on your behalf.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="canteen-concurrency">Orders cooked at once</Label>
+          <Input
+            id="canteen-concurrency"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={50}
+            value={concurrent}
+            onChange={(e) => setConcurrent(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            How many orders your kitchen can work on in parallel. Waiting times
+            quoted to students grow with the queue based on this — set it too
+            high and busy-period estimates become fiction.
           </p>
         </div>
       </section>

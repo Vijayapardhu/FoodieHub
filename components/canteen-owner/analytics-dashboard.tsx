@@ -38,12 +38,66 @@ export function AnalyticsDashboard({ orders }: { orders: Order[] }) {
   const stats = useMemo(() => {
     const completed = scoped.filter((order) => order.status === "completed")
     const cancelled = scoped.filter((order) => order.status === "cancelled")
+    const noShows = scoped.filter((order) => order.status === "no_show")
+
+    /*
+     * Food cooked and binned. Distinct from a cancellation, where nothing was
+     * made — this is the only line in the console that represents a direct
+     * loss to the kitchen.
+     */
+    const wasted = noShows.reduce(
+      (sum, order) => sum + Number(order.total_amount),
+      0
+    )
+
+    /*
+     * Did the app tell the truth about the wait?
+     *
+     * Compares what each collected order was quoted against how long it
+     * actually took. An owner cannot tune prep times without this — and the
+     * quoted number is a promise the app makes on their behalf.
+     */
+    const timed = completed.filter(
+      (order) => order.collected_at && order.estimated_preparation_time
+    )
+    const actuals = timed.map((order) =>
+      Math.round(
+        (new Date(order.collected_at as string).getTime() -
+          new Date(order.created_at).getTime()) /
+          60000
+      )
+    )
+    const quoted = timed.map(
+      (order) => order.estimated_preparation_time as number
+    )
+    const avgActual = actuals.length
+      ? actuals.reduce((a, b) => a + b, 0) / actuals.length
+      : null
+    const avgQuoted = quoted.length
+      ? quoted.reduce((a, b) => a + b, 0) / quoted.length
+      : null
+    const onTime = timed.filter(
+      (_, i) => actuals[i] <= quoted[i]
+    ).length
+
+    // Why the kitchen turned work away, in its own words.
+    const declineReasons = new Map<string, number>()
+    for (const order of scoped) {
+      const reason = (order as any).decline_reason as string | null
+      if (!reason) continue
+      declineReasons.set(reason, (declineReasons.get(reason) ?? 0) + 1)
+    }
+    const declines = Array.from(declineReasons, ([reason, count]) => ({
+      reason,
+      count,
+    })).sort((a, b) => b.count - a.count)
     const revenue = completed.reduce(
       (sum, order) => sum + Number(order.total_amount),
       0
     )
 
     const itemCounts = new Map<string, { name: string; count: number; revenue: number }>()
+
     for (const order of scoped) {
       for (const line of order.order_items ?? []) {
         const name = line.items?.name ?? "Unknown item"
@@ -61,6 +115,13 @@ export function AnalyticsDashboard({ orders }: { orders: Order[] }) {
     }
 
     return {
+      noShowCount: noShows.length,
+      wasted,
+      avgActual,
+      avgQuoted,
+      onTime,
+      timedCount: timed.length,
+      declines,
       revenue,
       orderCount: scoped.length,
       completedCount: completed.length,
@@ -165,17 +226,109 @@ export function AnalyticsDashboard({ orders }: { orders: Order[] }) {
           tone="info"
         />
         <StatTile
-          label="Cancelled"
-          value={stats.cancelledCount}
+          label="Not collected"
+          value={stats.noShowCount}
           hint={
-            stats.orderCount > 0
-              ? `${((stats.cancelledCount / stats.orderCount) * 100).toFixed(0)}% of orders`
-              : "None"
+            stats.wasted > 0
+              ? `₹${stats.wasted.toFixed(0)} of food binned`
+              : `${stats.cancelledCount} cancelled before cooking`
           }
           icon={XCircle}
-          tone="destructive"
+          tone={stats.noShowCount > 0 ? "destructive" : "default"}
         />
       </StatGrid>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Were you on time?</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats.timedCount === 0 ? (
+              <EmptyState
+                title="Nothing collected yet in this period"
+                description="Once orders are handed over, this compares how long they really took against what the app promised."
+                compact
+              />
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-baseline gap-3">
+                  <span className="text-3xl font-black tabular-nums text-foreground">
+                    {Math.round(
+                      (stats.onTime / stats.timedCount) * 100
+                    )}
+                    %
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    of {stats.timedCount} orders ready by the time promised
+                  </span>
+                </div>
+
+                <dl className="space-y-1.5 border-t border-border pt-3 text-sm">
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">You quote</dt>
+                    <dd className="font-semibold tabular-nums text-foreground">
+                      {stats.avgQuoted?.toFixed(0)} min
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">You actually take</dt>
+                    <dd className="font-semibold tabular-nums text-foreground">
+                      {stats.avgActual?.toFixed(0)} min
+                    </dd>
+                  </div>
+                </dl>
+
+                {stats.avgActual !== null && stats.avgQuoted !== null ? (
+                  <p
+                    className={cn(
+                      "rounded-xl px-3 py-2 text-xs",
+                      stats.avgActual > stats.avgQuoted + 3
+                        ? "bg-warning-soft text-warning"
+                        : "bg-success-soft text-success"
+                    )}
+                  >
+                    {stats.avgActual > stats.avgQuoted + 3
+                      ? `You are running about ${Math.round(stats.avgActual - stats.avgQuoted)} minutes over. Raising your prep time would make the promise honest.`
+                      : "Your prep times match reality. Students are being told the truth."}
+                  </p>
+                ) : null}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Why you turned orders away</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats.declines.length === 0 ? (
+              <EmptyState
+                title="You declined nothing"
+                description="Reasons appear here when you decline an order, so patterns are visible."
+                compact
+              />
+            ) : (
+              <ul className="space-y-2">
+                {stats.declines.map((entry) => (
+                  <li
+                    key={entry.reason}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3 py-2"
+                  >
+                    <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+                      {entry.reason}
+                    </span>
+                    <span className="shrink-0 text-sm font-bold tabular-nums text-muted-foreground">
+                      {entry.count}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

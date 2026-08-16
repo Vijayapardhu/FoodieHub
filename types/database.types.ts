@@ -65,6 +65,7 @@ export interface Database {
           rejection_reason: string | null
           slug: string | null
           prep_minutes: number | null
+          concurrent_orders: number
         }
         Insert: {
           id?: string
@@ -89,6 +90,7 @@ export interface Database {
           rejection_reason?: string | null
           slug?: string | null
           prep_minutes?: number | null
+          concurrent_orders?: number
         }
         Update: {
           id?: string
@@ -113,6 +115,7 @@ export interface Database {
           rejection_reason?: string | null
           slug?: string | null
           prep_minutes?: number | null
+          concurrent_orders?: number
         }
       }
       categories: {
@@ -177,6 +180,7 @@ export interface Database {
           featured_image_url?: string | null
           slug?: string | null
           prep_minutes?: number | null
+          concurrent_orders?: number
         }
         Update: {
           id?: string
@@ -198,6 +202,7 @@ export interface Database {
           featured_image_url?: string | null
           slug?: string | null
           prep_minutes?: number | null
+          concurrent_orders?: number
         }
       }
       orders: {
@@ -207,7 +212,7 @@ export interface Database {
           canteen_id: string
           token: string
           qr_code_url: string | null
-          status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled'
+          status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'no_show'
           total_amount: number
           payment_method: 'on_shop'
           payment_status: 'pending' | 'completed'
@@ -227,6 +232,8 @@ export interface Database {
           is_group_order: boolean | null
           group_order_code: string | null
           decline_reason: string | null
+          collected_at: string | null
+          no_show_at: string | null
           subtotal: number
           discount_amount: number
           offer_id: string | null
@@ -245,11 +252,13 @@ export interface Database {
           is_group_order?: boolean | null
           group_order_code?: string | null
           decline_reason?: string | null
+          collected_at?: string | null
+          no_show_at?: string | null
           subtotal?: number
           discount_amount?: number
           offer_id?: string | null
           qr_code_url?: string | null
-          status?: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled'
+          status?: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'no_show'
           total_amount: number
           payment_method?: 'on_shop'
           payment_status?: 'pending' | 'completed'
@@ -266,7 +275,7 @@ export interface Database {
           canteen_id?: string
           token?: string
           qr_code_url?: string | null
-          status?: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled'
+          status?: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'no_show'
           total_amount?: number
           payment_method?: 'on_shop'
           payment_status?: 'pending' | 'completed'
@@ -285,6 +294,8 @@ export interface Database {
           is_group_order?: boolean | null
           group_order_code?: string | null
           decline_reason?: string | null
+          collected_at?: string | null
+          no_show_at?: string | null
           subtotal?: number
           discount_amount?: number
           offer_id?: string | null
@@ -711,7 +722,7 @@ export interface Database {
     }
     Enums: {
       user_role: 'user' | 'canteen_owner' | 'admin'
-      order_status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled'
+      order_status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'no_show' | 'no_show'
       payment_status: 'pending' | 'completed'
       notification_type: 'order' | 'promotion' | 'system' | 'feedback'
       discount_type: 'percentage' | 'flat'

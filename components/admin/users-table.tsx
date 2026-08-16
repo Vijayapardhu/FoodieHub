@@ -168,7 +168,7 @@ export function UsersTable({ users: initialUsers }: { users: User[] }) {
           compact
         />
       ) : (
-        <ul className="grid gap-2 lg:grid-cols-2">
+        <ul className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-3">
           {visible.map((user) => (
             <li
               key={user.id}

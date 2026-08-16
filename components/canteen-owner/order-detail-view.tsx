@@ -31,6 +31,7 @@ import {
 } from "@/lib/utils/order-status"
 import { printInvoice } from "@/lib/utils/invoice"
 import { etaDetail, etaLabel, orderEta } from "@/lib/utils/eta"
+import { CustomerHistory } from "@/components/canteen-owner/customer-history"
 
 type Order = Database["public"]["Tables"]["orders"]["Row"] & {
   canteens: Database["public"]["Tables"]["canteens"]["Row"]
@@ -273,6 +274,13 @@ export function OrderDetailView({ order }: { order: Order }) {
                   <Phone className="h-4 w-4 shrink-0" />
                   {order.customer_phone || order.users?.phone_number}
                 </a>
+              ) : null}
+
+              {order.user_id ? (
+                <CustomerHistory
+                  userId={order.user_id}
+                  canteenId={order.canteen_id}
+                />
               ) : null}
 
               {order.users?.email ? (

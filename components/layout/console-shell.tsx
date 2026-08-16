@@ -142,7 +142,9 @@ export function ConsoleShell({ variant, children }: ConsoleShellProps) {
 
         <main
           id="main"
-          className="flex-1 px-4 py-4 pb-[calc(theme(spacing.tabbar)+1.5rem+env(safe-area-inset-bottom))] sm:px-5 md:px-6 md:py-6 md:pb-10"
+          /* Capped and centred: without a ceiling, a two-column card grid on
+             a 27-inch monitor stretches each card to a width nobody can scan. */
+          className="mx-auto w-full max-w-[110rem] flex-1 px-4 py-4 pb-[calc(theme(spacing.tabbar)+1.5rem+env(safe-area-inset-bottom))] sm:px-5 md:px-6 md:py-6 md:pb-10"
         >
           {children}
         </main>
