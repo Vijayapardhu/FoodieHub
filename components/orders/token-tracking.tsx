@@ -320,6 +320,23 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
         </ul>
 
         <dl className="space-y-2 border-t border-border p-4 text-sm">
+          {Number(order.discount_amount) > 0 ? (
+            <>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Item total</dt>
+                <dd className="tabular-nums text-foreground">
+                  ₹{Number(order.subtotal).toFixed(2)}
+                </dd>
+              </div>
+              <div className="flex justify-between text-success">
+                <dt>Discount applied</dt>
+                <dd className="tabular-nums">
+                  −₹{Number(order.discount_amount).toFixed(2)}
+                </dd>
+              </div>
+            </>
+          ) : null}
+
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Payment</dt>
             <dd className="text-foreground">

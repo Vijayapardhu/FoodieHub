@@ -227,6 +227,9 @@ export interface Database {
           is_group_order: boolean | null
           group_order_code: string | null
           decline_reason: string | null
+          subtotal: number
+          discount_amount: number
+          offer_id: string | null
         }
         Insert: {
           id?: string
@@ -242,6 +245,9 @@ export interface Database {
           is_group_order?: boolean | null
           group_order_code?: string | null
           decline_reason?: string | null
+          subtotal?: number
+          discount_amount?: number
+          offer_id?: string | null
           qr_code_url?: string | null
           status?: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled'
           total_amount: number
@@ -279,6 +285,9 @@ export interface Database {
           is_group_order?: boolean | null
           group_order_code?: string | null
           decline_reason?: string | null
+          subtotal?: number
+          discount_amount?: number
+          offer_id?: string | null
         }
       }
       order_items: {

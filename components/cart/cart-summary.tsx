@@ -114,7 +114,15 @@ export function CartSummary({ canteenId }: CartSummaryProps) {
           canteen_id: group.canteenId,
           token: generateToken(6),
           status: "pending",
+          // The database recomputes this from the lines and re-derives the
+          // discount from the offer below, so this is only a starting value.
           total_amount: groupTotal,
+          // Nominate the offer rather than asserting a discount: the server
+          // decides whether it applies and for how much.
+          offer_id:
+            selectedOffer && group.canteenId === canteenId
+              ? selectedOffer.id
+              : null,
           payment_method: "on_shop",
           payment_status: "pending",
           customer_name: customerName,
