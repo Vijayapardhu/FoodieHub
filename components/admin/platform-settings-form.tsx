@@ -79,7 +79,6 @@ export function PlatformSettingsForm({
           ordering_enabled: form.ordering_enabled,
           scheduled_orders_enabled: form.scheduled_orders_enabled,
           reviews_enabled: form.reviews_enabled,
-          loyalty_enabled: form.loyalty_enabled,
           new_canteens_require_approval: form.new_canteens_require_approval,
           maintenance_message: form.maintenance_message?.trim() || null,
           ...(supportsPromoRate
@@ -273,12 +272,6 @@ export function PlatformSettingsForm({
             description="Allow ratings and written feedback"
             checked={form.reviews_enabled}
             onCheckedChange={(value) => set("reviews_enabled", value)}
-          />
-          <SwitchRow
-            label="Loyalty points"
-            description="Award points on collected orders"
-            checked={form.loyalty_enabled}
-            onCheckedChange={(value) => set("loyalty_enabled", value)}
           />
           <SwitchRow
             label="Canteen approval required"

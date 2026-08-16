@@ -498,73 +498,6 @@ export interface Database {
           updated_at?: string
         }
       }
-      loyalty_points: {
-        Row: {
-          id: string
-          user_id: string
-          canteen_id: string | null
-          points: number
-          total_earned: number
-          total_redeemed: number
-          tier: 'bronze' | 'silver' | 'gold' | 'platinum'
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          canteen_id?: string | null
-          points?: number
-          total_earned?: number
-          total_redeemed?: number
-          tier?: 'bronze' | 'silver' | 'gold' | 'platinum'
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          canteen_id?: string | null
-          points?: number
-          total_earned?: number
-          total_redeemed?: number
-          tier?: 'bronze' | 'silver' | 'gold' | 'platinum'
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      loyalty_transactions: {
-        Row: {
-          id: string
-          user_id: string
-          canteen_id: string | null
-          order_id: string | null
-          points: number
-          transaction_type: 'earned' | 'redeemed' | 'expired' | 'adjusted'
-          description: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          canteen_id?: string | null
-          order_id?: string | null
-          points: number
-          transaction_type: 'earned' | 'redeemed' | 'expired' | 'adjusted'
-          description?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          canteen_id?: string | null
-          order_id?: string | null
-          points?: number
-          transaction_type?: 'earned' | 'redeemed' | 'expired' | 'adjusted'
-          description?: string | null
-          created_at?: string
-        }
-      }
       // Added by migration 019_platform_settings
       platform_settings: {
         Row: {
@@ -579,7 +512,6 @@ export interface Database {
           ordering_enabled: boolean
           scheduled_orders_enabled: boolean
           reviews_enabled: boolean
-          loyalty_enabled: boolean
           new_canteens_require_approval: boolean
           maintenance_message: string | null
           promo_daily_rate: number
@@ -599,7 +531,6 @@ export interface Database {
           ordering_enabled?: boolean
           scheduled_orders_enabled?: boolean
           reviews_enabled?: boolean
-          loyalty_enabled?: boolean
           new_canteens_require_approval?: boolean
           maintenance_message?: string | null
           promo_daily_rate?: number
@@ -619,7 +550,6 @@ export interface Database {
           ordering_enabled?: boolean
           scheduled_orders_enabled?: boolean
           reviews_enabled?: boolean
-          loyalty_enabled?: boolean
           new_canteens_require_approval?: boolean
           maintenance_message?: string | null
           promo_daily_rate?: number

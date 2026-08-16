@@ -16,7 +16,6 @@ import { OffersSelector } from "./offers-selector"
 import { OrderScheduling } from "./order-scheduling"
 import { OrderTemplates } from "./order-templates"
 import { DietaryPreferences } from "./dietary-preferences"
-import { LoyaltyPointsDisplay } from "./loyalty-points-display"
 
 type Offer = Database["public"]["Tables"]["offers"]["Row"]
 
@@ -185,8 +184,6 @@ export function CartSummary({ canteenId }: CartSummaryProps) {
       <div className="space-y-3">
         {canteenId ? (
           <>
-            <LoyaltyPointsDisplay canteenId={canteenId} orderAmount={total} />
-
             <Disclosure
               title="Offers"
               icon={TicketPercent}

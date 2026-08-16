@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
+  CalendarClock,
   ChefHat,
   Clock,
   Inbox,
@@ -68,9 +69,30 @@ const COLUMNS = [
 
 const SOUND_KEY = "foodiehub.queue-sound"
 
-/** Minutes since the order was placed. */
+/**
+ * When the kitchen should start on this order.
+ *
+ * For a walk-up order that is the moment it was placed. For a booking it is
+ * one prep-time before the pickup slot — starting a 1pm thali at 9am is how
+ * food gets cold.
+ */
+function startsAt(order: QueueOrder) {
+  const placed = new Date(order.created_at).getTime()
+  if (!order.scheduled_pickup_time) return placed
+
+  const pickup = new Date(order.scheduled_pickup_time).getTime()
+  const prep = (order.estimated_preparation_time ?? 20) * 60000
+  return Math.max(placed, pickup - prep)
+}
+
+/** An order booked for later that the kitchen should not have started yet. */
+function isUpcoming(order: QueueOrder, now: number) {
+  return Boolean(order.scheduled_pickup_time) && startsAt(order) > now
+}
+
+/** Minutes the kitchen has had this order in front of it. */
 function waitedMinutes(order: QueueOrder, now: number) {
-  return Math.floor((now - new Date(order.created_at).getTime()) / 60000)
+  return Math.max(0, Math.floor((now - startsAt(order)) / 60000))
 }
 
 /**
@@ -220,6 +242,26 @@ export function KitchenQueue({
     }
   }
 
+  /*
+   * Bookings for later are held back from the board entirely.
+   *
+   * Scheduling allows a week ahead, so without this a Tuesday order sat in
+   * "New" from the moment it was placed, ageing against a clock that had not
+   * started, turning red, and burying the orders the kitchen actually has to
+   * cook today.
+   */
+  const upcoming = useMemo(
+    () =>
+      orders
+        .filter((order) => isUpcoming(order, now) && order.status !== "ready")
+        .sort(
+          (a, b) =>
+            new Date(a.scheduled_pickup_time!).getTime() -
+            new Date(b.scheduled_pickup_time!).getTime()
+        ),
+    [orders, now]
+  )
+
   // `confirmed` is a state the customer app can produce but the kitchen has no
   // separate step for, so it sits with the new orders rather than vanishing.
   const byColumn = useMemo(() => {
@@ -229,6 +271,7 @@ export function KitchenQueue({
       ready: [],
     }
     for (const order of orders) {
+      if (isUpcoming(order, now) && order.status !== "ready") continue
       if (order.status === "pending" || order.status === "confirmed") {
         map.pending.push(order)
       } else if (map[order.status]) {
@@ -236,7 +279,7 @@ export function KitchenQueue({
       }
     }
     return map
-  }, [orders])
+  }, [orders, now])
 
   /**
    * What the kitchen has to cook in total, across every unfinished order.
@@ -248,6 +291,7 @@ export function KitchenQueue({
     const totals = new Map<string, number>()
     for (const order of orders) {
       if (order.status === "ready") continue
+      if (isUpcoming(order, now)) continue
       for (const line of order.lines) {
         totals.set(line.name, (totals.get(line.name) ?? 0) + line.quantity)
       }
@@ -255,10 +299,13 @@ export function KitchenQueue({
     return Array.from(totals, ([name, quantity]) => ({ name, quantity })).sort(
       (a, b) => b.quantity - a.quantity
     )
-  }, [orders])
+  }, [orders, now])
 
   const lateCount = orders.filter(
-    (order) => order.status !== "ready" && urgency(order, now) === "late"
+    (order) =>
+      order.status !== "ready" &&
+      !isUpcoming(order, now) &&
+      urgency(order, now) === "late"
   ).length
 
   const OrderCard = ({
@@ -370,8 +417,14 @@ export function KitchenQueue({
           </span>
 
           <span className="text-sm text-muted-foreground">
-            {orders.length} in the queue
+            {orders.length - upcoming.length} in the queue
           </span>
+
+          {upcoming.length > 0 ? (
+            <span className="rounded-full bg-info-soft px-2.5 py-1 text-xs font-semibold text-info">
+              {upcoming.length} booked for later
+            </span>
+          ) : null}
 
           {lateCount > 0 ? (
             <span className="rounded-full bg-destructive px-2.5 py-1 text-xs font-bold text-destructive-foreground">
@@ -417,11 +470,59 @@ export function KitchenQueue({
           </section>
         ) : null}
 
+        {/* Bookings, listed but out of the way. They join the board on their
+            own when there is just enough time left to cook them. */}
+        {upcoming.length > 0 ? (
+          <section className="rounded-2xl border border-info/30 bg-info-soft p-3">
+            <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-info">
+              <CalendarClock className="h-3.5 w-3.5" />
+              Booked for later
+            </h2>
+            <ul className="mt-2 space-y-1.5">
+              {upcoming.map((order) => (
+                <li key={order.id}>
+                  <Link
+                    href={ownerOrderPath(order)}
+                    className="flex items-center gap-3 rounded-xl bg-card px-3 py-2 transition-colors active:bg-muted"
+                  >
+                    <span className="font-mono text-sm font-bold text-foreground">
+                      {order.token}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                      {order.lines
+                        .map((line) => `${line.quantity}x ${line.name}`)
+                        .join(", ")}
+                    </span>
+                    <span className="shrink-0 text-xs font-semibold text-info">
+                      {new Date(order.scheduled_pickup_time!).toLocaleString(
+                        "en-IN",
+                        {
+                          day: "numeric",
+                          month: "short",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        }
+                      )}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
         {orders.length === 0 ? (
           <EmptyState
             icon={Inbox}
             title="Nothing waiting"
             description="New orders appear here the moment a student checks out — no need to refresh."
+          />
+        ) : orders.length === upcoming.length ? (
+          <EmptyState
+            icon={Inbox}
+            title="Nothing to cook right now"
+            description="Everything in the queue is booked for later. It moves up here when it's time to start."
+            compact
           />
         ) : (
           /* Three columns on a counter tablet, stacked sections on a phone. */

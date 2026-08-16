@@ -13,6 +13,7 @@ import { ACTIVE_ORDER_STATUSES } from "@/lib/utils/order-status"
 import { NeedsYouNow } from "@/components/canteen-owner/needs-you-now"
 import { OpenToggle } from "@/components/canteen-owner/open-toggle"
 import { SoldOutSheet } from "@/components/canteen-owner/sold-out-sheet"
+import { CashUpCard } from "@/components/canteen-owner/cash-up-card"
 import type { QueueOrder } from "@/lib/hooks/use-live-queue"
 
 export const metadata = { title: "Dashboard" }
@@ -56,7 +57,7 @@ export default async function CanteenDashboardPage() {
   ] = await Promise.all([
     supabase
       .from("orders")
-      .select("id, total_amount, created_at, status")
+      .select("id, total_amount, created_at, status, payment_status")
       .eq("canteen_id", canteen.id)
       .gte("created_at", startOfWeek.toISOString()),
     supabase
@@ -160,6 +161,24 @@ export default async function CanteenDashboardPage() {
     .sort((a, b) => b.count - a.count)
     .slice(0, 5)
 
+  // Money actually taken today, versus money still owed at the counter.
+  const todaysOrders = weekOrders.filter((order) =>
+    inRange(order.created_at, today)
+  )
+  const settled = todaysOrders.filter(
+    (order) => order.payment_status === "completed"
+  )
+  const outstanding = todaysOrders.filter(
+    (order) =>
+      order.payment_status !== "completed" && order.status !== "cancelled"
+  )
+  const cashUp = {
+    collected: settled.reduce((sum, o) => sum + Number(o.total_amount), 0),
+    collectedCount: settled.length,
+    awaiting: outstanding.reduce((sum, o) => sum + Number(o.total_amount), 0),
+    awaitingCount: outstanding.length,
+  }
+
   const metrics = {
     todayRevenue,
     revenueDelta,
@@ -205,9 +224,12 @@ export default async function CanteenDashboardPage() {
 
         <DashboardStats metrics={metrics} />
 
-        <QuickActions canteenId={canteen.id} />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <CashUpCard {...cashUp} />
+          <RevenueTrendCard weeklyData={weeklyRevenueByDay} />
+        </div>
 
-        <RevenueTrendCard weeklyData={weeklyRevenueByDay} />
+        <QuickActions canteenId={canteen.id} />
 
         <div className="grid gap-4 lg:grid-cols-3">
           <TopDishesCard dishes={topDishes} />
