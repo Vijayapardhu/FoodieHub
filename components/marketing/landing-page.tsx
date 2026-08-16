@@ -289,13 +289,16 @@ export function LandingPage({
                 <br className="hidden sm:block" />{" "}
                 <span className="text-primary">skip the queue</span>
               </h1>
+              <p className="mt-3 text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Aditya University · Surampalem
+              </p>
             </Reveal>
 
             <Reveal delay={140}>
               <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-                FoodieHub is the ordering system for our campus canteens. Order
-                between lectures, collect with a token, and pay at the counter
-                exactly as you do today.
+                FoodieHub is the ordering system for the canteens at Aditya
+                University, Surampalem. Order between lectures, collect with a
+                token, and pay at the counter exactly as you do today.
               </p>
             </Reveal>
 
@@ -972,7 +975,8 @@ export function LandingPage({
           <div>
             <Logo markClassName="h-7 w-7" wordClassName="text-sm" className="gap-2.5" />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Campus canteen ordering. Pay at the counter, collect with a token.
+              Canteen ordering for Aditya University, Surampalem. Pay at the
+              counter, collect with a token.
             </p>
           </div>
 
@@ -1018,6 +1022,22 @@ export function LandingPage({
               Photo credits
             </Link>
           </div>
+
+          <p className="mt-5 text-center text-xs text-muted-foreground">
+            Built and developed with{" "}
+            <span aria-label="love" className="text-primary">
+              &hearts;
+            </span>{" "}
+            by{" "}
+            <a
+              href="https://vijayaapardhu.dev"
+              target="_blank"
+              rel="noopener noreferrer author"
+              className="font-semibold text-foreground underline underline-offset-4 transition-colors hover:text-primary"
+            >
+              Vijaya Pardhu
+            </a>
+          </p>
         </div>
       </footer>
     </div>

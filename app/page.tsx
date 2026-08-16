@@ -2,17 +2,19 @@ import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { LandingPage } from "@/components/marketing/landing-page"
+import { StructuredData } from "@/components/marketing/structured-data"
 
 // This is the page that gets shared in WhatsApp groups and printed on posters,
 // so it carries the link-preview metadata rather than inheriting the app's.
 export const metadata: Metadata = {
-  title: "FoodieHub — skip the canteen queue",
+  title: "Canteen ordering at Aditya University, Surampalem",
   description:
-    "Order from any campus canteen on your phone, get a pickup token, and collect without queuing. Pay at the counter, same price.",
+    "Order from any canteen at Aditya University, Surampalem on your phone. Get a pickup token, collect without queuing, and pay at the counter — same price, no delivery fee.",
+  alternates: { canonical: "/" },
   openGraph: {
-    title: "Never queue at the canteen again",
+    title: "Never queue at the Aditya University canteen again",
     description:
-      "Order ahead from campus canteens, show your token, collect. Pay at the counter — same price, no queue.",
+      "Order ahead from the canteens at Aditya University, Surampalem. Show your token, collect. Pay at the counter — same price, no queue.",
     type: "website",
     siteName: "FoodieHub",
     images: [
@@ -103,15 +105,21 @@ export default async function RootPage() {
   const canteenList = canteens ?? []
 
   return (
-    <LandingPage
-      canteens={canteenList}
-      popularItems={(popularItems ?? []) as any}
-      offers={(offers ?? []) as any}
-      stats={{
-        dishes: dishCount ?? 0,
-        canteens: canteenList.length,
-        openNow: canteenList.filter((c) => c.is_open).length,
-      }}
-    />
+    <>
+      <StructuredData
+        canteenCount={canteenList.length}
+        dishCount={dishCount ?? 0}
+      />
+      <LandingPage
+        canteens={canteenList}
+        popularItems={(popularItems ?? []) as any}
+        offers={(offers ?? []) as any}
+        stats={{
+          dishes: dishCount ?? 0,
+          canteens: canteenList.length,
+          openNow: canteenList.filter((c) => c.is_open).length,
+        }}
+      />
+    </>
   )
 }

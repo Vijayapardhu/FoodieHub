@@ -22,13 +22,54 @@ const body = Plus_Jakarta_Sans({
   variable: "--font-body",
 })
 
+/**
+ * The canonical origin. Without it every `openGraph.images` path stays
+ * relative, and a crawler resolving a relative image against nothing gets no
+ * preview at all — which is most of what link metadata is for.
+ */
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://foodiehub-dusky.vercel.app"
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "FoodieHub — Canteen ordering",
+    default: "FoodieHub — canteen ordering at Aditya University, Surampalem",
     template: "%s · FoodieHub",
   },
   description:
-    "Order from your college canteen, skip the queue, and collect with a token.",
+    "Order ahead from the canteens at Aditya University, Surampalem. Skip the queue, collect with a pickup token, and pay at the counter — same price, no delivery fee.",
+  // Written for how a student would actually search: the campus name, the
+  // town, and the problem ("canteen queue"), not marketing abstractions.
+  keywords: [
+    "Aditya University canteen",
+    "Aditya University food ordering",
+    "Surampalem canteen",
+    "Surampalem food delivery app",
+    "campus food ordering",
+    "college canteen app",
+    "skip canteen queue",
+    "Aditya Engineering College canteen",
+    "FoodieHub",
+  ],
+  authors: [{ name: "Vijaya Pardhu", url: "https://vijayaapardhu.dev" }],
+  creator: "Vijaya Pardhu",
+  publisher: "FoodieHub",
+  alternates: { canonical: "/" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    siteName: "FoodieHub",
+    locale: "en_IN",
+    url: SITE_URL,
+  },
   manifest: "/manifest.webmanifest",
   applicationName: "FoodieHub",
   appleWebApp: {
