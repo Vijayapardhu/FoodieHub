@@ -11,7 +11,9 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { Section, SectionHeader } from "@/components/ui/section-header"
 import { CanteenCard } from "@/components/canteen/canteen-card"
 import { ItemCard } from "@/components/menu/item-card"
+import { cn } from "@/lib/utils/cn"
 import { useDebounce } from "@/lib/hooks/use-debounce"
+import { useScrollDirection } from "@/lib/hooks/use-scroll-direction"
 import { PromoCarousel } from "@/components/home/promo-carousel"
 import { SectionRail } from "@/components/home/section-rail"
 import { DiscoverySearch } from "@/components/home/discovery-search"
@@ -74,6 +76,10 @@ export function HomePageContent({
 }: HomePageContentProps) {
   const [rawQuery, setRawQuery] = useState("")
   const [filters, setFilters] = useState<BrowseFilters>(defaultFilters)
+
+  // The filter row rides with the search box, but only while it is wanted.
+  const { direction, atTop } = useScrollDirection()
+  const filtersPinned = atTop || direction === "up"
   const [filtersOpen, setFiltersOpen] = useState(false)
   /** "Fast pickup" — dishes the kitchen can turn round quickly. */
   const [quickOnly, setQuickOnly] = useState(false)
@@ -91,9 +97,10 @@ export function HomePageContent({
         best[item.category_id] = { url: item.image_url, rating: item.rating }
       }
     }
-    return Object.fromEntries(
-      Object.entries(best).map(([id, v]) => [id, v.url])
-    ) as Record<string, string>
+    return Object.fromEntries(Object.entries(best).map(([id, v]) => [id, v.url])) as Record<
+      string,
+      string
+    >
   }, [items])
 
   // Typing filters a client-side list, so a short debounce is enough to stop
@@ -106,13 +113,10 @@ export function HomePageContent({
     let list = canteens
 
     if (filters.openOnly) list = list.filter((c) => c.is_open)
-    if (filters.minRating !== null)
-      list = list.filter((c) => c.rating >= filters.minRating!)
+    if (filters.minRating !== null) list = list.filter((c) => c.rating >= filters.minRating!)
     if (query)
       list = list.filter(
-        (c) =>
-          c.name.toLowerCase().includes(query) ||
-          c.description?.toLowerCase().includes(query)
+        (c) => c.name.toLowerCase().includes(query) || c.description?.toLowerCase().includes(query)
       )
 
     const sorted = [...list]
@@ -133,18 +137,13 @@ export function HomePageContent({
   const matchedItems = useMemo(() => {
     let list = items
 
-    if (filters.categoryId)
-      list = list.filter((i) => i.category_id === filters.categoryId)
+    if (filters.categoryId) list = list.filter((i) => i.category_id === filters.categoryId)
     if (filters.vegOnly) list = list.filter((i) => i.is_vegetarian)
     if (filters.openOnly) list = list.filter((i) => i.canteens?.is_open)
-    if (filters.minPrice !== null)
-      list = list.filter((i) => Number(i.price) >= filters.minPrice!)
-    if (filters.maxPrice !== null)
-      list = list.filter((i) => Number(i.price) <= filters.maxPrice!)
-    if (filters.minRating !== null)
-      list = list.filter((i) => i.rating >= filters.minRating!)
-    if (quickOnly)
-      list = list.filter((i) => (i.prep_minutes ?? 99) <= QUICK_MINUTES)
+    if (filters.minPrice !== null) list = list.filter((i) => Number(i.price) >= filters.minPrice!)
+    if (filters.maxPrice !== null) list = list.filter((i) => Number(i.price) <= filters.maxPrice!)
+    if (filters.minRating !== null) list = list.filter((i) => i.rating >= filters.minRating!)
+    if (quickOnly) list = list.filter((i) => (i.prep_minutes ?? 99) <= QUICK_MINUTES)
     if (query)
       list = list.filter(
         (i) =>
@@ -188,10 +187,7 @@ export function HomePageContent({
    * cheap, quick, well liked — which is what turns a list of dishes into
    * something worth scrolling.
    */
-  const orderable = useMemo(
-    () => items.filter((item) => item.canteens?.is_open !== false),
-    [items]
-  )
+  const orderable = useMemo(() => items.filter((item) => item.canteens?.is_open !== false), [items])
 
   const underHundred = useMemo(
     () =>
@@ -235,9 +231,7 @@ export function HomePageContent({
 
   const openCanteens = useMemo(
     () =>
-      [...canteens].sort(
-        (a, b) => Number(b.is_open) - Number(a.is_open) || b.rating - a.rating
-      ),
+      [...canteens].sort((a, b) => Number(b.is_open) - Number(a.is_open) || b.rating - a.rating),
     [canteens]
   )
 
@@ -274,7 +268,6 @@ export function HomePageContent({
             What are you craving today?
           </p>
         </div>
-
       </header>
 
       {/*
@@ -296,66 +289,76 @@ export function HomePageContent({
           onOpenFilters={() => setFiltersOpen(true)}
           activeFilterCount={activeCount}
         />
-      </div>
 
-      <div className="!mt-3">
-        <ChipRail>
-          <Chip
-            active={filters.openOnly}
-            onClick={() => setFilters((f) => ({ ...f, openOnly: !f.openOnly }))}
-          >
-            Open now
-          </Chip>
-          <Chip
-            active={filters.vegOnly}
-            onClick={() => setFilters((f) => ({ ...f, vegOnly: !f.vegOnly }))}
-          >
-            Pure veg
-          </Chip>
-          <Chip
-            active={filters.sort === "rating"}
-            onClick={() =>
-              setFilters((f) => ({
-                ...f,
-                sort: f.sort === "rating" ? "relevance" : "rating",
-              }))
-            }
-          >
-            Top rated
-          </Chip>
-          <Chip
-            active={filters.maxPrice === 100}
-            onClick={() =>
-              setFilters((f) => ({
-                ...f,
-                maxPrice: f.maxPrice === 100 ? null : 100,
-              }))
-            }
-          >
-            Under ₹100
-          </Chip>
-          {/* Pickup, not delivery — nobody is riding anywhere. */}
-          <Chip
-            active={quickOnly}
-            onClick={() => setQuickOnly((on) => !on)}
-          >
-            Fast pickup
-          </Chip>
-          {categories.slice(0, 8).map((category) => (
+        {/*
+         * The filters collapse on the way down and come back on the way up.
+         *
+         * The wrapper is the full-bleed element rather than the rail inside
+         * it: clipping the collapse has to happen at the screen edge, and if
+         * the rail kept its own bleed it would be sliced off mid-chip by the
+         * overflow needed to animate the height.
+         */}
+        <div
+          className={cn(
+            "-mx-4 overflow-hidden transition-[max-height,opacity] duration-200 ease-out sm:-mx-5",
+            filtersPinned ? "max-h-20 opacity-100" : "max-h-0 opacity-0"
+          )}
+        >
+          <ChipRail className="rail-inset pb-1 pt-2">
             <Chip
-              key={category.id}
-              active={filters.categoryId === category.id}
+              active={filters.openOnly}
+              onClick={() => setFilters((f) => ({ ...f, openOnly: !f.openOnly }))}
+            >
+              Open now
+            </Chip>
+            <Chip
+              active={filters.vegOnly}
+              onClick={() => setFilters((f) => ({ ...f, vegOnly: !f.vegOnly }))}
+            >
+              Pure veg
+            </Chip>
+            <Chip
+              active={filters.sort === "rating"}
               onClick={() =>
                 setFilters((f) => ({
                   ...f,
-                  categoryId: f.categoryId === category.id ? null : category.id,
+                  sort: f.sort === "rating" ? "relevance" : "rating",
                 }))
               }
             >
-              {category.name}
+              Top rated
             </Chip>
-          ))}
-        </ChipRail>
+            <Chip
+              active={filters.maxPrice === 100}
+              onClick={() =>
+                setFilters((f) => ({
+                  ...f,
+                  maxPrice: f.maxPrice === 100 ? null : 100,
+                }))
+              }
+            >
+              Under ₹100
+            </Chip>
+            {/* Pickup, not delivery — nobody is riding anywhere. */}
+            <Chip active={quickOnly} onClick={() => setQuickOnly((on) => !on)}>
+              Fast pickup
+            </Chip>
+            {categories.slice(0, 8).map((category) => (
+              <Chip
+                key={category.id}
+                active={filters.categoryId === category.id}
+                onClick={() =>
+                  setFilters((f) => ({
+                    ...f,
+                    categoryId: f.categoryId === category.id ? null : category.id,
+                  }))
+                }
+              >
+                {category.name}
+              </Chip>
+            ))}
+          </ChipRail>
+        </div>
       </div>
 
       <FilterSheet
@@ -370,12 +373,8 @@ export function HomePageContent({
         <Section>
           <SectionHeader
             title={searching ? `Results for “${rawQuery.trim()}”` : "Dishes"}
-            subtitle={`${matchedItems.length} ${
-              matchedItems.length === 1 ? "dish" : "dishes"
-            }${
-              matchedCanteens.length && searching
-                ? ` · ${matchedCanteens.length} canteens`
-                : ""
+            subtitle={`${matchedItems.length} ${matchedItems.length === 1 ? "dish" : "dishes"}${
+              matchedCanteens.length && searching ? ` · ${matchedCanteens.length} canteens` : ""
             }`}
           />
 
@@ -425,18 +424,13 @@ export function HomePageContent({
               under it still sits above everything a student has to browse
               for — so the fastest path to checkout costs one glance, not a
               scroll. */}
-          {promos && promos.length > 0 ? (
-            <PromoCarousel slides={promos} />
-          ) : null}
+          {promos && promos.length > 0 ? <PromoCarousel slides={promos} /> : null}
 
           {/* Fastest path to checkout for a returning student. */}
           {reorder}
 
           {featuredItems.length > 0 ? (
-            <SectionRail
-              title="Today's picks"
-              subtitle="Hand-picked by the kitchens"
-            >
+            <SectionRail title="Today's picks" subtitle="Hand-picked by the kitchens">
               {featuredItems.map((item) => (
                 <ItemCard
                   key={item.id}
@@ -462,14 +456,12 @@ export function HomePageContent({
                   <button
                     key={category.id}
                     type="button"
-                    onClick={() =>
-                      setFilters((f) => ({ ...f, categoryId: category.id }))
-                    }
+                    onClick={() => setFilters((f) => ({ ...f, categoryId: category.id }))}
                     className="group w-card-craving shrink-0 text-left"
                   >
                     {/* A photograph of real food from that category, not an
                         icon: "Snacks" means nothing until you see the samosa. */}
-                    <span className="relative block h-20 w-full overflow-hidden rounded-2xl bg-primary-soft">
+                    <span className="relative block aspect-square w-full overflow-hidden rounded-2xl bg-primary-soft">
                       {cover ? (
                         <Image
                           src={cover}
@@ -494,10 +486,7 @@ export function HomePageContent({
           ) : null}
 
           {openCanteens.length > 0 ? (
-            <SectionRail
-              title="Canteens on campus"
-              subtitle="Open counters first"
-            >
+            <SectionRail title="Canteens on campus" subtitle="Open counters first">
               {openCanteens.map((canteen) => (
                 <CanteenRailCard
                   key={canteen.id}
@@ -514,8 +503,7 @@ export function HomePageContent({
               subtitle="Full meals that leave change"
               action={{
                 label: "See all",
-                onClick: () =>
-                  setFilters((f) => ({ ...f, maxPrice: 99, minPrice: null })),
+                onClick: () => setFilters((f) => ({ ...f, maxPrice: 99, minPrice: null })),
               }}
             >
               {underHundred.map((item) => (
@@ -589,20 +577,14 @@ export function HomePageContent({
             {matchedCanteens.length === 0 ? (
               <EmptyState
                 icon={Store}
-                title={
-                  canteens.length === 0
-                    ? "No canteens yet"
-                    : "Nothing matches those filters"
-                }
+                title={canteens.length === 0 ? "No canteens yet" : "Nothing matches those filters"}
                 description={
                   canteens.length === 0
                     ? "Once a canteen is approved it will show up here."
                     : "Try turning off “Open now”, or widen the rating filter."
                 }
                 action={
-                  canteens.length === 0
-                    ? undefined
-                    : { label: "Clear filters", onClick: clearAll }
+                  canteens.length === 0 ? undefined : { label: "Clear filters", onClick: clearAll }
                 }
                 compact
               />
