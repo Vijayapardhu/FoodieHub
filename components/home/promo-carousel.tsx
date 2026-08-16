@@ -25,6 +25,14 @@ const IMPRESSION_DWELL_MS = 900
 /**
  * Paid banner slots on the home screen.
  *
+ * The banner is a card split in two — words on one side, photograph on the
+ * other — rather than words laid over the photograph. Overlaying meant the
+ * design depended on artwork the platform does not control: a 21:9 strip on a
+ * phone left about 150px to hold a badge, a two-line headline, a line of
+ * subtext and a button, and the readability gradient ran to transparent on
+ * exactly the side the button sat on. Splitting it means a banner is legible
+ * whatever a canteen uploads, and the photo is never dimmed to make room.
+ *
  * Native scroll-snap rather than a transform-based slider: it gets momentum,
  * rubber-banding and accessible focus scrolling from the platform for free,
  * and it degrades to a plain horizontal scroller if JavaScript is slow to
@@ -110,117 +118,122 @@ export function PromoCarousel({ slides }: PromoCarouselProps) {
       onBlurCapture={() => setPaused(false)}
       onTouchStart={() => setPaused(true)}
     >
-      <div
-        ref={trackRef}
-        onScroll={handleScroll}
-        className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth rounded-2xl scrollbar-hide"
-      >
-        {slides.map((slide, index) => (
-          <Link
-            key={slide.id}
-            href={canteenPath({ id: slide.canteenId, slug: slide.canteenSlug })}
-            onClick={() => track(slide.id, "click")}
-            aria-roledescription="slide"
-            aria-label={`${index + 1} of ${slides.length}: ${slide.headline}`}
-            aria-hidden={index !== active ? true : undefined}
-            tabIndex={index !== active ? -1 : undefined}
-            className="group relative aspect-[21/9] w-full shrink-0 snap-center overflow-hidden rounded-2xl bg-brand-gradient sm:aspect-[3/1]"
-          >
-            {slide.imageUrl ? (
-              <Image
-                src={slide.imageUrl}
-                alt=""
-                fill
-                priority={index === 0}
-                sizes="(max-width: 1024px) 100vw, 960px"
-                className="object-cover transition-transform duration-500 md:group-hover:scale-[1.03]"
-              />
-            ) : null}
-
-            {/* Readability floor for whatever artwork the canteen uploaded. */}
-            <span
-              aria-hidden
-              className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-transparent"
-            />
-
-            <span className="absolute inset-0 flex flex-col justify-end gap-1.5 p-4 sm:p-6">
-              <span className="flex flex-wrap items-center gap-1.5">
-                <span className="rounded-full bg-white/20 px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-white backdrop-blur-sm">
-                  Promoted
+      <div className="relative">
+        <div
+          ref={trackRef}
+          onScroll={handleScroll}
+          className="scrollbar-hide flex snap-x snap-mandatory overflow-x-auto scroll-smooth rounded-2xl"
+        >
+          {slides.map((slide, index) => (
+            <Link
+              key={slide.id}
+              href={canteenPath({ id: slide.canteenId, slug: slide.canteenSlug })}
+              onClick={() => track(slide.id, "click")}
+              aria-roledescription="slide"
+              aria-label={`${index + 1} of ${slides.length}: ${slide.headline}`}
+              aria-hidden={index !== active ? true : undefined}
+              tabIndex={index !== active ? -1 : undefined}
+              className="group flex h-36 w-full shrink-0 snap-center overflow-hidden rounded-2xl border border-border bg-card shadow-card sm:h-44"
+            >
+              <span className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 p-4 sm:gap-2 sm:p-5">
+                <span className="flex flex-wrap items-center gap-1.5">
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Promoted
+                  </span>
+                  {slide.offerLabel ? (
+                    <span className="rounded-full bg-warning px-2 py-0.5 text-2xs font-bold text-warning-foreground">
+                      {slide.offerLabel}
+                    </span>
+                  ) : null}
+                  {!slide.canteenOpen ? (
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-2xs font-bold text-muted-foreground">
+                      Closed now
+                    </span>
+                  ) : null}
                 </span>
-                {slide.offerLabel ? (
-                  <span className="rounded-full bg-warning px-2 py-0.5 text-2xs font-bold text-warning-foreground">
-                    {slide.offerLabel}
+
+                <span className="line-clamp-2 text-base font-extrabold leading-tight tracking-tight text-foreground sm:text-xl">
+                  {slide.headline}
+                </span>
+
+                {slide.subtext ? (
+                  <span className="line-clamp-2 text-xs leading-snug text-muted-foreground sm:text-sm">
+                    {slide.subtext}
                   </span>
                 ) : null}
-                {!slide.canteenOpen ? (
-                  <span className="rounded-full bg-black/50 px-2 py-0.5 text-2xs font-bold text-white/90 backdrop-blur-sm">
-                    Closed now
-                  </span>
-                ) : null}
-              </span>
 
-              <span className="line-clamp-2 max-w-[85%] text-lg font-extrabold leading-tight tracking-tight text-white sm:text-2xl">
-                {slide.headline}
-              </span>
-
-              {slide.subtext ? (
-                <span className="line-clamp-1 max-w-[80%] text-xs text-white/80 sm:text-sm">
-                  {slide.subtext}
-                </span>
-              ) : null}
-
-              <span className="mt-1 flex items-center gap-2">
-                <span className="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-xs font-bold text-neutral-900 sm:text-sm">
+                <span className="mt-0.5 inline-flex w-fit items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition-transform group-active:scale-95">
                   {slide.ctaLabel}
-                </span>
-                <span className="truncate text-xs font-medium text-white/75">
-                  {slide.canteenName}
+                  <ChevronRight className="h-3.5 w-3.5" />
                 </span>
               </span>
-            </span>
-          </Link>
-        ))}
+
+              <span className="relative w-[38%] shrink-0 overflow-hidden bg-muted sm:w-[42%]">
+                {slide.imageUrl ? (
+                  <Image
+                    src={slide.imageUrl}
+                    alt=""
+                    fill
+                    priority={index === 0}
+                    sizes="(max-width: 1024px) 40vw, 400px"
+                    className={cn(
+                      "object-cover transition-transform duration-500 md:group-hover:scale-[1.04]",
+                      !slide.canteenOpen && "grayscale"
+                    )}
+                  />
+                ) : null}
+                {/* Feathered into the card so the photo reads as part of it
+                  rather than as a rectangle stuck on the end. */}
+                <span
+                  aria-hidden
+                  className="absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-card to-transparent"
+                />
+              </span>
+            </Link>
+          ))}
+        </div>
+
+        {multiple ? (
+          <>
+            {/* Pointer-only affordances; touch users swipe. */}
+            <button
+              type="button"
+              onClick={() => goTo((active - 1 + slides.length) % slides.length)}
+              aria-label="Previous promotion"
+              className="absolute left-2 top-1/2 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-foreground shadow-soft backdrop-blur-sm transition-opacity hover:bg-background md:flex"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => goTo((active + 1) % slides.length)}
+              aria-label="Next promotion"
+              className="absolute right-2 top-1/2 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-foreground shadow-soft backdrop-blur-sm transition-opacity hover:bg-background md:flex"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </>
+        ) : null}
       </div>
 
+      {/* Below the card, not over it: the dots used to sit on top of the
+          artwork, which is now where the call to action is. */}
       {multiple ? (
-        <>
-          {/* Pointer-only affordances; touch users swipe. */}
-          <button
-            type="button"
-            onClick={() => goTo((active - 1 + slides.length) % slides.length)}
-            aria-label="Previous promotion"
-            className="absolute left-2 top-1/2 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-background/85 text-foreground shadow-soft backdrop-blur-sm transition-opacity hover:bg-background md:flex"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => goTo((active + 1) % slides.length)}
-            aria-label="Next promotion"
-            className="absolute right-2 top-1/2 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-background/85 text-foreground shadow-soft backdrop-blur-sm transition-opacity hover:bg-background md:flex"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-
-          <div className="absolute inset-x-0 bottom-2.5 flex justify-center gap-1.5">
-            {slides.map((slide, index) => (
-              <button
-                key={slide.id}
-                type="button"
-                onClick={() => goTo(index)}
-                aria-label={`Go to promotion ${index + 1}`}
-                aria-current={index === active ? "true" : undefined}
-                className={cn(
-                  "h-1.5 rounded-full transition-all duration-300",
-                  index === active
-                    ? "w-5 bg-white"
-                    : "w-1.5 bg-white/50 hover:bg-white/75"
-                )}
-              />
-            ))}
-          </div>
-        </>
+        <div className="mt-2.5 flex justify-center gap-1.5">
+          {slides.map((slide, index) => (
+            <button
+              key={slide.id}
+              type="button"
+              onClick={() => goTo(index)}
+              aria-label={`Go to promotion ${index + 1}`}
+              aria-current={index === active ? "true" : undefined}
+              className={cn(
+                "h-1.5 rounded-full transition-all duration-300",
+                index === active ? "w-5 bg-primary" : "w-1.5 bg-border hover:bg-muted-foreground/50"
+              )}
+            />
+          ))}
+        </div>
       ) : null}
     </section>
   )

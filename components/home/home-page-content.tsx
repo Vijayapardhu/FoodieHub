@@ -420,16 +420,17 @@ export function HomePageContent({
         </Section>
       ) : (
         <>
-          {/* Paid placement, so it sits high — but below the reorder rail,
-              which is the fastest path to checkout for a returning student
-              and shouldn't be pushed down by advertising. */}
-          {/* Fastest path to checkout for a returning student. */}
-          {reorder}
-
-          {/* Paid placement, high but below the reorder rail. */}
+          {/* The paid slot leads. It is the platform's inventory and the most
+              valuable position on the page, and the reorder rail directly
+              under it still sits above everything a student has to browse
+              for — so the fastest path to checkout costs one glance, not a
+              scroll. */}
           {promos && promos.length > 0 ? (
             <PromoCarousel slides={promos} />
           ) : null}
+
+          {/* Fastest path to checkout for a returning student. */}
+          {reorder}
 
           {featuredItems.length > 0 ? (
             <SectionRail
