@@ -60,7 +60,7 @@ export function CartPageContent({ canteenId, promo }: CartPageContentProps) {
   if (groups.length === 0) {
     return (
       <EmptyState
-        icon={ShoppingCart}
+        art="cart"
         title="Your cart is empty"
         description="Browse the canteens and add something you fancy — you pay at the counter when you collect."
         action={{ label: "Browse canteens", href: "/home" }}

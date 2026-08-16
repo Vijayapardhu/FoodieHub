@@ -266,12 +266,28 @@
    * edge. The half-visible card at the end is the only honest signal that
    * there is more — an arrow can be missed, a cut-off photograph cannot.
    */
+  /*
+   * scroll-pl is not decoration. A snap container's snapport is its padding
+   * box, so with scroll-padding left at 0 the browser snaps the first card
+   * flush to the container edge and eats the padding-left the moment anything
+   * scrolls — the rail looks correctly inset until you touch it, then every
+   * rail on every page sits hard against the screen edge. Matching scroll-pl
+   * to pl keeps the snapped position and the resting position the same.
+   */
   .rail {
-    @apply -mx-4 flex snap-x snap-mandatory gap-rail-gap overflow-x-auto scroll-smooth pb-1 pl-4 pr-2 sm:-mx-5 sm:pl-5 sm:pr-3;
+    @apply -mx-4 flex snap-x snap-mandatory gap-rail-gap overflow-x-auto scroll-smooth scroll-pl-4 pb-1 pl-4 pr-2 sm:-mx-5 sm:scroll-pl-5 sm:pl-5 sm:pr-3;
     scrollbar-width: none;
   }
   .rail::-webkit-scrollbar {
     display: none;
+  }
+  /*
+   * For a rail that already sits inside a full-bleed wrapper. Without this it
+   * bleeds a second time and the first card is dragged off the left edge of
+   * the screen — the padding is there, the negative margin just doubled.
+   */
+  .rail-inset {
+    @apply mx-0 pl-4 pr-4 sm:mx-0 sm:pl-5 sm:pr-5;
   }
   .rail > * {
     @apply snap-start;

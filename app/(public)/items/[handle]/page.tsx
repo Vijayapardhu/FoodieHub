@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { UtensilsCrossed } from "@/components/ui/icons"
 import { AppShell } from "@/components/layout/app-shell"
+import { PromoSlot } from "@/components/promo/promo-slot"
 import { ItemDetail } from "@/components/menu/item-detail"
 import { EmptyState } from "@/components/ui/empty-state"
 import { requireRole } from "@/lib/auth/require-role"
@@ -98,6 +99,7 @@ export default async function ItemDetailPage({
         canteen={canteen ?? null}
         categoryName={category?.name}
         relatedItems={relatedItems ?? []}
+        promo={<PromoSlot placement="item_detail" limit={1} />}
       />
     </AppShell>
   )

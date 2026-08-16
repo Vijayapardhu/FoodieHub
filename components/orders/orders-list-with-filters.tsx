@@ -85,7 +85,7 @@ export function OrdersListWithFilters({
   if (activeOrders.length === 0 && pastOrders.length === 0) {
     return (
       <EmptyState
-        icon={Receipt}
+        art="orders"
         title="No orders yet"
         description="Order from a campus canteen and your pickup token will show up here."
         action={{ label: "Browse canteens", href: "/home" }}

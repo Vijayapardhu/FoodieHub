@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 import { AppShell } from "@/components/layout/app-shell"
+import { PromoSlot } from "@/components/promo/promo-slot"
 import { TokenTracking } from "@/components/orders/token-tracking"
 import { requireRole } from "@/lib/auth/require-role"
 import { isUuid } from "@/lib/utils/public-id"
@@ -50,6 +51,11 @@ export default async function OrderDetailPage({
   return (
     <AppShell title="Track order" showBack backHref="/orders">
       <TokenTracking order={order as any} />
+      {/* Below the token, never above it: the thing they opened this screen
+          for stays the first thing on it. */}
+      <div className="mt-5">
+        <PromoSlot placement="order_detail" limit={1} />
+      </div>
     </AppShell>
   )
 }

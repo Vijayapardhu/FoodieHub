@@ -1,10 +1,19 @@
 import Link from "next/link"
 import { IconComponent } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
+import { LottieArt } from "@/components/ui/lottie-art"
+import type { AnimationName } from "@/lib/lottie/animations"
 import { cn } from "@/lib/utils/cn"
 
 interface EmptyStateProps {
   icon?: IconComponent
+  /**
+   * An animated drawing instead of the icon tile. Worth it on the screens a
+   * customer actually lands on and finds empty — an empty cart or order list
+   * is a dead end, and a drawing that moves makes it read as a place that
+   * hasn't filled up yet rather than a page that failed to load.
+   */
+  art?: AnimationName
   title: string
   description?: string
   action?: {
@@ -23,6 +32,7 @@ interface EmptyStateProps {
 
 export function EmptyState({
   icon: Icon,
+  art,
   title,
   description,
   action,
@@ -38,7 +48,9 @@ export function EmptyState({
         className
       )}
     >
-      {Icon ? (
+      {art ? (
+        <LottieArt name={art} size={compact ? "sm" : "md"} className="-mb-2" />
+      ) : Icon ? (
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-soft">
           <Icon className="h-6 w-6 text-primary" />
         </div>

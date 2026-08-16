@@ -46,6 +46,8 @@ interface HomePageContentProps {
   activeOrder?: React.ReactNode
   /** Mid-page advertising slot. */
   inlinePromo?: React.ReactNode
+  /** Shown only when a search finds nothing — the cheapest slot sold. */
+  searchEmptyPromo?: React.ReactNode
 }
 
 /** A dish a kitchen can turn round quickly enough to wait for. */
@@ -68,6 +70,7 @@ export function HomePageContent({
   reorder,
   activeOrder,
   inlinePromo,
+  searchEmptyPromo,
 }: HomePageContentProps) {
   const [rawQuery, setRawQuery] = useState("")
   const [filters, setFilters] = useState<BrowseFilters>(defaultFilters)
@@ -272,20 +275,30 @@ export function HomePageContent({
           </p>
         </div>
 
-        {/*
-         * Sticky search. On a long discovery page the search box is the
-         * fastest route to a specific dish, and flicking back to the top to
-         * reach it is the most annoying thing about browsing on a phone.
-         */}
-        <div className="sticky top-appbar z-30 -mx-4 bg-background/95 px-4 py-2 backdrop-blur-md sm:-mx-5 sm:px-5">
-          <DiscoverySearch
-            value={rawQuery}
-            onChange={setRawQuery}
-            onOpenFilters={() => setFiltersOpen(true)}
-            activeFilterCount={activeCount}
-          />
-        </div>
+      </header>
 
+      {/*
+       * Sticky search, and a direct child of the page container on purpose.
+       *
+       * It was already marked sticky but sat inside <header>, and a sticky
+       * element is confined to its own parent — so it pinned for the ~150px
+       * the greeting block occupied and then scrolled away with it, which is
+       * indistinguishable from not being sticky at all. Its containing block
+       * has to be the element that spans the whole page.
+       *
+       * The offset carries the safe-area inset because the app bar above it
+       * does too; without it the box tucks under the notch on an iPhone.
+       */}
+      <div className="sticky top-[calc(theme(spacing.appbar)+env(safe-area-inset-top))] z-30 -mx-4 !mt-3 bg-background/95 px-4 py-2 backdrop-blur-md sm:-mx-5 sm:px-5">
+        <DiscoverySearch
+          value={rawQuery}
+          onChange={setRawQuery}
+          onOpenFilters={() => setFiltersOpen(true)}
+          activeFilterCount={activeCount}
+        />
+      </div>
+
+      <div className="!mt-3">
         <ChipRail>
           <Chip
             active={filters.openOnly}
@@ -343,7 +356,7 @@ export function HomePageContent({
             </Chip>
           ))}
         </ChipRail>
-      </header>
+      </div>
 
       <FilterSheet
         categories={categories}
@@ -367,13 +380,18 @@ export function HomePageContent({
           />
 
           {matchedItems.length === 0 ? (
-            <EmptyState
-              icon={UtensilsCrossed}
-              title="No dishes match"
-              description="Try a different search term, or loosen the filters."
-              action={{ label: "Clear filters", onClick: clearAll }}
-              compact
-            />
+            <>
+              <EmptyState
+                art="search"
+                title="No dishes match"
+                description="Try a different search term, or loosen the filters."
+                action={{ label: "Clear filters", onClick: clearAll }}
+                compact
+              />
+              {/* The one slot where an advert is genuinely more useful than
+                  the nothing it replaces. */}
+              <div className="mt-3">{searchEmptyPromo}</div>
+            </>
           ) : (
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {matchedItems.slice(0, 40).map((item) => (

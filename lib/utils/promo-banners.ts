@@ -24,7 +24,15 @@ export interface PromoSlide {
   offerLabel: string | null
 }
 
-export type PromoPlacement = "home_hero" | "home_inline" | "orders" | "cart"
+export type PromoPlacement =
+  | "home_hero"
+  | "home_inline"
+  | "orders"
+  | "cart"
+  | "order_detail"
+  | "canteen_menu"
+  | "item_detail"
+  | "search_empty"
 
 /**
  * The inventory a canteen can buy, cheapest attention last. `multiplier` is
@@ -63,6 +71,34 @@ export const PROMO_PLACEMENTS: Array<{
     label: "Cart",
     description: "Beside the bill, moments before the order is placed.",
     multiplier: 0.5,
+  },
+  {
+    value: "order_detail",
+    label: "While they wait",
+    description:
+      "On the order somebody is waiting for. Re-read every few minutes, by a student with nothing else to do — the closest thing on the platform to guaranteed attention.",
+    multiplier: 0.7,
+  },
+  {
+    value: "canteen_menu",
+    label: "Canteen menus",
+    description:
+      "Inside the menu of every canteen, read by somebody actively choosing what to eat.",
+    multiplier: 0.4,
+  },
+  {
+    value: "item_detail",
+    label: "Dish pages",
+    description:
+      "Under the description of a dish, at the moment of deciding on it.",
+    multiplier: 0.35,
+  },
+  {
+    value: "search_empty",
+    label: "Empty search",
+    description:
+      "Shown when a search finds nothing. Cheapest slot on the platform, and the only one where an advert is genuinely more useful than what it replaces.",
+    multiplier: 0.3,
   },
 ]
 

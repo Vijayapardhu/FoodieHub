@@ -14,6 +14,7 @@ import { QuantityStepper } from "@/components/ui/quantity-stepper"
 import { canteenPath, cartPath, itemPath } from "@/lib/utils/public-id"
 import { StickyBar } from "@/components/ui/sticky-bar"
 import { ImagePlaceholder } from "@/components/ui/image-placeholder"
+import { ImageLightbox } from "@/components/ui/image-lightbox"
 import { FavoriteButton } from "@/components/menu/favorite-button"
 import { ShareItemButton } from "@/components/menu/share-item-button"
 import { ItemCard } from "@/components/menu/item-card"
@@ -29,6 +30,8 @@ interface ItemDetailProps {
   canteen: Canteen
   relatedItems: Item[]
   categoryName?: string | null
+  /** Advertising slot, rendered by the server so an unsold one costs nothing. */
+  promo?: React.ReactNode
 }
 
 export function ItemDetail({
@@ -36,6 +39,7 @@ export function ItemDetail({
   canteen,
   relatedItems,
   categoryName,
+  promo,
 }: ItemDetailProps) {
   const router = useRouter()
   const canteenName = canteen?.name ?? "Canteen"
@@ -50,6 +54,7 @@ export function ItemDetail({
   }, [item.featured_image_url, item.image_url, item.gallery_images])
 
   const [activeIndex, setActiveIndex] = useState(0)
+  const [zoomed, setZoomed] = useState(false)
   const activeImage = gallery[activeIndex] ?? null
 
   const { quantity, increment, decrement } = useCartItem(
@@ -75,14 +80,28 @@ export function ItemDetail({
         <div className="-mx-4 sm:-mx-5">
           <div className="relative aspect-square w-full overflow-hidden bg-muted sm:aspect-[16/9] sm:rounded-2xl">
             {activeImage ? (
-              <Image
-                src={activeImage}
-                alt={item.name}
-                fill
-                priority
-                sizes="(max-width: 640px) 100vw, 720px"
-                className="object-cover"
-              />
+              // A photograph of food is the whole pitch, and on a phone the
+              // thumbnail is the only view of it there is.
+              <button
+                type="button"
+                onClick={() => setZoomed(true)}
+                aria-label="View photo full screen"
+                className="absolute inset-0 h-full w-full"
+              >
+                <Image
+                  src={activeImage}
+                  alt={item.name}
+                  fill
+                  priority
+                  sizes="(max-width: 640px) 100vw, 720px"
+                  className="object-cover"
+                />
+                {gallery.length > 1 ? (
+                  <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1 text-2xs font-bold tabular-nums text-white backdrop-blur-sm">
+                    {activeIndex + 1}/{gallery.length}
+                  </span>
+                ) : null}
+              </button>
             ) : (
               <ImagePlaceholder type="item" size="xl" />
             )}
@@ -108,7 +127,9 @@ export function ItemDetail({
             </div>
 
             {!item.is_available ? (
-              <span className="absolute inset-0 flex items-center justify-center bg-background/70">
+              // pointer-events-none: the badge must not swallow the tap that
+              // opens the photo — a sold-out dish is still worth looking at.
+              <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/70">
                 <span className="rounded-full bg-foreground/85 px-4 py-2 text-sm font-bold text-background">
                   Sold out
                 </span>
@@ -117,7 +138,7 @@ export function ItemDetail({
           </div>
 
           {gallery.length > 1 ? (
-            <div className="rail mt-3 px-4 sm:px-0">
+            <div className="rail rail-inset mt-3">
               {gallery.map((src, idx) => (
                 <button
                   key={`${src}-${idx}`}
@@ -234,6 +255,9 @@ export function ItemDetail({
           </Section>
         ) : null}
 
+        {/* After the dish is understood, before the alternatives to it. */}
+        {promo}
+
         {relatedItems.length > 0 ? (
           <Section>
             <SectionHeader
@@ -289,6 +313,16 @@ export function ItemDetail({
           </Button>
         )}
       </StickyBar>
+
+      {zoomed ? (
+        <ImageLightbox
+          images={gallery}
+          index={activeIndex}
+          onIndexChange={setActiveIndex}
+          onClose={() => setZoomed(false)}
+          alt={item.name}
+        />
+      ) : null}
     </>
   )
 }

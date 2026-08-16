@@ -49,6 +49,7 @@ export default async function EditFeedbackPage({
           reviewId={feedback.id}
           initialRating={feedback.rating}
           initialComment={feedback.comment}
+          initialPhotos={feedback.photos}
         />
       </div>
     </AppShell>

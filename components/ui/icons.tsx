@@ -3,7 +3,7 @@ import {
   Alert02Icon,
   Bookmark02Icon,
   Home05Icon,
-  ReceiptIndianRupeeIcon,
+  ClipboardListIcon,
   ShoppingBasket01Icon,
   UserCircleIcon,
   AlertCircleIcon,
@@ -264,12 +264,14 @@ export const XCircle = icon(CancelCircleIcon, "XCircle")
  *
  * A tab bar is read at 22px by someone walking, so these are picked for
  * silhouette: shapes that stay distinct from each other when the detail
- * disappears. `ReceiptIndianRupeeIcon` for orders because the bill is in
- * rupees, and `ShoppingBasket` rather than a trolley because nobody pushes a
+ * disappears. A clipboard for orders rather than a rupee receipt: at 22px the
+ * currency mark was the only thing separating it from the cart, and what a
+ * student opens that tab for is the docket — where the order is up to — not
+ * the bill. `ShoppingBasket` rather than a trolley because nobody pushes a
  * trolley round a canteen.
  */
 export const NavHome = icon(Home05Icon, "NavHome")
-export const NavOrders = icon(ReceiptIndianRupeeIcon, "NavOrders")
+export const NavOrders = icon(ClipboardListIcon, "NavOrders")
 export const NavCart = icon(ShoppingBasket01Icon, "NavCart")
 export const NavSaved = icon(Bookmark02Icon, "NavSaved")
 export const NavProfile = icon(UserCircleIcon, "NavProfile")

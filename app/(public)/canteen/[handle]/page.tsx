@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Store } from "@/components/ui/icons"
 import { AppShell } from "@/components/layout/app-shell"
+import { PromoSlot } from "@/components/promo/promo-slot"
 import { CanteenMenuPage } from "@/components/canteen/canteen-menu-page"
 import { EmptyState } from "@/components/ui/empty-state"
 import { requireRole } from "@/lib/auth/require-role"
@@ -116,6 +117,7 @@ export default async function CanteenPage({
         featuredItems={featuredItems as any}
         comboItems={comboItems as any}
         reviews={(reviews ?? []) as any}
+        promo={<PromoSlot placement="canteen_menu" limit={1} />}
       />
     </AppShell>
   )

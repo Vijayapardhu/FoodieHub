@@ -38,6 +38,8 @@ interface CanteenMenuPageProps {
   featuredItems: Item[]
   comboItems: Item[]
   reviews: Review[]
+  /** Advertising slot, rendered by the server so an unsold one costs nothing. */
+  promo?: React.ReactNode
 }
 
 export function CanteenMenuPage({
@@ -47,6 +49,7 @@ export function CanteenMenuPage({
   featuredItems,
   comboItems,
   reviews,
+  promo,
 }: CanteenMenuPageProps) {
   const [rawQuery, setRawQuery] = useState("")
   const [filters, setFilters] = useState<BrowseFilters>(defaultFilters)
@@ -172,6 +175,10 @@ export function CanteenMenuPage({
           canteenName={canteen.name}
         />
 
+        {/* Between the highlights and the full list, where somebody is still
+            deciding rather than already reading. */}
+        {promo}
+
         <Section>
           <SectionHeader
             title="Full menu"
@@ -246,7 +253,7 @@ export function CanteenMenuPage({
 
           {filtered.length === 0 ? (
             <EmptyState
-              icon={UtensilsCrossed}
+              art="search"
               title={
                 items.length === 0 ? "Menu coming soon" : "Nothing matches"
               }

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { StarPicker } from "@/components/ui/star-rating"
 import { StickyBar } from "@/components/ui/sticky-bar"
+import { ReviewPhotoPicker } from "@/components/reviews/review-photo-picker"
 import {
   Dialog,
   DialogContent,
@@ -22,16 +23,19 @@ interface ReviewEditFormProps {
   reviewId: string
   initialRating: number
   initialComment: string | null
+  initialPhotos: string[] | null
 }
 
 export function ReviewEditForm({
   reviewId,
   initialRating,
   initialComment,
+  initialPhotos,
 }: ReviewEditFormProps) {
   const router = useRouter()
   const [rating, setRating] = useState(initialRating)
   const [comment, setComment] = useState(initialComment || "")
+  const [photos, setPhotos] = useState<string[]>(initialPhotos ?? [])
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -52,6 +56,7 @@ export function ReviewEditForm({
         .update({
           rating,
           comment: comment.trim() || null,
+          photos,
           updated_at: new Date().toISOString(),
         })
         .eq("id", reviewId)
@@ -117,6 +122,12 @@ export function ReviewEditForm({
             {comment.length}/1000
           </p>
         </section>
+
+        <ReviewPhotoPicker
+          photos={photos}
+          onChange={setPhotos}
+          pathPrefix={`reviews/${reviewId}`}
+        />
 
         <Button
           type="button"

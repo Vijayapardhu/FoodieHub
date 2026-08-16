@@ -156,6 +156,7 @@ export default async function HomePage() {
         reorder={usual ? <ReorderRail usual={usual} /> : null}
         activeOrder={active ? <ActiveOrderCard order={active} /> : null}
         inlinePromo={<PromoSlot placement="home_inline" />}
+        searchEmptyPromo={<PromoSlot placement="search_empty" limit={1} />}
       />
     </AppShell>
   )

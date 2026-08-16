@@ -42,7 +42,7 @@ export function FavoritesList({
   if (favorites.length === 0) {
     return (
       <EmptyState
-        icon={Heart}
+        art="saved"
         title="Nothing saved yet"
         description="Tap the heart on any dish or canteen and it'll wait for you here."
         action={{ label: "Browse canteens", href: "/home" }}
