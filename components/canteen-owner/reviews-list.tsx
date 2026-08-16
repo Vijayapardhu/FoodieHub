@@ -14,9 +14,12 @@ import { Chip, ChipRail } from "@/components/ui/chip"
 import { Textarea } from "@/components/ui/textarea"
 import { StarRating } from "@/components/ui/star-rating"
 import { EmptyState } from "@/components/ui/empty-state"
+import { ReviewInsights } from "@/components/canteen-owner/review-insights"
 
 type Review = Database["public"]["Tables"]["reviews"]["Row"] & {
   users: { full_name: string | null; email: string; avatar_url?: string | null } | null
+  /** Dishes on the order this review is about. */
+  dishes?: string[]
 }
 
 interface ReviewsListProps {
@@ -48,11 +51,27 @@ export function ReviewsList({ reviews }: ReviewsListProps) {
   }, [reviews])
 
   const visible = useMemo(() => {
-    if (filter === "unanswered")
-      return reviews.filter((review) => !review.owner_response)
-    if (filter === "critical")
-      return reviews.filter((review) => review.rating <= 2)
-    return reviews
+    const list =
+      filter === "unanswered"
+        ? reviews.filter((review) => !review.owner_response)
+        : filter === "critical"
+          ? reviews.filter((review) => review.rating <= 2)
+          : [...reviews]
+
+    /*
+     * Sorted as a work queue rather than a feed. Reverse-chronological is the
+     * wrong default here: an unanswered one-star from last week costs more
+     * than a five-star from this morning, and it was buried under it.
+     */
+    return list.sort((a, b) => {
+      const aNeeds = a.owner_response ? 1 : 0
+      const bNeeds = b.owner_response ? 1 : 0
+      if (aNeeds !== bNeeds) return aNeeds - bNeeds
+      if (a.rating !== b.rating) return a.rating - b.rating
+      return (
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+    })
   }, [reviews, filter])
 
   const postResponse = async (reviewId: string) => {
@@ -96,31 +115,14 @@ export function ReviewsList({ reviews }: ReviewsListProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
-        <div className="text-center">
-          <p className="text-3xl font-black tabular-nums text-foreground">
-            {stats.average.toFixed(1)}
-          </p>
-          <StarRating value={stats.average} />
-        </div>
-        <div className="h-12 w-px bg-border" />
-        <dl className="flex-1 space-y-0.5 text-sm">
-          <div className="flex justify-between">
-            <dt className="text-muted-foreground">Total reviews</dt>
-            <dd className="font-semibold tabular-nums">{stats.total}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-muted-foreground">Awaiting a reply</dt>
-            <dd className="font-semibold tabular-nums">{stats.unanswered}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-muted-foreground">2 stars or below</dt>
-            <dd className="font-semibold tabular-nums text-destructive">
-              {stats.critical}
-            </dd>
-          </div>
-        </dl>
-      </div>
+      <ReviewInsights
+        reviews={reviews.map((review) => ({
+          rating: review.rating,
+          created_at: review.created_at,
+          owner_response: review.owner_response,
+          dishes: review.dishes ?? [],
+        }))}
+      />
 
       <ChipRail>
         <Chip active={filter === "all"} onClick={() => setFilter("all")} count={stats.total}>
@@ -174,6 +176,12 @@ export function ReviewsList({ reviews }: ReviewsListProps) {
                   </div>
                 </div>
               </div>
+
+              {review.dishes?.length ? (
+                <p className="text-xs text-muted-foreground">
+                  Ordered: {review.dishes.join(", ")}
+                </p>
+              ) : null}
 
               {review.comment ? (
                 <p className="text-sm text-foreground">{review.comment}</p>
