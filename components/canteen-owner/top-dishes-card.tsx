@@ -1,52 +1,68 @@
 import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ImagePlaceholder } from "@/components/ui/image-placeholder"
 
 interface TopDishesCardProps {
   dishes: { id: string; name: string; imageUrl: string | null; count: number }[]
 }
 
 export function TopDishesCard({ dishes }: TopDishesCardProps) {
+  const max = Math.max(...dishes.map((dish) => dish.count), 1)
+
   return (
-    <Card className="border-orange-50 bg-white">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Top movers this week</CardTitle>
+        <CardTitle>Best sellers this week</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+
+      <CardContent>
         {dishes.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-orange-100 bg-orange-50/40 p-4 text-sm text-muted-foreground">
-            Serve a few more orders to unlock your bestseller insights.
-          </div>
+          <p className="rounded-xl bg-muted p-3 text-sm text-muted-foreground">
+            Serve a few more orders and your bestsellers will show up here.
+          </p>
         ) : (
-          dishes.map((dish, index) => (
-            <div key={dish.id} className="flex items-center gap-3">
-              <div className="text-lg font-semibold text-muted-foreground">
-                #{index + 1}
-              </div>
-              <div className="relative h-14 w-14 overflow-hidden rounded-xl bg-orange-50">
-                {dish.imageUrl ? (
-                  <Image
-                    src={dish.imageUrl}
-                    alt={dish.name}
-                    fill
-                    className="object-cover"
-                    sizes="56px"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-2xl">🍲</div>
-                )}
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-foreground">{dish.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {dish.count} servings · keep ingredients ready
-                </p>
-              </div>
-            </div>
-          ))
+          <ol className="space-y-3">
+            {dishes.map((dish, index) => (
+              <li key={dish.id} className="flex items-center gap-3">
+                <span className="w-4 shrink-0 text-sm font-bold tabular-nums text-muted-foreground">
+                  {index + 1}
+                </span>
+
+                <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-muted">
+                  {dish.imageUrl ? (
+                    <Image
+                      src={dish.imageUrl}
+                      alt=""
+                      fill
+                      sizes="44px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <ImagePlaceholder type="item" size="sm" />
+                  )}
+                </span>
+
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-foreground">
+                    {dish.name}
+                  </span>
+                  {/* Bar makes the gap between #1 and #4 readable at a glance */}
+                  <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <span
+                      className="block h-full rounded-full bg-primary"
+                      style={{ width: `${(dish.count / max) * 100}%` }}
+                    />
+                  </span>
+                </span>
+
+                <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">
+                  {dish.count}
+                </span>
+              </li>
+            ))}
+          </ol>
         )}
       </CardContent>
     </Card>
   )
 }
-
-

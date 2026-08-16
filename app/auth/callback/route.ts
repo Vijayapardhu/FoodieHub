@@ -1,40 +1,6 @@
-import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
-
-async function getRedirectPath(userId: string) {
-  const supabase = await createClient()
-  const { data: userProfile } = await supabase
-    .from("users")
-    .select("role, phone_number")
-    .eq("id", userId)
-    .single()
-
-  if (!userProfile) {
-    return "/home" // Default fallback
-  }
-
-  // Check if profile is complete (specifically phone number)
-  if (!userProfile.phone_number && (userProfile.role === 'user' || userProfile.role === 'student')) {
-    return "/complete-profile"
-  }
-
-  // Redirect based on role
-  switch (userProfile.role) {
-    case "admin":
-      return "/admin"
-    case "canteen_owner":
-      // Check if owner has a canteen
-      const { data: canteen } = await supabase
-        .from("canteens")
-        .select("id")
-        .eq("owner_id", userId)
-        .maybeSingle()
-      return canteen ? "/canteen" : "/canteen/register"
-    case "user":
-    default:
-      return "/home"
-  }
-}
+import { createClient } from "@/lib/supabase/server"
+import { resolveDestination } from "@/lib/auth/destination"
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
@@ -45,27 +11,36 @@ export async function GET(request: Request) {
 
   if (error) {
     return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(errorDescription || "An error occurred during sign in")}`
+      `${origin}/login?error=${encodeURIComponent(
+        error
+      )}&error_description=${encodeURIComponent(
+        errorDescription || "An error occurred during sign in"
+      )}`
     )
   }
 
   if (code) {
     const supabase = await createClient()
-    await supabase.auth.exchangeCodeForSession(code)
+    const { data, error: exchangeError } =
+      await supabase.auth.exchangeCodeForSession(code)
 
-    // Get user after session exchange
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    if (exchangeError) {
+      return NextResponse.redirect(
+        `${origin}/login?error=${encodeURIComponent(
+          "auth_failed"
+        )}&error_description=${encodeURIComponent(exchangeError.message)}`
+      )
+    }
 
+    // exchangeCodeForSession already returns the user, so the extra
+    // getUser() round trip this used to make was pure latency.
+    const user = data.session?.user
     if (user) {
-      // Redirect based on role
-      const redirectPath = await getRedirectPath(user.id)
-      return NextResponse.redirect(`${origin}${redirectPath}`)
+      return NextResponse.redirect(
+        `${origin}${await resolveDestination(supabase, user.id)}`
+      )
     }
   }
 
-  // Fallback: redirect to root (which will handle redirect)
   return NextResponse.redirect(`${origin}/`)
 }
-

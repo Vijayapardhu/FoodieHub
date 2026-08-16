@@ -1,0 +1,173 @@
+[
+  {
+    "slug": "canteen-central",
+    "file": "canteen-central.jpg",
+    "kb": 211,
+    "page": "https://commons.wikimedia.org/wiki/File:Haikou_College_of_Economics_-_a_canteen_02.jpg",
+    "artist": "Anna Frodesiak",
+    "licence": "CC0",
+    "needsCredit": false
+  },
+  {
+    "slug": "canteen-hostel",
+    "file": "canteen-hostel.jpg",
+    "kb": 119,
+    "page": "https://commons.wikimedia.org/wiki/File:Tea_stall_apparatus.jpg",
+    "artist": "Wasir kasab",
+    "licence": "CC BY 4.0",
+    "needsCredit": true
+  },
+  {
+    "slug": "cheese-maggi",
+    "file": "cheese-maggi.jpg",
+    "kb": 125,
+    "page": "https://commons.wikimedia.org/wiki/File:Maggi_Bowl.jpg",
+    "artist": "Mrudit161187",
+    "licence": "CC BY-SA 4.0",
+    "needsCredit": true
+  },
+  {
+    "slug": "chicken-biryani",
+    "file": "chicken-biryani.jpg",
+    "kb": 402,
+    "page": "https://commons.wikimedia.org/wiki/File:A_home_made_plate_of_mutton_biryani_served_with_chicken_kassa_cooked_in_the_bengali_style.jpg",
+    "artist": "Subhrajyoti07",
+    "licence": "CC BY-SA 4.0",
+    "needsCredit": true
+  },
+  {
+    "slug": "cold-coffee",
+    "file": "cold-coffee.jpg",
+    "kb": 204,
+    "page": "https://commons.wikimedia.org/wiki/File:Iced_Coffee_in_Glass_-_Sunshine_Coffee_-_Laramie_Cafe_(53838344552).jpg",
+    "artist": "Tony Webster",
+    "licence": "CC BY 2.0",
+    "needsCredit": true
+  },
+  {
+    "slug": "dal-tadka",
+    "file": "dal-tadka.jpg",
+    "kb": 231,
+    "page": "https://commons.wikimedia.org/wiki/File:Dal_Tadka-Delhi.jpg",
+    "artist": "AugustineKajur",
+    "licence": "CC BY-SA 4.0",
+    "needsCredit": true
+  },
+  {
+    "slug": "egg-puff",
+    "file": "egg-puff.jpg",
+    "kb": 39,
+    "page": "https://commons.wikimedia.org/wiki/File:Egg_Puff2.jpg",
+    "artist": "Affaf Ali",
+    "licence": "CC BY-SA 4.0",
+    "needsCredit": true
+  },
+  {
+    "slug": "filter-coffee",
+    "file": "filter-coffee.jpg",
+    "kb": 224,
+    "page": "https://commons.wikimedia.org/wiki/File:Memorable_Coffee.jpg",
+    "artist": "K.Sreeram 2603",
+    "licence": "CC0",
+    "needsCredit": false
+  },
+  {
+    "slug": "fresh-lime-soda",
+    "file": "fresh-lime-soda.jpg",
+    "kb": 33,
+    "page": "https://commons.wikimedia.org/wiki/File:Shikanji-_served_with_pomegranate,grated_apple_and_mint.jpg",
+    "artist": "Kanikatwl",
+    "licence": "CC BY-SA 4.0",
+    "needsCredit": true
+  },
+  {
+    "slug": "grilled-sandwich",
+    "file": "grilled-sandwich.jpg",
+    "kb": 274,
+    "page": "https://commons.wikimedia.org/wiki/File:Sausage_%26_veggies_toasted_sandwich_-_Potatoast_2025-12-30.jpg",
+    "artist": "Andy Li",
+    "licence": "CC0",
+    "needsCredit": false
+  },
+  {
+    "slug": "idli-vada-combo",
+    "file": "idli-vada-combo.jpg",
+    "kb": 212,
+    "page": "https://commons.wikimedia.org/wiki/File:South_Indian_Breakast_Idli_Vada_Sambar_Chutney.JPG",
+    "artist": "Saind147",
+    "licence": "CC BY-SA 4.0",
+    "needsCredit": true
+  },
+  {
+    "slug": "masala-chai",
+    "file": "masala-chai.jpg",
+    "kb": 297,
+    "page": "https://commons.wikimedia.org/wiki/File:Masala_Chai.JPG",
+    "artist": "Miansari66",
+    "licence": "Public domain",
+    "needsCredit": false
+  },
+  {
+    "slug": "masala-dosa",
+    "file": "masala-dosa.jpg",
+    "kb": 227,
+    "page": "https://commons.wikimedia.org/wiki/File:Masala_Dosa_in_Banana_Leaf_with_Chutney.jpg",
+    "artist": "ideowl",
+    "licence": "CC BY 2.0",
+    "needsCredit": true
+  },
+  {
+    "slug": "midnight-chai",
+    "file": "midnight-chai.jpg",
+    "kb": 325,
+    "page": "https://commons.wikimedia.org/wiki/File:Kerala-style_Glass_of_Chai_(Tea).jpg",
+    "artist": "Navaneethpp",
+    "licence": "CC BY 4.0",
+    "needsCredit": true
+  },
+  {
+    "slug": "north-thali",
+    "file": "north-thali.jpg",
+    "kb": 269,
+    "page": "https://commons.wikimedia.org/wiki/File:Darjeeling,_India,_Indian_Thali_meal.jpg",
+    "artist": "Vyacheslav Argenberg",
+    "licence": "CC BY 4.0",
+    "needsCredit": true
+  },
+  {
+    "slug": "paneer-butter-masala",
+    "file": "paneer-butter-masala.jpg",
+    "kb": 340,
+    "page": "https://commons.wikimedia.org/wiki/File:Paneer_butter_masala_2.jpg",
+    "artist": "Gannu03",
+    "licence": "CC BY-SA 4.0",
+    "needsCredit": true
+  },
+  {
+    "slug": "samosa",
+    "file": "samosa.jpg",
+    "kb": 126,
+    "page": "https://commons.wikimedia.org/wiki/File:Samosa_with_sweet_chutney.jpg",
+    "artist": "Swathi sri srinivasa raghavan",
+    "licence": "CC0",
+    "needsCredit": false
+  },
+  {
+    "slug": "south-combo",
+    "file": "south-combo.jpg",
+    "kb": 275,
+    "page": "https://commons.wikimedia.org/wiki/File:Onam_vannae_-_Flickr_-_George_Augustine.jpg",
+    "artist": "George Augustine",
+    "licence": "CC BY 2.0",
+    "needsCredit": true
+  },
+  {
+    "slug": "veg-puff",
+    "file": "veg-puff.jpg",
+    "kb": 154,
+    "page": "https://commons.wikimedia.org/wiki/File:Roasted_Vegetable_Plant_Based_Savoury_Roll_-_Caff%C3%A8_Nero_2026-07-04.jpg",
+    "artist": "Andy Li",
+    "licence": "CC0",
+    "needsCredit": false
+  }
+]

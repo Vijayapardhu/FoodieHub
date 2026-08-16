@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { useCallback, useEffect, useState } from "react"
+import { Check, TicketPercent } from "lucide-react"
 import { Database } from "@/types/database.types"
-import { Gift, Check } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
-import { findBestOffer, calculateDiscount } from "@/lib/utils/offers"
+import { Skeleton } from "@/components/ui/skeleton"
+import { calculateDiscount, findBestOffer } from "@/lib/utils/offers"
+import { useEventCallback } from "@/lib/hooks/use-event-callback"
+import { cn } from "@/lib/utils/cn"
 
 type Offer = Database["public"]["Tables"]["offers"]["Row"]
 
@@ -19,32 +20,19 @@ interface OffersSelectorProps {
 export function OffersSelector({
   canteenId,
   orderAmount,
-  onOfferSelected,
+  onOfferSelected: onOfferSelectedProp,
 }: OffersSelectorProps) {
+  const onOfferSelected = useEventCallback(onOfferSelectedProp)
   const [offers, setOffers] = useState<Offer[]>([])
-  const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const [autoApplied, setAutoApplied] = useState(false)
+  const [supabase] = useState(() => createClient())
 
-  useEffect(() => {
-    fetchOffers()
-  }, [canteenId])
-
-  useEffect(() => {
-    if (offers.length > 0 && !selectedOffer) {
-      const best = findBestOffer(offers, orderAmount)
-      if (best) {
-        setSelectedOffer(best.offer)
-        onOfferSelected(best.offer, best.discount)
-      }
-    }
-  }, [offers, orderAmount])
-
-  const fetchOffers = async () => {
+  const fetchOffers = useCallback(async () => {
+    setLoading(true)
     try {
-      setLoading(true)
       const now = new Date().toISOString()
-
       const { data, error } = await supabase
         .from("offers")
         .select("*")
@@ -56,81 +44,139 @@ export function OffersSelector({
         .order("discount_value", { ascending: false })
 
       if (error) throw error
-
-      setOffers(data || [])
-    } catch (error: any) {
-      console.error("Error fetching offers:", error)
+      setOffers(data ?? [])
+    } catch (error) {
+      console.error("[offers] fetch failed", error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase, canteenId])
 
-  const handleOfferSelect = (offer: Offer) => {
-    if (selectedOffer?.id === offer.id) {
-      setSelectedOffer(null)
-      onOfferSelected(null, 0)
-    } else {
-      const discount = calculateDiscount(offer, orderAmount)
-      setSelectedOffer(offer)
-      onOfferSelected(offer, discount)
+  useEffect(() => {
+    fetchOffers()
+  }, [fetchOffers])
+
+  // Apply the best offer once, then leave the choice to the customer. Re-running
+  // on every amount change would silently undo a manual selection.
+  useEffect(() => {
+    if (autoApplied || offers.length === 0 || orderAmount <= 0) return
+    const best = findBestOffer(offers, orderAmount)
+    setAutoApplied(true)
+    if (best) {
+      setSelectedId(best.offer.id)
+      onOfferSelected(best.offer, best.discount)
     }
+  }, [offers, orderAmount, autoApplied, onOfferSelected])
+
+  const select = (offer: Offer) => {
+    if (selectedId === offer.id) {
+      setSelectedId(null)
+      onOfferSelected(null, 0)
+      return
+    }
+    setSelectedId(offer.id)
+    onOfferSelected(offer, calculateDiscount(offer, orderAmount))
   }
 
   if (loading) {
-    return <div className="text-sm text-muted-foreground">Loading offers...</div>
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-16 rounded-xl" />
+        <Skeleton className="h-16 rounded-xl" />
+      </div>
+    )
   }
 
+  const usable = offers.filter(
+    (offer) => calculateDiscount(offer, orderAmount) > 0
+  )
+  const locked = offers.filter(
+    (offer) => calculateDiscount(offer, orderAmount) === 0
+  )
+
   if (offers.length === 0) {
-    return null
+    return (
+      <p className="text-sm text-muted-foreground">
+        No offers running at this canteen right now.
+      </p>
+    )
   }
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold">Available Offers</h3>
-      {offers.map((offer) => {
+      {usable.map((offer) => {
         const discount = calculateDiscount(offer, orderAmount)
-        const isSelected = selectedOffer?.id === offer.id
-
-        if (discount === 0) return null
+        const active = selectedId === offer.id
 
         return (
-          <Card
+          <button
             key={offer.id}
-            className={`cursor-pointer transition-all ${
-              isSelected ? "border-primary bg-primary/5" : ""
-            }`}
-            onClick={() => handleOfferSelect(offer)}
+            type="button"
+            onClick={() => select(offer)}
+            aria-pressed={active}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors active:scale-[0.99]",
+              active
+                ? "border-primary bg-primary-soft"
+                : "border-border bg-surface"
+            )}
           >
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Gift className="h-4 w-4 text-primary" />
-                  <div>
-                    <p className="font-medium">{offer.title}</p>
-                    {offer.description && (
-                      <p className="text-xs text-muted-foreground">
-                        {offer.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant={isSelected ? "default" : "outline"}
-                    className={isSelected ? "bg-primary" : ""}
-                  >
-                    Save ₹{discount.toFixed(2)}
-                  </Badge>
-                  {isSelected && (
-                    <Check className="h-4 w-4 text-primary" />
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            <span
+              className={cn(
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                active
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground"
+              )}
+            >
+              {active ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <TicketPercent className="h-4 w-4" />
+              )}
+            </span>
+
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold text-foreground">
+                {offer.title}
+              </span>
+              {offer.description ? (
+                <span className="block truncate text-xs text-muted-foreground">
+                  {offer.description}
+                </span>
+              ) : null}
+            </span>
+
+            <span className="shrink-0 text-sm font-bold text-success tabular-nums">
+              −₹{discount.toFixed(0)}
+            </span>
+          </button>
         )
       })}
+
+      {locked.map((offer) => (
+        <div
+          key={offer.id}
+          className="flex items-center gap-3 rounded-xl border border-dashed border-border p-3 opacity-70"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+            <TicketPercent className="h-4 w-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold text-foreground">
+              {offer.title}
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              {offer.min_order_amount
+                ? `Add ₹${Math.max(
+                    0,
+                    offer.min_order_amount - orderAmount
+                  ).toFixed(0)} more to unlock`
+                : "Not applicable to this order"}
+            </span>
+          </span>
+        </div>
+      ))}
     </div>
   )
 }
-

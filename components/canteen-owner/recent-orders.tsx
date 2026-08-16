@@ -1,69 +1,62 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { ChevronRight } from "lucide-react"
 import { Database } from "@/types/database.types"
-import { formatDistanceToNow } from "date-fns"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { StatusBadge } from "@/components/ui/status-badge"
+import { formatRelativeTime } from "@/lib/utils/format"
+import { ownerOrderPath } from "@/lib/utils/public-id"
 
 type Order = Database["public"]["Tables"]["orders"]["Row"]
 
-interface RecentOrdersProps {
-  orders: Order[]
-}
-
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-500",
-  confirmed: "bg-blue-500",
-  preparing: "bg-orange-500",
-  ready: "bg-green-500",
-  completed: "bg-success",
-  cancelled: "bg-destructive",
-}
-
-export function RecentOrders({ orders }: RecentOrdersProps) {
+export function RecentOrders({ orders }: { orders: Order[] }) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Recent Orders</CardTitle>
+      <CardHeader className="flex-row items-center justify-between space-y-0">
+        <CardTitle>Live queue</CardTitle>
+        <Link
+          href="/canteen/orders"
+          className="text-sm font-semibold text-primary"
+        >
+          All orders
+        </Link>
       </CardHeader>
+
       <CardContent>
         {orders.length === 0 ? (
-          <p className="text-center text-muted-foreground">No recent orders</p>
+          <p className="rounded-xl bg-muted p-3 text-sm text-muted-foreground">
+            Nothing in the queue. New orders land here instantly.
+          </p>
         ) : (
-          <div className="space-y-4">
+          <ul className="space-y-2">
             {orders.map((order) => (
-              <Link
-                key={order.id}
-                href={`/canteen/orders/${order.id}`}
-                className="block rounded-lg border p-4 transition-colors hover:bg-muted"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-semibold">
-                        {order.token}
+              <li key={order.id}>
+                <Link
+                  href={ownerOrderPath(order)}
+                  className="flex items-center gap-3 rounded-xl border border-border p-3 transition-colors active:bg-muted"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2">
+                      <span className="font-mono text-sm font-bold tracking-wider text-foreground">
+                        #{order.token}
                       </span>
-                      <Badge
-                        className={statusColors[order.status] || "bg-muted"}
-                      >
-                        {order.status}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      ₹{Number(order.total_amount).toFixed(2)}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(order.created_at), {
-                        addSuffix: true,
-                      })}
-                    </p>
-                  </div>
-                </div>
-              </Link>
+                      <StatusBadge status={order.status} size="sm" showIcon={false} />
+                    </span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      {order.customer_name || "Guest"} ·{" "}
+                      {formatRelativeTime(order.created_at)}
+                    </span>
+                  </span>
+
+                  <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">
+                    ₹{Number(order.total_amount).toFixed(0)}
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </CardContent>
     </Card>
   )
 }
-

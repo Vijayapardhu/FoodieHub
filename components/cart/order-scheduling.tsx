@@ -1,208 +1,162 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { useEffect, useState } from "react"
+import { addHours, format, addDays, startOfToday } from "date-fns"
 import { Input } from "@/components/ui/input"
-import { Calendar, Clock } from "lucide-react"
-import { format, addDays, addHours, startOfToday, setHours, setMinutes } from "date-fns"
+import { Chip } from "@/components/ui/chip"
+import { useEventCallback } from "@/lib/hooks/use-event-callback"
+import { cn } from "@/lib/utils/cn"
 
 interface OrderSchedulingProps {
   onScheduleChange: (scheduledTime: Date | null, timeSlot: string | null) => void
-  canteenOperatingHours?: any
 }
 
+const quickSlots = [
+  { hours: 1, label: "In 1 hour" },
+  { hours: 2, label: "In 2 hours" },
+  { hours: 3, label: "In 3 hours" },
+]
+
 export function OrderScheduling({
-  onScheduleChange,
-  canteenOperatingHours,
+  onScheduleChange: onScheduleChangeProp,
 }: OrderSchedulingProps) {
-  const [orderType, setOrderType] = useState<"immediate" | "scheduled">("immediate")
-  const [selectedDate, setSelectedDate] = useState<string>(
-    format(new Date(), "yyyy-MM-dd")
-  )
-  const [selectedTime, setSelectedTime] = useState<string>(
+  const onScheduleChange = useEventCallback(onScheduleChangeProp)
+  const [mode, setMode] = useState<"now" | "later">("now")
+  const [date, setDate] = useState(() => format(new Date(), "yyyy-MM-dd"))
+  const [time, setTime] = useState(() =>
     format(addHours(new Date(), 1), "HH:mm")
   )
+  const [error, setError] = useState<string | null>(null)
 
   const today = startOfToday()
   const maxDate = format(addDays(today, 7), "yyyy-MM-dd")
 
-  // Generate time slots (every 15 minutes from 9 AM to 9 PM)
-  const generateTimeSlots = () => {
-    const slots: string[] = []
-    const startHour = 9
-    const endHour = 21
-
-    for (let hour = startHour; hour <= endHour; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
-        const timeStr = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`
-        slots.push(timeStr)
-      }
-    }
-
-    return slots
-  }
-
-  const timeSlots = generateTimeSlots()
-
-  const handleScheduleChange = () => {
-    if (orderType === "scheduled") {
-      const scheduledDateTime = new Date(`${selectedDate}T${selectedTime}`)
-      // Check if scheduled time is in the future
-      if (scheduledDateTime <= new Date()) {
-        alert("Please select a future time for scheduled orders")
-        return
-      }
-      onScheduleChange(scheduledDateTime, `${selectedDate} ${selectedTime}`)
-    } else {
+  // Report upward whenever the choice changes, so the parent never has to poll.
+  useEffect(() => {
+    if (mode === "now") {
+      setError(null)
       onScheduleChange(null, null)
+      return
     }
-  }
 
-  const handleQuickSlot = (hoursFromNow: number) => {
-    const quickTime = addHours(new Date(), hoursFromNow)
-    setSelectedDate(format(quickTime, "yyyy-MM-dd"))
-    setSelectedTime(format(quickTime, "HH:mm"))
-    setOrderType("scheduled")
-    setTimeout(() => {
-      onScheduleChange(quickTime, format(quickTime, "yyyy-MM-dd HH:mm"))
-    }, 100)
+    const parsed = new Date(`${date}T${time}`)
+    if (Number.isNaN(parsed.getTime())) {
+      setError("Pick a valid date and time")
+      onScheduleChange(null, null)
+      return
+    }
+    if (parsed <= new Date()) {
+      setError("Pick a time in the future")
+      onScheduleChange(null, null)
+      return
+    }
+
+    setError(null)
+    onScheduleChange(parsed, `${date} ${time}`)
+  }, [mode, date, time, onScheduleChange])
+
+  const applyQuickSlot = (hours: number) => {
+    const target = addHours(new Date(), hours)
+    setDate(format(target, "yyyy-MM-dd"))
+    setTime(format(target, "HH:mm"))
+    setMode("later")
   }
 
   return (
-    <Card className="border-2 border-orange-100">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Clock className="h-5 w-5 text-primary" />
-          Order Timing
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex gap-3">
-          <Button
-            type="button"
-            variant={orderType === "immediate" ? "default" : "outline"}
-            onClick={() => {
-              setOrderType("immediate")
-              onScheduleChange(null, null)
-            }}
-            className={`flex-1 rounded-full ${orderType === "immediate" ? "bg-primary text-white" : ""}`}
-          >
-            Order Now
-          </Button>
-          <Button
-            type="button"
-            variant={orderType === "scheduled" ? "default" : "outline"}
-            onClick={() => {
-              setOrderType("scheduled")
-              handleScheduleChange()
-            }}
-            className={`flex-1 rounded-full ${orderType === "scheduled" ? "bg-primary text-white" : ""}`}
-          >
-            Schedule Later
-          </Button>
-        </div>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => setMode("now")}
+          aria-pressed={mode === "now"}
+          className={cn(
+            "min-h-touch rounded-xl border px-4 text-sm font-semibold transition-colors",
+            mode === "now"
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border bg-surface text-muted-foreground"
+          )}
+        >
+          Order now
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("later")}
+          aria-pressed={mode === "later"}
+          className={cn(
+            "min-h-touch rounded-xl border px-4 text-sm font-semibold transition-colors",
+            mode === "later"
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border bg-surface text-muted-foreground"
+          )}
+        >
+          Schedule
+        </button>
+      </div>
 
-        {orderType === "scheduled" && (
-          <div className="space-y-4 rounded-lg bg-orange-50/50 p-4">
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <Calendar className="h-4 w-4" />
-                Select Date
+      {mode === "now" ? (
+        <p className="text-sm text-muted-foreground">
+          The kitchen starts on your order as soon as it accepts it.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {quickSlots.map((slot) => (
+              <Chip
+                key={slot.hours}
+                onClick={() => applyQuickSlot(slot.hours)}
+              >
+                {slot.label}
+              </Chip>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label
+                htmlFor="pickup-date"
+                className="text-xs font-medium text-muted-foreground"
+              >
+                Date
               </label>
               <Input
+                id="pickup-date"
                 type="date"
-                value={selectedDate}
+                value={date}
                 min={format(today, "yyyy-MM-dd")}
                 max={maxDate}
-                onChange={(e) => {
-                  setSelectedDate(e.target.value)
-                  handleScheduleChange()
-                }}
-                className="rounded-lg"
+                onChange={(e) => setDate(e.target.value)}
               />
             </div>
-
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <Clock className="h-4 w-4" />
-                Select Time
+            <div className="space-y-1.5">
+              <label
+                htmlFor="pickup-time"
+                className="text-xs font-medium text-muted-foreground"
+              >
+                Time
               </label>
               <Input
+                id="pickup-time"
                 type="time"
-                value={selectedTime}
-                onChange={(e) => {
-                  setSelectedTime(e.target.value)
-                  handleScheduleChange()
-                }}
-                className="rounded-lg"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
               />
             </div>
-
-            {/* Quick time slots */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Quick Select</p>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickSlot(1)}
-                  className="rounded-full text-xs"
-                >
-                  +1 Hour
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickSlot(2)}
-                  className="rounded-full text-xs"
-                >
-                  +2 Hours
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickSlot(3)}
-                  className="rounded-full text-xs"
-                >
-                  +3 Hours
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickSlot(6)}
-                  className="rounded-full text-xs"
-                >
-                  +6 Hours
-                </Button>
-              </div>
-            </div>
-
-            {selectedDate && selectedTime && (
-              <div className="rounded-lg bg-white p-3 text-center">
-                <p className="text-xs text-muted-foreground">Scheduled for</p>
-                <p className="font-semibold text-primary">
-                  {format(new Date(`${selectedDate}T${selectedTime}`), "PPpp")}
-                </p>
-              </div>
-            )}
           </div>
-        )}
 
-        {orderType === "immediate" && (
-          <div className="rounded-lg bg-blue-50/50 p-3 text-center">
-            <p className="text-sm text-muted-foreground">
-              Your order will be prepared immediately upon confirmation
+          {error ? (
+            <p role="alert" className="text-sm font-medium text-destructive">
+              {error}
             </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          ) : (
+            <p className="rounded-xl bg-muted p-3 text-center text-sm">
+              <span className="text-muted-foreground">Collect at </span>
+              <span className="font-semibold text-foreground">
+                {format(new Date(`${date}T${time}`), "d MMM, h:mm a")}
+              </span>
+            </p>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
-
-

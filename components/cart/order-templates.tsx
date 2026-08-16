@@ -1,21 +1,20 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { useCallback, useEffect, useState } from "react"
+import { BookmarkPlus, Trash2 } from "lucide-react"
+import toast from "react-hot-toast"
 import { useCartStore } from "@/store/cart-store"
 import { createClient } from "@/lib/supabase/client"
-import { Clock, Star, Trash2 } from "lucide-react"
-import toast from "react-hot-toast"
-import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface OrderTemplate {
   id: string
   name: string
   description: string | null
-  items: Array<{ item_id: string; quantity: number; item_name?: string; item_price?: number }>
+  items: Array<{ item_id: string; quantity: number }>
   canteen_id: string
-  canteen_name?: string
   created_at: string
 }
 
@@ -24,29 +23,25 @@ interface OrderTemplatesProps {
   onTemplateSelect?: () => void
 }
 
-export function OrderTemplates({ canteenId, onTemplateSelect }: OrderTemplatesProps) {
+export function OrderTemplates({
+  canteenId,
+  onTemplateSelect,
+}: OrderTemplatesProps) {
   const [templates, setTemplates] = useState<OrderTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [templateName, setTemplateName] = useState("")
-  const [showSaveForm, setShowSaveForm] = useState(false)
-  const supabase = createClient()
-  const router = useRouter()
-  const { items, getItemsByCanteen, addItem, clearCart } = useCartStore()
+  const [name, setName] = useState("")
+  const [supabase] = useState(() => createClient())
 
-  const cartItems = canteenId ? getItemsByCanteen(canteenId) : []
+  const cartItems = useCartStore((state) =>
+    canteenId ? state.items.filter((i) => i.canteenId === canteenId) : []
+  )
+  const addItem = useCartStore((state) => state.addItem)
 
-  useEffect(() => {
-    if (canteenId) {
-      fetchTemplates()
-    }
-  }, [canteenId])
-
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async () => {
     if (!canteenId) return
-
+    setLoading(true)
     try {
-      setLoading(true)
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -60,238 +55,193 @@ export function OrderTemplates({ canteenId, onTemplateSelect }: OrderTemplatesPr
         .order("updated_at", { ascending: false })
 
       if (error) throw error
-      setTemplates((data as OrderTemplate[]) || [])
-    } catch (error: any) {
-      console.error("Error fetching templates:", error)
+      setTemplates((data as OrderTemplate[]) ?? [])
+    } catch (error) {
+      console.error("[templates] fetch failed", error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase, canteenId])
 
-  const handleSaveTemplate = async () => {
-    if (!templateName.trim() || !canteenId || cartItems.length === 0) {
-      toast.error("Please provide a template name and add items to cart")
-      return
-    }
+  useEffect(() => {
+    fetchTemplates()
+  }, [fetchTemplates])
 
+  const saveTemplate = async () => {
+    if (!name.trim() || !canteenId || cartItems.length === 0) return
+
+    setSaving(true)
     try {
-      setSaving(true)
       const {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) {
-        toast.error("Please login")
+        toast.error("Please log in")
         return
       }
-
-      const templateItems = cartItems.map((item) => ({
-        item_id: item.itemId,
-        quantity: item.quantity,
-        item_name: item.name,
-        item_price: item.price,
-      }))
 
       const { error } = await supabase.from("order_templates").insert({
         user_id: user.id,
         canteen_id: canteenId,
-        name: templateName.trim(),
-        items: templateItems,
+        name: name.trim(),
+        items: cartItems.map((item) => ({
+          item_id: item.itemId,
+          quantity: item.quantity,
+        })),
       })
 
       if (error) throw error
 
-      toast.success("Template saved successfully!")
-      setTemplateName("")
-      setShowSaveForm(false)
+      toast.success("Saved for next time")
+      setName("")
       fetchTemplates()
     } catch (error: any) {
-      toast.error(error.message || "Failed to save template")
+      toast.error(error?.message || "Could not save this order")
     } finally {
       setSaving(false)
     }
   }
 
-  const handleLoadTemplate = async (template: OrderTemplate) => {
+  const loadTemplate = async (template: OrderTemplate) => {
     if (!canteenId) return
 
     try {
-      // Clear current cart items for this canteen
-      cartItems.forEach((item) => {
+      // Replace this canteen's lines rather than stacking onto them.
+      cartItems.forEach((item) =>
         useCartStore.getState().removeItem(item.itemId)
-      })
+      )
 
-      // Fetch item details and add to cart
-      const { data: itemsData, error } = await supabase
+      const { data: itemRows, error } = await supabase
         .from("items")
-        .select("id, name, price, image_url")
-        .in(
-          "id",
-          template.items.map((i) => i.item_id)
-        )
+        .select("id, name, price, image_url, is_available")
+        .in("id", template.items.map((i) => i.item_id))
         .eq("canteen_id", canteenId)
 
       if (error) throw error
 
-      // Add items to cart
-      template.items.forEach((templateItem) => {
-        const itemDetails = itemsData?.find((i) => i.id === templateItem.item_id)
-        if (itemDetails) {
-          for (let i = 0; i < templateItem.quantity; i++) {
-            addItem({
-              itemId: itemDetails.id,
-              name: itemDetails.name,
-              price: Number(itemDetails.price),
-              imageUrl: itemDetails.image_url,
-              canteenId: canteenId,
-              canteenName: template.canteen_name || "Canteen",
-            })
-          }
+      let skipped = 0
+      for (const line of template.items) {
+        const details = itemRows?.find((row) => row.id === line.item_id)
+        if (!details || !details.is_available) {
+          skipped++
+          continue
         }
-      })
+        for (let i = 0; i < line.quantity; i++) {
+          addItem({
+            itemId: details.id,
+            name: details.name,
+            price: Number(details.price),
+            imageUrl: details.image_url,
+            canteenId,
+            canteenName: cartItems[0]?.canteenName ?? "Canteen",
+          })
+        }
+      }
 
-      toast.success(`Template "${template.name}" loaded!`)
+      toast.success(
+        skipped > 0
+          ? `Loaded “${template.name}” · ${skipped} item${
+              skipped === 1 ? "" : "s"
+            } unavailable`
+          : `Loaded “${template.name}”`
+      )
       onTemplateSelect?.()
     } catch (error: any) {
-      toast.error(error.message || "Failed to load template")
+      toast.error(error?.message || "Could not load this order")
     }
   }
 
-  const handleDeleteTemplate = async (templateId: string) => {
-    if (!confirm("Are you sure you want to delete this template?")) return
-
+  const deleteTemplate = async (templateId: string) => {
+    const previous = templates
+    setTemplates((list) => list.filter((t) => t.id !== templateId))
     try {
       const { error } = await supabase
         .from("order_templates")
         .delete()
         .eq("id", templateId)
-
       if (error) throw error
-
-      toast.success("Template deleted")
-      fetchTemplates()
+      toast.success("Saved order deleted")
     } catch (error: any) {
-      toast.error(error.message || "Failed to delete template")
+      setTemplates(previous)
+      toast.error(error?.message || "Could not delete")
     }
   }
 
-  if (!canteenId || (templates.length === 0 && !showSaveForm && cartItems.length === 0)) {
-    return null
-  }
-
-  if (loading) {
-    return (
-      <Card className="border-2 border-orange-100">
-        <CardContent className="p-4 text-center text-sm text-muted-foreground">
-          Loading templates...
-        </CardContent>
-      </Card>
-    )
-  }
+  if (!canteenId) return null
 
   return (
-    <Card className="border-2 border-orange-100">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between text-lg">
-          <div className="flex items-center gap-2">
-            <Star className="h-5 w-5 text-primary" />
-            Saved Orders
-          </div>
-          {cartItems.length > 0 && !showSaveForm && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowSaveForm(true)}
-              className="rounded-full text-xs"
+    <div className="space-y-4">
+      {cartItems.length > 0 ? (
+        <div className="flex items-end gap-2">
+          <div className="flex-1 space-y-1.5">
+            <label
+              htmlFor="template-name"
+              className="text-xs font-medium text-muted-foreground"
             >
-              Save Current
-            </Button>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {showSaveForm && (
-          <div className="rounded-lg bg-orange-50/50 p-4 space-y-3">
-            <input
-              type="text"
-              placeholder="Template name (e.g., 'My Usual Order')"
-              value={templateName}
-              onChange={(e) => setTemplateName(e.target.value)}
-              className="w-full rounded-lg border-2 border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              Save this cart as
+            </label>
+            <Input
+              id="template-name"
+              placeholder="My usual"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               maxLength={50}
             />
-            <div className="flex gap-2">
-              <Button
-                onClick={handleSaveTemplate}
-                disabled={saving || !templateName.trim()}
-                size="sm"
-                className="flex-1 rounded-full bg-primary text-white"
-              >
-                {saving ? "Saving..." : "Save"}
-              </Button>
-              <Button
-                onClick={() => {
-                  setShowSaveForm(false)
-                  setTemplateName("")
-                }}
-                variant="outline"
-                size="sm"
-                className="rounded-full"
-              >
-                Cancel
-              </Button>
-            </div>
           </div>
-        )}
+          <Button
+            onClick={saveTemplate}
+            loading={saving}
+            disabled={!name.trim()}
+            variant="outline"
+            className="shrink-0"
+          >
+            <BookmarkPlus className="h-4 w-4" />
+            Save
+          </Button>
+        </div>
+      ) : null}
 
-        {templates.length === 0 && !showSaveForm ? (
-          <div className="text-center py-4 text-sm text-muted-foreground">
-            <p>No saved orders yet.</p>
-            {cartItems.length > 0 && (
-              <p className="mt-2">Save your current cart as a template for quick reordering!</p>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {templates.map((template) => (
-              <div
-                key={template.id}
-                className="flex items-center justify-between rounded-lg border border-orange-100 bg-white p-3 hover:bg-orange-50/50 transition-colors"
-              >
-                <div className="flex-1">
-                  <h4 className="font-semibold text-sm">{template.name}</h4>
-                  {template.description && (
-                    <p className="text-xs text-muted-foreground">{template.description}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {template.items.length} item(s) • Saved{" "}
-                    {new Date(template.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={() => handleLoadTemplate(template)}
-                    size="sm"
-                    variant="outline"
-                    className="rounded-full text-xs"
-                  >
-                    Load
-                  </Button>
-                  <Button
-                    onClick={() => handleDeleteTemplate(template.id)}
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 w-8 rounded-full text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+      {loading ? (
+        <Skeleton className="h-14 rounded-xl" />
+      ) : templates.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No saved orders yet. Save a cart to reorder it in one tap.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {templates.map((template) => (
+            <li
+              key={template.id}
+              className="flex items-center gap-2 rounded-xl border border-border bg-surface p-3"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-foreground">
+                  {template.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {template.items.length}{" "}
+                  {template.items.length === 1 ? "item" : "items"}
+                </p>
               </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              <Button
+                size="sm"
+                variant="soft"
+                onClick={() => loadTemplate(template)}
+              >
+                Load
+              </Button>
+              <button
+                type="button"
+                onClick={() => deleteTemplate(template.id)}
+                aria-label={`Delete ${template.name}`}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive-soft hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
-
-

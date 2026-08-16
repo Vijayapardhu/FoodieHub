@@ -1,68 +1,95 @@
-import { Card } from "@/components/ui/card"
 import Link from "next/link"
+import Image from "next/image"
 import { format } from "date-fns"
+import { ChevronRight, MessageSquare } from "lucide-react"
 import { Database } from "@/types/database.types"
-import { Button } from "@/components/ui/button"
+import { StarRating } from "@/components/ui/star-rating"
+import { EmptyState } from "@/components/ui/empty-state"
+import { reviewPath } from "@/lib/utils/public-id"
 
-type FeedbackSummary =
-  Database["public"]["Tables"]["reviews"]["Row"] & {
-    items: { name: string } | null
-    canteens: { name: string } | null
-  }
-
-interface ProfileFeedbackListProps {
-  feedbacks: FeedbackSummary[]
+type FeedbackSummary = Database["public"]["Tables"]["reviews"]["Row"] & {
+  items: { name: string } | null
+  canteens: { name: string } | null
 }
 
-export function ProfileFeedbackList({ feedbacks }: ProfileFeedbackListProps) {
+export function ProfileFeedbackList({
+  feedbacks,
+}: {
+  feedbacks: FeedbackSummary[]
+}) {
   if (feedbacks.length === 0) {
     return (
-      <Card className="rounded-3xl border border-dashed border-orange-200 bg-white/80 p-6 text-center text-muted-foreground">
-        No feedback yet. Once you start sharing reviews, they will appear here
-        for quick edits.
-      </Card>
+      <EmptyState
+        icon={MessageSquare}
+        title="No reviews yet"
+        description="Rate a completed order and it'll show up here, ready to edit."
+        action={{ label: "See your orders", href: "/orders" }}
+      />
     )
   }
 
   return (
-    <div className="space-y-4">
+    <ul className="space-y-3">
       {feedbacks.map((feedback) => (
-        <Card
-          key={feedback.id}
-          className="rounded-3xl border border-orange-100 bg-white/90 p-4 shadow-sm"
-        >
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm font-semibold">
-                {feedback.items?.name || "Order"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {feedback.canteens?.name || "Canteen"} ·{" "}
-                {format(new Date(feedback.created_at), "dd MMM, yyyy")}
-              </p>
+        <li key={feedback.id}>
+          <Link
+            href={reviewPath(feedback)}
+            className="block rounded-2xl border border-border bg-card p-4 transition-transform active:scale-[0.99]"
+          >
+            <div className="flex items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-foreground">
+                  {feedback.items?.name ||
+                    feedback.canteens?.name ||
+                    "Order review"}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {feedback.canteens?.name || "Canteen"} ·{" "}
+                  {format(new Date(feedback.created_at), "d MMM yyyy")}
+                </p>
+                <StarRating value={feedback.rating} className="mt-1.5" />
+              </div>
+              <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
             </div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-primary">
-              ⭐ {feedback.rating}
-            </span>
-          </div>
-          {feedback.comment && (
-            <p className="mt-3 text-sm text-muted-foreground">
-              {feedback.comment}
-            </p>
-          )}
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button asChild variant="outline" size="sm" className="rounded-full">
-              <Link href={`/profile/feedback/${feedback.id}`}>Edit review</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm" className="text-primary">
-              <Link href={`/canteen/${feedback.canteen_id}`}>
-                View canteen
-              </Link>
-            </Button>
-          </div>
-        </Card>
+
+            {feedback.comment ? (
+              <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">
+                {feedback.comment}
+              </p>
+            ) : null}
+
+            {feedback.photos?.length ? (
+              <div className="mt-3 flex gap-2">
+                {feedback.photos.slice(0, 4).map((photo) => (
+                  <span
+                    key={photo}
+                    className="relative h-14 w-14 overflow-hidden rounded-xl border border-border"
+                  >
+                    <Image
+                      src={photo}
+                      alt=""
+                      fill
+                      sizes="56px"
+                      className="object-cover"
+                    />
+                  </span>
+                ))}
+              </div>
+            ) : null}
+
+            {feedback.owner_response ? (
+              <div className="mt-3 rounded-xl bg-muted p-3">
+                <p className="text-xs font-semibold text-foreground">
+                  Canteen replied
+                </p>
+                <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                  {feedback.owner_response}
+                </p>
+              </div>
+            ) : null}
+          </Link>
+        </li>
       ))}
-    </div>
+    </ul>
   )
 }
-

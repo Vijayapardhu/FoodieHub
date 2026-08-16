@@ -1,182 +1,177 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { Mail, Phone, User } from "lucide-react"
+import toast from "react-hot-toast"
+import { LogoMark } from "@/components/brand/logo"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PageLoader } from "@/components/ui/loading-state"
 import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import toast from "react-hot-toast"
-import { Mail, Phone, User, Sparkles } from "lucide-react"
 
 export default function CompleteProfilePage() {
-    const [loading, setLoading] = useState(true)
-    const [saving, setSaving] = useState(false)
-    const router = useRouter()
-    const supabase = createClient()
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [email, setEmail] = useState("")
+  const [fullName, setFullName] = useState("")
+  const [phoneNumber, setPhoneNumber] = useState("")
 
-    const [formData, setFormData] = useState({
-        email: "",
-        fullName: "",
-        phoneNumber: "",
-    })
+  useEffect(() => {
+    let cancelled = false
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const { data: { user } } = await supabase.auth.getUser()
+    const loadUser = async () => {
+      try {
+        const supabase = createClient()
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
 
-                if (!user) {
-                    router.push("/login")
-                    return
-                }
-
-                // Fetch existing profile data
-                const { data: profile } = await supabase
-                    .from("users")
-                    .select("full_name, phone_number, role")
-                    .eq("id", user.id)
-                    .single()
-
-                // If phone number exists, they don't need to be here
-                if (profile?.phone_number) {
-                    router.push(profile.role === 'admin' ? '/admin' : profile.role === 'canteen_owner' ? '/canteen' : '/')
-                    return
-                }
-
-                setFormData({
-                    email: user.email || "",
-                    fullName: profile?.full_name || user.user_metadata?.full_name || "",
-                    phoneNumber: "",
-                })
-            } catch (error) {
-                console.error("Error fetching user:", error)
-                toast.error("Failed to load profile")
-            } finally {
-                setLoading(false)
-            }
+        if (!user) {
+          router.push("/login")
+          return
         }
 
-        fetchUser()
-    }, [router, supabase])
+        const { data: profile } = await supabase
+          .from("users")
+          .select("full_name, phone_number, role")
+          .eq("id", user.id)
+          .maybeSingle()
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-
-        if (formData.phoneNumber.length < 10) {
-            toast.error("Please enter a valid phone number")
-            return
+        // Already complete — send them to their landing screen.
+        if (profile?.phone_number) {
+          router.push(
+            profile.role === "admin"
+              ? "/admin"
+              : profile.role === "canteen_owner"
+                ? "/canteen"
+                : "/home"
+          )
+          return
         }
 
-        try {
-            setSaving(true)
-            const { data: { user } } = await supabase.auth.getUser()
-
-            if (!user) throw new Error("No user found")
-
-            const { error } = await supabase
-                .from("users")
-                .update({
-                    full_name: formData.fullName,
-                    phone_number: formData.phoneNumber,
-                })
-                .eq("id", user.id)
-
-            if (error) throw error
-
-            toast.success("Profile updated successfully!")
-            router.push("/")
-            router.refresh()
-        } catch (error: any) {
-            console.error("Error updating profile:", error)
-            toast.error(error.message || "Failed to update profile")
-        } finally {
-            setSaving(false)
-        }
-    }
-
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-orange-50/50">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
+        if (cancelled) return
+        setEmail(user.email ?? "")
+        setFullName(
+          profile?.full_name || (user.user_metadata?.full_name as string) || ""
         )
+      } catch (error) {
+        console.error("[complete-profile] load failed", error)
+        toast.error("Could not load your profile")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
 
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-orange-50/50 p-4">
-            <div className="w-full max-w-md space-y-8">
-                <div className="text-center space-y-2">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-orange-400 mb-4 shadow-lg">
-                        <Sparkles className="w-8 h-8 text-white" />
-                    </div>
-                    <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
-                        Complete Your Profile
-                    </h1>
-                    <p className="text-muted-foreground">
-                        We need a few more details to get you started
-                    </p>
-                </div>
+    loadUser()
+    return () => {
+      cancelled = true
+    }
+  }, [router])
 
-                <Card className="border-0 shadow-xl shadow-orange-100/50">
-                    <CardContent className="p-6">
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="email">Email Address</Label>
-                                <div className="relative">
-                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="email"
-                                        value={formData.email}
-                                        disabled
-                                        className="pl-10 bg-muted/50"
-                                    />
-                                </div>
-                            </div>
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
 
-                            <div className="space-y-2">
-                                <Label htmlFor="fullName">Full Name</Label>
-                                <div className="relative">
-                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="fullName"
-                                        value={formData.fullName}
-                                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                                        placeholder="John Doe"
-                                        required
-                                        className="pl-10"
-                                    />
-                                </div>
-                            </div>
+    const digits = phoneNumber.replace(/\D/g, "")
+    if (digits.length < 10) {
+      toast.error("Enter a valid phone number")
+      return
+    }
 
-                            <div className="space-y-2">
-                                <Label htmlFor="phone">Phone Number</Label>
-                                <div className="relative">
-                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="phone"
-                                        type="tel"
-                                        value={formData.phoneNumber}
-                                        onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                                        placeholder="+1234567890"
-                                        required
-                                        className="pl-10"
-                                    />
-                                </div>
-                            </div>
+    setSaving(true)
+    try {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error("Session expired — please log in again")
 
-                            <Button
-                                type="submit"
-                                disabled={saving}
-                                className="w-full h-11 rounded-xl bg-gradient-to-r from-primary to-orange-400 hover:from-primary/90 hover:to-orange-400/90 text-white font-medium shadow-lg shadow-primary/25"
-                            >
-                                {saving ? "Saving..." : "Continue"}
-                            </Button>
-                        </form>
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
-    )
+      const { error } = await supabase
+        .from("users")
+        .update({
+          full_name: fullName.trim(),
+          phone_number: phoneNumber.replace(/[^\d+]/g, ""),
+        })
+        .eq("id", user.id)
+
+      if (error) throw error
+
+      toast.success("You're all set")
+      router.push("/")
+      router.refresh()
+    } catch (error: any) {
+      toast.error(error?.message || "Could not save your details")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return <PageLoader label="Loading your profile" />
+
+  return (
+    <main className="flex min-h-screen flex-col justify-center bg-surface-fade px-4 py-8 pb-[calc(2rem+env(safe-area-inset-bottom))]">
+      <div className="mx-auto w-full max-w-md space-y-6">
+        <header className="space-y-3 text-center">
+          <LogoMark className="mx-auto h-16 w-16 rounded-2xl" />
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+              One last thing
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Canteens need a way to reach you about an active order.
+            </p>
+          </div>
+        </header>
+
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-card"
+        >
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              value={email}
+              disabled
+              startAdornment={<Mail />}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="fullName">Full name</Label>
+            <Input
+              id="fullName"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Your name"
+              autoComplete="name"
+              required
+              startAdornment={<User />}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="phone">Phone number</Label>
+            <Input
+              id="phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="+91 98765 43210"
+              required
+              startAdornment={<Phone />}
+            />
+          </div>
+
+          <Button type="submit" size="lg" block loading={saving}>
+            Continue
+          </Button>
+        </form>
+      </div>
+    </main>
+  )
 }

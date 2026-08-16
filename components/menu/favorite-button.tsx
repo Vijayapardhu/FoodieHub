@@ -1,116 +1,134 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Heart } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/client"
 import toast from "react-hot-toast"
+import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils/cn"
 
 interface FavoriteButtonProps {
   itemId?: string
   canteenId?: string
   className?: string
+  /** `overlay` sits on top of imagery; `plain` inherits the surface behind it. */
+  tone?: "overlay" | "plain"
+  size?: "sm" | "md"
 }
 
 export function FavoriteButton({
   itemId,
   canteenId,
   className,
+  tone = "overlay",
+  size = "md",
 }: FavoriteButtonProps) {
   const [isFavorite, setIsFavorite] = useState(false)
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
 
-  useEffect(() => {
-    checkFavorite()
-  }, [itemId, canteenId])
+  const column = itemId ? "item_id" : "canteen_id"
+  const value = itemId || canteenId
 
-  const checkFavorite = async () => {
+  const checkFavorite = useCallback(async () => {
+    if (!value) return
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser()
-
       if (!user) return
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("favorites")
         .select("id")
         .eq("user_id", user.id)
-        .eq(itemId ? "item_id" : "canteen_id", itemId || canteenId)
+        .eq(column, value)
         .maybeSingle()
 
-      if (error && error.code !== "PGRST116") {
-        throw error
-      }
-
       setIsFavorite(!!data)
-    } catch (error) {
+    } catch {
       setIsFavorite(false)
     }
-  }
+  }, [supabase, column, value])
 
-  const toggleFavorite = async () => {
+  useEffect(() => {
+    checkFavorite()
+  }, [checkFavorite])
+
+  const toggleFavorite = async (event: React.MouseEvent) => {
+    // These buttons often sit inside a card that is itself a link.
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (!value || loading) return
+
+    // Optimistic flip: the heart is the whole point of the interaction, so it
+    // should never wait on a round trip.
+    const next = !isFavorite
+    setIsFavorite(next)
+    setLoading(true)
+
     try {
-      setLoading(true)
-
       const {
         data: { user },
       } = await supabase.auth.getUser()
 
       if (!user) {
-        toast.error("Please login to add favorites")
+        setIsFavorite(!next)
+        toast.error("Please log in to save favourites")
         return
       }
 
-      if (isFavorite) {
-        // Remove from favorites
-        const { error } = await supabase
-          .from("favorites")
-          .delete()
-          .eq("user_id", user.id)
-          .eq(itemId ? "item_id" : "canteen_id", itemId || canteenId)
-
-        if (error) throw error
-        setIsFavorite(false)
-        toast.success("Removed from favorites")
-      } else {
-        // Add to favorites
+      if (next) {
         const { error } = await supabase.from("favorites").insert({
           user_id: user.id,
           item_id: itemId || null,
           canteen_id: canteenId || null,
         })
-
         if (error) throw error
-        setIsFavorite(true)
-        toast.success("Added to favorites")
+      } else {
+        const { error } = await supabase
+          .from("favorites")
+          .delete()
+          .eq("user_id", user.id)
+          .eq(column, value)
+        if (error) throw error
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to update favorite")
+      setIsFavorite(!next)
+      toast.error(error?.message || "Could not update favourites")
     } finally {
       setLoading(false)
     }
   }
 
+  const box = size === "sm" ? "h-9 w-9" : "h-10 w-10"
+  const icon = size === "sm" ? "h-4 w-4" : "h-[18px] w-[18px]"
+
   return (
-    <Button
-      variant="ghost"
-      size="icon"
+    <button
+      type="button"
       onClick={toggleFavorite}
       disabled={loading}
-      className={cn(className)}
+      aria-pressed={isFavorite}
+      aria-label={isFavorite ? "Remove from favourites" : "Add to favourites"}
+      className={cn(
+        "flex items-center justify-center rounded-full transition-transform active:scale-90 disabled:opacity-70",
+        box,
+        tone === "overlay"
+          ? "bg-surface/85 shadow-soft backdrop-blur-sm"
+          : "hover:bg-muted",
+        className
+      )}
     >
       <Heart
         className={cn(
-          "h-5 w-5 transition-colors",
+          icon,
+          "transition-colors",
           isFavorite
-            ? "fill-red-500 text-red-500"
-            : "text-gray-400 hover:text-red-500"
+            ? "fill-destructive text-destructive"
+            : "text-muted-foreground"
         )}
       />
-    </Button>
+    </button>
   )
 }
-

@@ -1,30 +1,38 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { requireRole } from "@/lib/auth/require-role"
+import { ConsoleHeader } from "@/components/layout/console-shell"
+import { PlatformSettingsForm } from "@/components/admin/platform-settings-form"
+import { DEFAULT_PLATFORM_SETTINGS } from "@/lib/utils/platform-settings"
+
+export const metadata = { title: "Platform settings" }
 
 export default async function AdminSettingsPage() {
-  await requireRole(["admin"])
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 via-white to-gray-50/30 p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
-          Settings
-        </h1>
-        <p className="text-muted-foreground">
-          Platform configuration and preferences
-        </p>
-      </div>
+  const { supabase } = await requireRole(["admin"])
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Platform Settings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Platform settings and configuration options will be available here.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+  // Both queries fail cleanly if migration 019 hasn't been applied; the form
+  // then renders the defaults read-only rather than erroring.
+  const [{ data: settings }, { data: auditLog }] = await Promise.all([
+    supabase.from("platform_settings").select("*").eq("id", true).maybeSingle(),
+    supabase
+      .from("settings_audit_log")
+      .select("*, users(full_name, email)")
+      .order("created_at", { ascending: false })
+      .limit(20),
+  ])
+
+  return (
+    <>
+      <ConsoleHeader
+        title="Platform settings"
+        description="Ordering rules, feature switches and the maintenance banner"
+      />
+
+      <div className="mx-auto max-w-3xl pb-24 md:pb-0">
+        <PlatformSettingsForm
+          settings={settings ?? DEFAULT_PLATFORM_SETTINGS}
+          auditLog={(auditLog ?? []) as any}
+          persisted={Boolean(settings)}
+        />
+      </div>
+    </>
   )
 }
-

@@ -1,172 +1,284 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import Image from "next/image"
+import { Search, Star, UtensilsCrossed, X } from "lucide-react"
+import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
 import { createClient } from "@/lib/supabase/client"
-import toast from "react-hot-toast"
-import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { EmptyState } from "@/components/ui/empty-state"
+import { CardGridSkeleton } from "@/components/ui/loading-state"
 import { ImageUpload } from "@/components/ui/image-upload"
-import { Skeleton } from "@/components/ui/loading-state"
+import { ImagePlaceholder } from "@/components/ui/image-placeholder"
+import { VegMark } from "@/components/ui/status-badge"
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import { useDebounce } from "@/lib/hooks/use-debounce"
 
 type Item = Database["public"]["Tables"]["items"]["Row"] & {
   canteens?: { name: string } | null
 }
 
-type Canteen = { id: string; name: string }
-
 interface ItemsModerationTableProps {
-  canteens: Canteen[]
+  canteens: Array<{ id: string; name: string }>
   initialItems: Item[]
 }
 
+/**
+ * Admin view for curating what gets promoted. Owners control their own menus;
+ * this screen only governs featuring and the carousel artwork.
+ */
 export function ItemsModerationTable({
   canteens,
   initialItems,
 }: ItemsModerationTableProps) {
-  const supabase = createClient()
   const [items, setItems] = useState(initialItems)
-  const [selectedCanteen, setSelectedCanteen] = useState(
-    canteens[0]?.id ?? "",
-  )
+  const [selectedCanteen, setSelectedCanteen] = useState(canteens[0]?.id ?? "")
+  const [rawQuery, setRawQuery] = useState("")
   const [loading, setLoading] = useState(false)
+  const [artworkTarget, setArtworkTarget] = useState<Item | null>(null)
 
-  useEffect(() => {
-    const fetchItems = async () => {
-      if (!selectedCanteen) return
-      setLoading(true)
+  const query = useDebounce(rawQuery, 180).trim().toLowerCase()
+
+  const fetchItems = useCallback(async () => {
+    if (!selectedCanteen) return
+    setLoading(true)
+    try {
+      const supabase = createClient()
       const { data, error } = await supabase
         .from("items")
         .select("*, canteens(name)")
         .eq("canteen_id", selectedCanteen)
         .order("updated_at", { ascending: false })
 
-      if (error) {
-        toast.error(error.message)
-      } else {
-        setItems(data || [])
-      }
+      if (error) throw error
+      setItems(data ?? [])
+    } catch (error: any) {
+      toast.error(error?.message || "Could not load that menu")
+    } finally {
       setLoading(false)
     }
-    fetchItems()
-  }, [selectedCanteen, supabase])
+  }, [selectedCanteen])
 
-  const toggleFeatured = async (item: Item) => {
-    const nextState = !item.is_featured
-    const { error } = await supabase
-      .from("items")
-      .update({ is_featured: nextState })
-      .eq("id", item.id)
-    if (error) {
-      toast.error(error.message || "Failed to update")
-      return
+  useEffect(() => {
+    fetchItems()
+  }, [fetchItems])
+
+  const setFeatured = async (item: Item, value: boolean) => {
+    const previous = items
+    setItems((list) =>
+      list.map((entry) =>
+        entry.id === item.id ? { ...entry, is_featured: value } : entry
+      )
+    )
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from("items")
+        .update({ is_featured: value })
+        .eq("id", item.id)
+      if (error) throw error
+
+      toast.success(
+        value ? `${item.name} is now featured` : `${item.name} unfeatured`
+      )
+    } catch (error: any) {
+      setItems(previous)
+      toast.error(error?.message || "Could not update that dish")
     }
-    setItems((prev) =>
-      prev.map((i) => (i.id === item.id ? { ...i, is_featured: nextState } : i)),
-    )
-    toast.success(
-      nextState ? "Marked as featured" : "Removed from featured items",
-    )
   }
 
-  const updateFeaturedImage = async (itemId: string, url: string) => {
-    const { error } = await supabase
-      .from("items")
-      .update({ featured_image_url: url || null })
-      .eq("id", itemId)
-    if (error) {
-      toast.error(error.message || "Failed to update image")
-      return
+  const setArtwork = async (item: Item, url: string) => {
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from("items")
+        .update({ featured_image_url: url || null })
+        .eq("id", item.id)
+      if (error) throw error
+
+      setItems((list) =>
+        list.map((entry) =>
+          entry.id === item.id
+            ? { ...entry, featured_image_url: url || null }
+            : entry
+        )
+      )
+      toast.success("Carousel artwork updated")
+    } catch (error: any) {
+      toast.error(error?.message || "Could not update the artwork")
     }
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === itemId ? { ...i, featured_image_url: url || null } : i,
-      ),
+  }
+
+  const visible = items.filter((item) =>
+    query ? item.name.toLowerCase().includes(query) : true
+  )
+
+  if (canteens.length === 0) {
+    return (
+      <EmptyState
+        icon={UtensilsCrossed}
+        title="No canteens yet"
+        description="Approve a canteen first and its menu will appear here."
+        action={{ label: "Go to canteens", href: "/admin/canteens" }}
+      />
     )
-    toast.success("Carousel image updated")
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <label className="text-sm font-medium">Select canteen</label>
-        <select
-          value={selectedCanteen}
-          onChange={(e) => setSelectedCanteen(e.target.value)}
-          className="w-full rounded-md border px-3 py-2 text-sm sm:max-w-xs"
-        >
-          {canteens.map((canteen) => (
-            <option key={canteen.id} value={canteen.id}>
-              {canteen.name}
-            </option>
-          ))}
-        </select>
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="space-y-1.5 sm:w-64">
+          <Label htmlFor="canteen-picker" className="sr-only">
+            Canteen
+          </Label>
+          <select
+            id="canteen-picker"
+            value={selectedCanteen}
+            onChange={(e) => setSelectedCanteen(e.target.value)}
+            className="h-12 w-full rounded-xl border border-input bg-surface px-3.5 text-base font-semibold text-foreground focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+          >
+            {canteens.map((canteen) => (
+              <option key={canteen.id} value={canteen.id}>
+                {canteen.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <Input
+          type="search"
+          inputMode="search"
+          placeholder="Search this menu"
+          value={rawQuery}
+          onChange={(e) => setRawQuery(e.target.value)}
+          aria-label="Search menu items"
+          startAdornment={<Search />}
+          endAdornment={
+            rawQuery ? (
+              <button
+                type="button"
+                onClick={() => setRawQuery("")}
+                aria-label="Clear search"
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted"
+              >
+                <X />
+              </button>
+            ) : undefined
+          }
+        />
       </div>
 
       {loading ? (
-        <div className="grid gap-3 md:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, idx) => (
-            <Skeleton key={idx} className="h-40 rounded-2xl" />
-          ))}
-        </div>
-      ) : items.length === 0 ? (
-        <Card className="p-10 text-center text-sm text-muted-foreground">
-          No items for this canteen.
-        </Card>
+        <CardGridSkeleton count={4} />
+      ) : visible.length === 0 ? (
+        <EmptyState
+          icon={UtensilsCrossed}
+          title="Nothing on this menu"
+          description="This canteen hasn't published any dishes matching your search."
+          compact
+        />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {items.map((item) => (
-            <Card key={item.id} className="space-y-4 p-4">
-              <div className="flex gap-3">
-                <div className="relative h-20 w-20 overflow-hidden rounded-lg bg-muted">
-                  {item.image_url ? (
-                    <Image
-                      src={item.image_url}
-                      alt={item.name}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
-                      No image
-                    </span>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm uppercase text-muted-foreground">
-                    {item.canteens?.name}
+        <ul className="grid gap-2 lg:grid-cols-2">
+          {visible.map((item) => (
+            <li
+              key={item.id}
+              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5"
+            >
+              <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-muted">
+                {item.featured_image_url || item.image_url ? (
+                  <Image
+                    src={(item.featured_image_url || item.image_url)!}
+                    alt=""
+                    fill
+                    sizes="56px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <ImagePlaceholder type="item" size="sm" />
+                )}
+              </span>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <VegMark vegetarian={item.is_vegetarian} />
+                  <p className="truncate text-sm font-semibold text-foreground">
+                    {item.name}
                   </p>
-                  <h3 className="text-lg font-semibold">{item.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    ₹{Number(item.price).toFixed(2)}
-                  </p>
                 </div>
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  ₹{Number(item.price).toFixed(2)}
+                  {item.is_available ? "" : " · hidden by owner"}
+                </p>
               </div>
-              <div className="flex flex-wrap gap-2">
+
+              <div className="flex shrink-0 items-center gap-2">
                 <Button
                   size="sm"
-                  variant={item.is_featured ? "default" : "outline"}
-                  onClick={() => toggleFeatured(item)}
+                  variant="outline"
+                  onClick={() => setArtworkTarget(item)}
                 >
-                  {item.is_featured ? "Featured" : "Mark featured"}
+                  Artwork
                 </Button>
+                <label className="flex flex-col items-center gap-1">
+                  <span className="sr-only">Feature {item.name}</span>
+                  <Switch
+                    checked={item.is_featured}
+                    onCheckedChange={(value) => setFeatured(item, value)}
+                  />
+                  <Star
+                    className={
+                      item.is_featured
+                        ? "h-3 w-3 fill-warning text-warning"
+                        : "h-3 w-3 text-muted-foreground"
+                    }
+                  />
+                </label>
               </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Carousel image</p>
-                <ImageUpload
-                  bucket="items"
-                  folder="featured"
-                  currentImageUrl={item.featured_image_url || undefined}
-                  onUploadComplete={(url) => updateFeaturedImage(item.id, url)}
-                  className="max-h-56 max-w-md"
-                />
-              </div>
-            </Card>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
+
+      <Sheet
+        open={artworkTarget !== null}
+        onOpenChange={(open) => !open && setArtworkTarget(null)}
+      >
+        <SheetContent side="bottom">
+          <SheetHeader className="pr-12">
+            <SheetTitle>Carousel artwork</SheetTitle>
+          </SheetHeader>
+
+          <SheetBody className="space-y-3 pb-6">
+            <p className="text-sm text-muted-foreground">
+              Shown on the home carousel for{" "}
+              <strong className="text-foreground">{artworkTarget?.name}</strong>.
+              Leave it empty to fall back to the dish photo.
+            </p>
+
+            {artworkTarget ? (
+              <ImageUpload
+                bucket="items"
+                folder="featured"
+                currentImageUrl={artworkTarget.featured_image_url ?? undefined}
+                onUploadComplete={(url) => setArtwork(artworkTarget, url)}
+                aspectRatio="banner"
+                label="Upload carousel artwork"
+              />
+            ) : null}
+          </SheetBody>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
-

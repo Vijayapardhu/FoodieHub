@@ -1,6 +1,9 @@
-import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
+import { ConsoleHeader } from "@/components/layout/console-shell"
 import { AnalyticsDashboard } from "@/components/canteen-owner/analytics-dashboard"
+
+export const metadata = { title: "Analytics" }
 
 export default async function AnalyticsPage() {
   const supabase = await createClient()
@@ -8,21 +11,16 @@ export default async function AnalyticsPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect("/login")
-  }
+  if (!user) redirect("/login")
 
   const { data: canteen } = await supabase
     .from("canteens")
     .select("id")
     .eq("owner_id", user.id)
-    .single()
+    .maybeSingle()
 
-  if (!canteen) {
-    redirect("/canteen")
-  }
+  if (!canteen) redirect("/canteen")
 
-  // Get orders for last 30 days
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
@@ -34,18 +32,13 @@ export default async function AnalyticsPage() {
     .order("created_at", { ascending: false })
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 via-white to-gray-50/30 p-4 md:p-6">
-      <div className="mb-4 md:mb-6">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent md:text-3xl">
-          Analytics
-        </h1>
-        <p className="text-sm text-muted-foreground md:text-base">
-          Track your sales and performance
-        </p>
-      </div>
+    <>
+      <ConsoleHeader
+        title="Analytics"
+        description="Sales, bestsellers and peak hours — exportable to CSV"
+      />
 
-      <AnalyticsDashboard orders={recentOrders || []} />
-    </div>
+      <AnalyticsDashboard orders={(recentOrders ?? []) as any} />
+    </>
   )
 }
-

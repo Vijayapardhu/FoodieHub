@@ -1,16 +1,17 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import Image from "next/image"
+import { useRouter } from "next/navigation"
+import { ImagePlus, Loader2, X } from "lucide-react"
+import toast from "react-hot-toast"
+import { Database } from "@/types/database.types"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Database } from "@/types/database.types"
-import { Star, ArrowLeft, Upload, X } from "lucide-react"
-import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
-import toast from "react-hot-toast"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
+import { StarPicker } from "@/components/ui/star-rating"
+import { StickyBar } from "@/components/ui/sticky-bar"
+import { orderPath } from "@/lib/utils/public-id"
 
 type Order = Database["public"]["Tables"]["orders"]["Row"] & {
   canteens: Database["public"]["Tables"]["canteens"]["Row"]
@@ -33,286 +34,244 @@ interface FeedbackFormProps {
     | null
 }
 
+const MAX_PHOTOS = 4
+const REVIEW_BUCKET = "reviews"
+
+const ratingLabels: Record<number, string> = {
+  1: "Bad — something went wrong",
+  2: "Poor — needs work",
+  3: "Okay — did the job",
+  4: "Good — would order again",
+  5: "Excellent — loved it",
+}
+
 export function FeedbackForm({ order, existingReview }: FeedbackFormProps) {
+  const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   const [rating, setRating] = useState(existingReview?.rating ?? 0)
   const [comment, setComment] = useState(existingReview?.comment ?? "")
   const [photos, setPhotos] = useState<string[]>(existingReview?.photos ?? [])
-  const [uploadingPhotos, setUploadingPhotos] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
-  const supabase = createClient()
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const MAX_PHOTOS = 4
-  const REVIEW_BUCKET = "reviews"
-
-  const uploadPhoto = async (file: File) => {
-    const fileExt = file.name.split(".").pop()
-    const filePath = `reviews/${order.id}/${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2)}.${fileExt}`
-
-    const { error: uploadError } = await supabase.storage
-      .from(REVIEW_BUCKET)
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false,
-      })
-
-    if (uploadError) throw uploadError
-
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from(REVIEW_BUCKET).getPublicUrl(filePath)
-
-    return publicUrl
-  }
+  const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const handlePhotoSelect = async (
-    e: React.ChangeEvent<HTMLInputElement>
+    event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const files = e.target.files
+    const files = event.target.files
     if (!files?.length) return
 
-    const availableSlots = MAX_PHOTOS - photos.length
-    if (availableSlots <= 0) {
-      toast.error(`You can upload up to ${MAX_PHOTOS} photos`)
+    const slots = MAX_PHOTOS - photos.length
+    if (slots <= 0) {
+      toast.error(`Up to ${MAX_PHOTOS} photos`)
       return
     }
 
-    const filesToUpload = Array.from(files).slice(0, availableSlots)
-
+    setUploading(true)
     try {
-      setUploadingPhotos(true)
-      const uploadedUrls: string[] = []
+      const supabase = createClient()
+      const uploaded: string[] = []
 
-      for (const file of filesToUpload) {
-        if (!file.type.startsWith("image/")) {
-          toast.error("Please select image files only")
-          continue
-        }
+      for (const file of Array.from(files).slice(0, slots)) {
+        if (!file.type.startsWith("image/")) continue
 
-        const url = await uploadPhoto(file)
-        uploadedUrls.push(url)
+        const fileExt = file.name.split(".").pop()
+        const filePath = `reviews/${order.id}/${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2)}.${fileExt}`
+
+        const { error } = await supabase.storage
+          .from(REVIEW_BUCKET)
+          .upload(filePath, file, { cacheControl: "3600", upsert: false })
+        if (error) throw error
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from(REVIEW_BUCKET).getPublicUrl(filePath)
+        uploaded.push(publicUrl)
       }
 
-      if (uploadedUrls.length > 0) {
-        setPhotos((prev) => [...prev, ...uploadedUrls])
-        toast.success(
-          uploadedUrls.length === 1
-            ? "Photo uploaded"
-            : `${uploadedUrls.length} photos uploaded`
-        )
+      if (uploaded.length > 0) {
+        setPhotos((prev) => [...prev, ...uploaded])
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to upload photos")
+      toast.error(error?.message || "Could not upload those photos")
     } finally {
-      setUploadingPhotos(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
-      }
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
     }
   }
 
-  const handleRemovePhoto = (url: string) => {
-    setPhotos((prev) => prev.filter((photo) => photo !== url))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
 
     if (rating === 0) {
-      toast.error("Please select a rating")
+      toast.error("Pick a star rating first")
       return
     }
 
+    setSaving(true)
     try {
-      setLoading(true)
+      const supabase = createClient()
 
       if (existingReview) {
-        // Update existing review
         const { error } = await supabase
           .from("reviews")
           .update({
             rating,
-            comment: comment || null,
-            photos: photos.length ? photos : null,
+            comment: comment.trim() || null,
+            photos: photos.length ? photos : [],
             updated_at: new Date().toISOString(),
           })
           .eq("id", existingReview.id)
-
         if (error) throw error
-        toast.success("Feedback updated successfully")
+        toast.success("Review updated")
       } else {
-        // Create new review
         const {
           data: { user },
         } = await supabase.auth.getUser()
+        if (!user) throw new Error("Please log in again")
 
         const { error } = await supabase.from("reviews").insert({
-          user_id: user?.id!,
+          user_id: user.id,
           canteen_id: order.canteen_id,
           order_id: order.id,
           rating,
-          comment: comment || null,
-          photos: photos.length ? photos : null,
+          comment: comment.trim() || null,
+          photos: photos.length ? photos : [],
         })
-
         if (error) throw error
-        toast.success("Feedback submitted successfully")
+        toast.success("Thanks for the review")
       }
 
-      router.push(`/orders/${order.id}`)
+      router.push(orderPath(order))
+      router.refresh()
     } catch (error: any) {
-      toast.error(error.message || "Failed to submit feedback")
+      toast.error(error?.message || "Could not save your review")
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href={`/orders/${order.id}`}>
-          <button className="rounded-full p-2 hover:bg-muted">
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-        </Link>
-        <h1 className="text-2xl font-bold">Feedback</h1>
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <section className="rounded-2xl border border-border bg-card p-4">
+        <p className="text-sm font-semibold text-foreground">
+          {order.canteens?.name ?? "Canteen"}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Token #{order.token} · {order.order_items?.length ?? 0} items · ₹
+          {Number(order.total_amount).toFixed(2)}
+        </p>
+      </section>
 
-      <form onSubmit={handleSubmit}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Rate Your Experience</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Star Rating */}
-            <div className="space-y-3">
-              <p className="text-sm font-medium">Rating</p>
-              <div className="flex items-center gap-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setRating(star)}
-                    className="transition-transform hover:scale-110"
-                  >
-                    <Star
-                      className={`h-12 w-12 ${
-                        star <= rating
-                          ? "fill-yellow-400 text-yellow-400"
-                          : "text-gray-300"
-                      }`}
-                    />
-                  </button>
-                ))}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {rating === 5 && "Excellent"}
-                {rating === 4 && "Good"}
-                {rating === 3 && "Average"}
-                {rating === 2 && "Poor"}
-                {rating === 1 && "Very Poor"}
-              </p>
-            </div>
+      <section className="space-y-3 rounded-2xl border border-border bg-card p-4 text-center">
+        <h2 className="text-sm font-semibold text-foreground">
+          How was your order?
+        </h2>
+        <div className="flex justify-center">
+          <StarPicker value={rating} onChange={setRating} />
+        </div>
+        <p className="min-h-5 text-sm text-muted-foreground">
+          {ratingLabels[rating] ?? "Tap a star to rate"}
+        </p>
+      </section>
 
-            {/* Comment Section */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Comment</label>
-              <Textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Share your experience..."
-                rows={6}
-                className="resize-none"
-              />
-            </div>
+      <section className="space-y-2 rounded-2xl border border-border bg-card p-4">
+        <label
+          htmlFor="review-comment"
+          className="text-sm font-semibold text-foreground"
+        >
+          Tell them more{" "}
+          <span className="font-normal text-muted-foreground">(optional)</span>
+        </label>
+        <Textarea
+          id="review-comment"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder="Taste, portion size, wait time, packaging…"
+          rows={5}
+          maxLength={1000}
+        />
+        <p className="text-right text-xs text-muted-foreground tabular-nums">
+          {comment.length}/1000
+        </p>
+      </section>
 
-            {/* Photo Upload */}
-            <div className="space-y-3">
-              <label className="text-sm font-medium">Photos (Optional)</label>
-              {photos.length > 0 && (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {photos.map((photo) => (
-                    <div
-                      key={photo}
-                      className="relative aspect-square overflow-hidden rounded-2xl border border-orange-100 bg-muted"
-                    >
-                      <Image
-                        src={photo}
-                        alt="Uploaded feedback photo"
-                        fill
-                        className="object-cover"
-                        sizes="200px"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemovePhoto(photo)}
-                        className="absolute right-2 top-2 rounded-full bg-black/60 p-1 text-white transition hover:bg-black/80"
-                        aria-label="Remove photo"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="flex justify-center">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={uploadingPhotos || photos.length >= MAX_PHOTOS}
-                  className="flex items-center gap-2 rounded-full border-dashed px-6 py-5"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="h-4 w-4" />
-                  {uploadingPhotos
-                    ? "Uploading..."
-                    : photos.length >= MAX_PHOTOS
-                    ? "Photo limit reached"
-                    : "Add photos"}
-                </Button>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handlePhotoSelect}
-              />
-              <p className="text-center text-xs text-muted-foreground">
-                We'll center each photo and show it edge-to-edge so your dish or
-                service moment is easy to view. Up to {MAX_PHOTOS} images.
-              </p>
-            </div>
+      <section className="space-y-3 rounded-2xl border border-border bg-card p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Photos</h2>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {photos.length}/{MAX_PHOTOS}
+          </span>
+        </div>
 
-            {/* Order Summary */}
-            <div className="rounded-lg bg-muted p-4">
-              <p className="mb-2 text-sm font-medium">Order Summary</p>
-              <p className="text-sm text-muted-foreground">
-                {order.order_items.length} item(s) • ₹
-                {Number(order.total_amount).toFixed(2)}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {order.canteens?.name ?? "Canteen"}
-              </p>
-            </div>
-
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              disabled={loading || rating === 0}
-              className="w-full bg-primary text-lg font-semibold hover:bg-primary/90"
-              size="lg"
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {photos.map((photo) => (
+            <div
+              key={photo}
+              className="relative aspect-square overflow-hidden rounded-xl border border-border bg-muted"
             >
-              {loading ? "Submitting..." : "Submit Feedback"}
-            </Button>
-          </CardContent>
-        </Card>
-      </form>
-    </div>
+              <Image
+                src={photo}
+                alt=""
+                fill
+                sizes="120px"
+                className="object-cover"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  setPhotos((prev) => prev.filter((p) => p !== photo))
+                }
+                aria-label="Remove photo"
+                className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+
+          {photos.length < MAX_PHOTOS ? (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-muted-foreground transition-colors active:border-primary"
+            >
+              {uploading ? (
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              ) : (
+                <ImagePlus className="h-5 w-5" />
+              )}
+              <span className="text-2xs font-semibold">
+                {uploading ? "Uploading" : "Add"}
+              </span>
+            </button>
+          ) : null}
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handlePhotoSelect}
+        />
+      </section>
+
+      <StickyBar>
+        <Button
+          type="submit"
+          size="lg"
+          block
+          loading={saving}
+          disabled={rating === 0}
+        >
+          {existingReview ? "Update review" : "Post review"}
+        </Button>
+      </StickyBar>
+    </form>
   )
 }
-

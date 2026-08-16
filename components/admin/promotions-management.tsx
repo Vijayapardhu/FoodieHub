@@ -1,14 +1,16 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Database } from "@/types/database.types"
-import { format } from "date-fns"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useState } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { useRouter } from "next/navigation"
+import { format } from "date-fns"
+import { TicketPercent } from "lucide-react"
 import toast from "react-hot-toast"
+import { Database } from "@/types/database.types"
+import { createClient } from "@/lib/supabase/client"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/ui/empty-state"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type Offer = Database["public"]["Tables"]["offers"]["Row"] & {
   canteens: { name: string } | null
@@ -19,16 +21,92 @@ interface PromotionsManagementProps {
   approvedPromotions: Offer[]
 }
 
+function OfferCard({
+  offer,
+  children,
+}: {
+  offer: Offer
+  children?: React.ReactNode
+}) {
+  const expired = new Date(offer.valid_until) < new Date()
+
+  return (
+    <li className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="truncate text-sm font-bold text-foreground">
+            {offer.title}
+          </h3>
+          <p className="truncate text-xs text-muted-foreground">
+            {offer.canteens?.name || "Unknown canteen"}
+          </p>
+        </div>
+
+        <p className="shrink-0 text-xl font-black text-primary">
+          {offer.discount_type === "percentage"
+            ? `${offer.discount_value}%`
+            : `₹${offer.discount_value}`}
+        </p>
+      </div>
+
+      {offer.description ? (
+        <p className="line-clamp-2 text-sm text-muted-foreground">
+          {offer.description}
+        </p>
+      ) : null}
+
+      <dl className="space-y-1 text-xs">
+        {offer.min_order_amount ? (
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Minimum order</dt>
+            <dd className="font-semibold tabular-nums text-foreground">
+              ₹{offer.min_order_amount}
+            </dd>
+          </div>
+        ) : null}
+        {offer.max_discount ? (
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Capped at</dt>
+            <dd className="font-semibold tabular-nums text-foreground">
+              ₹{offer.max_discount}
+            </dd>
+          </div>
+        ) : null}
+        <div className="flex justify-between">
+          <dt className="text-muted-foreground">Runs</dt>
+          <dd className="font-semibold text-foreground">
+            {format(new Date(offer.valid_from), "d MMM")} –{" "}
+            {format(new Date(offer.valid_until), "d MMM yyyy")}
+          </dd>
+        </div>
+      </dl>
+
+      {expired ? (
+        <Badge variant="muted" size="sm" className="self-start">
+          Window has passed
+        </Badge>
+      ) : null}
+
+      {children ? (
+        <div className="mt-auto border-t border-border pt-3">{children}</div>
+      ) : null}
+    </li>
+  )
+}
+
 export function PromotionsManagement({
   pendingPromotions: initialPending,
   approvedPromotions: initialApproved,
 }: PromotionsManagementProps) {
-  const [pendingPromotions, setPendingPromotions] = useState(initialPending)
-  const [approvedPromotions, setApprovedPromotions] = useState(initialApproved)
-  const supabase = createClient()
+  const router = useRouter()
+  const [pending, setPending] = useState(initialPending)
+  const [approved, setApproved] = useState(initialApproved)
+  const [busyId, setBusyId] = useState<string | null>(null)
 
-  const handleApproval = async (offerId: string, approve: boolean) => {
+  const decide = async (offer: Offer, approve: boolean) => {
+    setBusyId(offer.id)
     try {
+      const supabase = createClient()
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -37,140 +115,132 @@ export function PromotionsManagement({
         .from("offers")
         .update({
           is_approved: approve,
-          approved_by: approve ? user?.id : null,
+          approved_by: approve ? (user?.id ?? null) : null,
           approved_at: approve ? new Date().toISOString() : null,
+          // A rejected offer shouldn't quietly go live if approved later.
+          is_active: approve ? offer.is_active : false,
         })
-        .eq("id", offerId)
+        .eq("id", offer.id)
 
       if (error) throw error
 
       if (approve) {
-        const approved = pendingPromotions.find((p) => p.id === offerId)
-        if (approved) {
-          setPendingPromotions((prev) => prev.filter((p) => p.id !== offerId))
-          setApprovedPromotions((prev) => [approved, ...prev])
-        }
+        setPending((list) => list.filter((entry) => entry.id !== offer.id))
+        setApproved((list) => [{ ...offer, is_approved: true }, ...list])
       } else {
-        setPendingPromotions((prev) => prev.filter((p) => p.id !== offerId))
+        setPending((list) => list.filter((entry) => entry.id !== offer.id))
       }
 
-      toast.success(approve ? "Promotion approved" : "Promotion rejected")
+      toast.success(approve ? "Offer approved" : "Offer rejected")
+      router.refresh()
     } catch (error: any) {
-      toast.error(error.message || "Failed to update promotion")
+      toast.error(error?.message || "Could not update that offer")
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const revoke = async (offer: Offer) => {
+    setBusyId(offer.id)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from("offers")
+        .update({ is_approved: false, approved_at: null, is_active: false })
+        .eq("id", offer.id)
+      if (error) throw error
+
+      setApproved((list) => list.filter((entry) => entry.id !== offer.id))
+      setPending((list) => [{ ...offer, is_approved: false }, ...list])
+      toast.success("Approval revoked")
+      router.refresh()
+    } catch (error: any) {
+      toast.error(error?.message || "Could not revoke that offer")
+    } finally {
+      setBusyId(null)
     }
   }
 
   return (
-    <Tabs defaultValue="pending" className="w-full">
+    <Tabs defaultValue={pending.length > 0 ? "pending" : "approved"}>
       <TabsList>
         <TabsTrigger value="pending">
-          Pending ({pendingPromotions.length})
+          Pending
+          {pending.length > 0 ? (
+            <span className="rounded-full bg-warning px-1.5 py-0.5 text-2xs font-bold text-warning-foreground">
+              {pending.length}
+            </span>
+          ) : null}
         </TabsTrigger>
-        <TabsTrigger value="approved">
-          Approved ({approvedPromotions.length})
-        </TabsTrigger>
+        <TabsTrigger value="approved">Approved ({approved.length})</TabsTrigger>
       </TabsList>
-      <TabsContent value="pending" className="mt-6">
-        {pendingPromotions.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">No pending promotions</p>
-            </CardContent>
-          </Card>
+
+      <TabsContent value="pending">
+        {pending.length === 0 ? (
+          <EmptyState
+            icon={TicketPercent}
+            title="Nothing waiting"
+            description="Every submitted offer has been reviewed."
+            compact
+          />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {pendingPromotions.map((offer) => (
-              <Card key={offer.id}>
-                <CardHeader>
-                  <CardTitle>{offer.title}</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {offer.canteens?.name || "Unknown Canteen"}
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {offer.description && (
-                    <p className="text-sm">{offer.description}</p>
-                  )}
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Discount</span>
-                      <span className="font-semibold">
-                        {offer.discount_type === "percentage"
-                          ? `${offer.discount_value}%`
-                          : `₹${offer.discount_value}`}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Valid From</span>
-                      <span>{format(new Date(offer.valid_from), "MMM dd")}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Valid Until</span>
-                      <span>{format(new Date(offer.valid_until), "MMM dd")}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleApproval(offer.id, true)}
-                      className="flex-1"
-                      size="sm"
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      onClick={() => handleApproval(offer.id, false)}
-                      variant="destructive"
-                      size="sm"
-                    >
-                      Reject
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+          <ul className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+            {pending.map((offer) => (
+              <OfferCard key={offer.id} offer={offer}>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-destructive/40 text-destructive hover:bg-destructive-soft"
+                    onClick={() => decide(offer, false)}
+                    disabled={busyId === offer.id}
+                  >
+                    Reject
+                  </Button>
+                  <Button
+                    variant="success"
+                    className="flex-1"
+                    loading={busyId === offer.id}
+                    onClick={() => decide(offer, true)}
+                  >
+                    Approve
+                  </Button>
+                </div>
+              </OfferCard>
             ))}
-          </div>
+          </ul>
         )}
       </TabsContent>
-      <TabsContent value="approved" className="mt-6">
-        {approvedPromotions.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">No approved promotions</p>
-            </CardContent>
-          </Card>
+
+      <TabsContent value="approved">
+        {approved.length === 0 ? (
+          <EmptyState
+            icon={TicketPercent}
+            title="No approved offers"
+            description="Approved discounts appear here for the record."
+            compact
+          />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {approvedPromotions.map((offer) => (
-              <Card key={offer.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <CardTitle>{offer.title}</CardTitle>
-                    <Badge className="bg-success">Approved</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {offer.canteens?.name || "Unknown Canteen"}
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Discount</span>
-                    <span className="font-semibold">
-                      {offer.discount_type === "percentage"
-                        ? `${offer.discount_value}%`
-                        : `₹${offer.discount_value}`}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Valid Until</span>
-                    <span>{format(new Date(offer.valid_until), "MMM dd, yyyy")}</span>
-                  </div>
-                </CardContent>
-              </Card>
+          <ul className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+            {approved.map((offer) => (
+              <OfferCard key={offer.id} offer={offer}>
+                <div className="flex items-center justify-between gap-2">
+                  <Badge variant="success" size="sm">
+                    Approved
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    loading={busyId === offer.id}
+                    onClick={() => revoke(offer)}
+                  >
+                    Revoke
+                  </Button>
+                </div>
+              </OfferCard>
             ))}
-          </div>
+          </ul>
         )}
       </TabsContent>
     </Tabs>
   )
 }
-

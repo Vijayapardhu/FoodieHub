@@ -9,6 +9,13 @@ export interface CartItem {
   quantity: number
   canteenId: string
   canteenName: string
+  /**
+   * Public handles for links out of the cart. Optional because carts persisted
+   * in localStorage before slugs existed have to keep working — the link
+   * helpers fall back to the id, which still resolves.
+   */
+  itemSlug?: string | null
+  canteenSlug?: string | null
 }
 
 interface CartStore {

@@ -1,25 +1,28 @@
 "use client"
 
+import { WifiOff } from "lucide-react"
+import { Button } from "@/components/ui/button"
+
 export default function OfflinePage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-orange-50 to-white px-6 text-center">
-      <div className="max-w-md space-y-4">
-        <h1 className="text-4xl font-bold text-primary">You are offline</h1>
-        <p className="text-muted-foreground">
-          It looks like you lost your internet connection. Don&apos;t worry, you
-          can continue browsing once you&apos;re back online.
+    <main className="flex min-h-screen flex-col items-center justify-center gap-5 px-6 text-center">
+      <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+        <WifiOff className="h-7 w-7" />
+      </span>
+
+      <div className="space-y-2">
+        <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+          You&apos;re offline
+        </h1>
+        <p className="mx-auto max-w-sm text-sm text-muted-foreground text-balance">
+          Your pickup token is saved on the server — it&apos;ll be waiting when
+          you reconnect. Live order updates resume automatically.
         </p>
-        <p className="text-sm text-muted-foreground">
-          Active orders and real-time updates will resume when you reconnect.
-        </p>
-        <button
-          className="w-full rounded-full bg-primary px-6 py-3 text-lg font-semibold text-white transition-colors hover:bg-primary/90"
-          onClick={() => window.location.reload()}
-        >
-          Retry Connection
-        </button>
       </div>
-    </div>
+
+      <Button size="lg" onClick={() => window.location.reload()}>
+        Try again
+      </Button>
+    </main>
   )
 }
-

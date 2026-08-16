@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Database } from "@/types/database.types"
+import { useEventCallback } from "./use-event-callback"
 
 type OrderWithRelations = Database["public"]["Tables"]["orders"]["Row"] & {
   canteens: Database["public"]["Tables"]["canteens"]["Row"]
@@ -13,47 +14,56 @@ type OrderWithRelations = Database["public"]["Tables"]["orders"]["Row"] & {
   >
 }
 
+const ORDER_SELECT = `
+  *,
+  canteens:canteens(
+    id,
+    name,
+    contact_phone,
+    address,
+    address_reference,
+    google_maps_url
+  ),
+  order_items(
+    *,
+    items(*)
+  )
+`
+
+/**
+ * Live view of a single order. Subscribes to row updates and refetches the
+ * joined shape, since postgres_changes payloads carry the base row only.
+ */
 export function useRealtimeOrders(
   orderId: string | null,
   onUpdate?: (order: OrderWithRelations) => void
 ) {
   const [order, setOrder] = useState<OrderWithRelations | null>(null)
-  const supabase = createClient()
-  const orderSelect = `
-    *,
-    canteens:canteens(
-      id,
-      name,
-      contact_phone,
-      address,
-      address_reference,
-      google_maps_url
-    ),
-    order_items(
-      *,
-      items(*)
-    )
-  `
+  // Stable identity: callers pass an inline arrow, which would otherwise
+  // re-run the effect every render and thrash the subscription.
+  const handleUpdate = useEventCallback(onUpdate ?? (() => {}))
+
+  const fetchOrder = useCallback(async () => {
+    if (!orderId) return
+    const supabase = createClient()
+    const { data } = await supabase
+      .from("orders")
+      .select(ORDER_SELECT)
+      .eq("id", orderId)
+      .maybeSingle()
+
+    if (data) {
+      setOrder(data as OrderWithRelations)
+      handleUpdate(data as OrderWithRelations)
+    }
+  }, [orderId, handleUpdate])
 
   useEffect(() => {
     if (!orderId) return
-
-    const fetchOrder = async () => {
-      const { data } = await supabase
-        .from("orders")
-        .select(orderSelect)
-        .eq("id", orderId)
-        .single()
-
-      if (data) {
-        setOrder(data as OrderWithRelations)
-        onUpdate?.(data as OrderWithRelations)
-      }
-    }
+    const supabase = createClient()
 
     fetchOrder()
 
-    // Subscribe to real-time updates
     const channel = supabase
       .channel(`order:${orderId}`)
       .on(
@@ -73,8 +83,7 @@ export function useRealtimeOrders(
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [orderId, supabase, onUpdate])
+  }, [orderId, fetchOrder])
 
   return order
 }
-

@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
-import { Upload, X, Image as ImageIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/client"
-import toast from "react-hot-toast"
+import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
+import { Camera, ImagePlus, Loader2, X } from "lucide-react"
+import toast from "react-hot-toast"
+import { createClient } from "@/lib/supabase/client"
+import { cn } from "@/lib/utils/cn"
 
 interface ImageUploadProps {
   currentImageUrl?: string | null
@@ -14,10 +14,18 @@ interface ImageUploadProps {
   folder?: string
   maxSizeMB?: number
   aspectRatio?: "square" | "banner" | "logo"
+  /** `manual` defers the upload to the parent's save action. */
   mode?: "instant" | "manual"
   onManualFileChange?: (file: File | null) => void
+  label?: string
   className?: string
 }
+
+const aspectClass = {
+  banner: "aspect-[3/1]",
+  logo: "aspect-square max-w-[9rem]",
+  square: "aspect-square",
+} as const
 
 export function ImageUpload({
   currentImageUrl,
@@ -28,13 +36,13 @@ export function ImageUpload({
   aspectRatio = "square",
   mode = "instant",
   onManualFileChange,
+  label = "Add a photo",
   className,
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(currentImageUrl || null)
   const [manualFileSelected, setManualFileSelected] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const supabase = createClient()
   const isManual = mode === "manual"
 
   useEffect(() => {
@@ -43,27 +51,24 @@ export function ImageUpload({
     }
   }, [currentImageUrl, isManual, manualFileSelected])
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  const handleFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0]
     if (!file) return
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file")
+      toast.error("Please choose an image file")
       return
     }
-
-    // Validate file size
     if (file.size > maxSizeMB * 1024 * 1024) {
-      toast.error(`Image size must be less than ${maxSizeMB}MB`)
+      toast.error(`Images must be under ${maxSizeMB}MB`)
       return
     }
 
-    // Create preview
     const reader = new FileReader()
     reader.onloadend = () => {
-      const result = reader.result as string
-      setPreview(result)
+      setPreview(reader.result as string)
       if (isManual) {
         setManualFileSelected(true)
         onManualFileChange?.(file)
@@ -71,25 +76,22 @@ export function ImageUpload({
     }
     reader.readAsDataURL(file)
 
-    if (!isManual) {
-      await uploadImage(file)
-    }
+    if (!isManual) await uploadImage(file)
   }
 
   const uploadImage = async (file: File) => {
+    setUploading(true)
     try {
-      setUploading(true)
-
+      const supabase = createClient()
       const fileExt = file.name.split(".").pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+      const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 9)}.${fileExt}`
       const filePath = folder ? `${folder}/${fileName}` : fileName
 
       const { error: uploadError } = await supabase.storage
         .from(bucket)
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-        })
+        .upload(filePath, file, { cacheControl: "3600", upsert: false })
 
       if (uploadError) throw uploadError
 
@@ -98,10 +100,10 @@ export function ImageUpload({
       } = supabase.storage.from(bucket).getPublicUrl(filePath)
 
       onUploadComplete(publicUrl)
-      toast.success("Image uploaded successfully")
+      toast.success("Photo uploaded")
     } catch (error: any) {
-      console.error("Error uploading image:", error)
-      toast.error(error.message || "Failed to upload image")
+      console.error("[upload] failed", error)
+      toast.error(error?.message || "Could not upload that photo")
       setPreview(currentImageUrl || null)
     } finally {
       setUploading(false)
@@ -110,9 +112,7 @@ export function ImageUpload({
 
   const handleRemove = () => {
     setPreview(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
-    }
+    if (fileInputRef.current) fileInputRef.current.value = ""
     if (isManual) {
       setManualFileSelected(false)
       onManualFileChange?.(null)
@@ -120,55 +120,64 @@ export function ImageUpload({
     onUploadComplete("")
   }
 
-  const getAspectRatioClass = () => {
-    switch (aspectRatio) {
-      case "banner":
-        return "aspect-[3/1]"
-      case "logo":
-        return "aspect-square"
-      default:
-        return "aspect-square"
-    }
-  }
-
   return (
-    <div className="space-y-4">
+    <div className={cn("space-y-3", className)}>
       {preview ? (
-        <div className={`relative w-full ${className ?? ""}`}>
-          <div className={`relative w-full overflow-hidden rounded-lg border ${getAspectRatioClass()}`}>
-            <Image
-              src={preview}
-              alt="Preview"
-              fill
-              className="object-cover"
-            />
+        <div className={cn("relative w-full", aspectClass[aspectRatio])}>
+          <div className="relative h-full w-full overflow-hidden rounded-2xl border border-border bg-muted">
+            <Image src={preview} alt="Preview" fill className="object-cover" />
+            {uploading ? (
+              <span className="absolute inset-0 flex items-center justify-center bg-background/70">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              </span>
+            ) : null}
           </div>
-          <Button
-            type="button"
-            variant="destructive"
-            size="icon"
-            className="absolute right-2 top-2 z-10"
-            onClick={handleRemove}
-            disabled={uploading}
-          >
-            <X className="h-4 w-4" />
-          </Button>
+
+          <div className="absolute right-2 top-2 flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              aria-label="Replace photo"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-surface/90 text-foreground shadow-soft backdrop-blur-sm transition-transform active:scale-90"
+            >
+              <Camera className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleRemove}
+              disabled={uploading}
+              aria-label="Remove photo"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-soft transition-transform active:scale-90"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       ) : (
-        <div
-          className={`flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:border-primary ${getAspectRatioClass()}`}
+        <button
+          type="button"
           onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className={cn(
+            "flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-surface-muted p-6 text-center transition-colors active:border-primary",
+            aspectClass[aspectRatio]
+          )}
         >
-          <div className="text-center">
-            <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <p className="mt-2 text-sm text-gray-600">
-              Click to upload image
-            </p>
-            <p className="text-xs text-gray-500">
-              Max {maxSizeMB}MB
-            </p>
-          </div>
-        </div>
+          {uploading ? (
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          ) : (
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary">
+              <ImagePlus className="h-5 w-5" />
+            </span>
+          )}
+          <span className="text-sm font-semibold text-foreground">
+            {uploading ? "Uploading…" : label}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            JPG, PNG or WebP · up to {maxSizeMB}MB
+          </span>
+        </button>
       )}
 
       <input
@@ -179,20 +188,6 @@ export function ImageUpload({
         className="hidden"
         disabled={uploading}
       />
-
-      {!preview && (
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="w-full"
-        >
-          <Upload className="mr-2 h-4 w-4" />
-          {uploading ? "Uploading..." : "Select Image"}
-        </Button>
-      )}
     </div>
   )
 }
-

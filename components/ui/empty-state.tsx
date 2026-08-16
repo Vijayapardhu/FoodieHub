@@ -1,8 +1,7 @@
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { LucideIcon } from "lucide-react"
 import Link from "next/link"
-import { cn } from "@/lib/utils"
+import { LucideIcon } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils/cn"
 
 interface EmptyStateProps {
   icon?: LucideIcon
@@ -13,7 +12,13 @@ interface EmptyStateProps {
     href?: string
     onClick?: () => void
   }
+  secondaryAction?: {
+    label: string
+    href?: string
+    onClick?: () => void
+  }
   className?: string
+  compact?: boolean
 }
 
 export function EmptyState({
@@ -21,44 +26,57 @@ export function EmptyState({
   title,
   description,
   action,
+  secondaryAction,
   className,
+  compact = false,
 }: EmptyStateProps) {
-  const content = (
-    <Card className={cn("rounded-3xl border border-dashed border-slate-200 bg-white/90", className)}>
-      <CardContent className="py-12 text-center space-y-4">
-        {Icon && (
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-            <Icon className="h-6 w-6 text-slate-400" />
-          </div>
-        )}
-        <div>
-          <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-          {description && (
-            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-          )}
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center rounded-2xl border border-dashed border-border bg-surface-muted text-center",
+        compact ? "gap-3 px-5 py-8" : "gap-4 px-6 py-12",
+        className
+      )}
+    >
+      {Icon ? (
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-soft">
+          <Icon className="h-6 w-6 text-primary" />
         </div>
-        {action && (
-          <div className="flex justify-center">
-            {action.href ? (
-              <Link href={action.href}>
-                <Button className="rounded-full bg-primary text-white hover:bg-primary/90">
-                  {action.label}
-                </Button>
-              </Link>
-            ) : (
-              <Button
-                onClick={action.onClick}
-                className="rounded-full bg-primary text-white hover:bg-primary/90"
-              >
-                {action.label}
+      ) : null}
+
+      <div className="space-y-1.5">
+        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+        {description ? (
+          <p className="mx-auto max-w-sm text-sm text-muted-foreground text-balance">
+            {description}
+          </p>
+        ) : null}
+      </div>
+
+      {action || secondaryAction ? (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {action ? (
+            action.href ? (
+              <Button asChild>
+                <Link href={action.href}>{action.label}</Link>
               </Button>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            ) : (
+              <Button onClick={action.onClick}>{action.label}</Button>
+            )
+          ) : null}
+          {secondaryAction ? (
+            secondaryAction.href ? (
+              <Button asChild variant="outline">
+                <Link href={secondaryAction.href}>{secondaryAction.label}</Link>
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={secondaryAction.onClick}>
+                {secondaryAction.label}
+              </Button>
+            )
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   )
-
-  return content
 }
-

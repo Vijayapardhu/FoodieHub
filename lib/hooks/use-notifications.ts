@@ -11,6 +11,7 @@ export function useNotifications() {
   const { user } = useUser()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export function useNotifications() {
           setNotifications(data)
           setUnreadCount(data.filter((n) => !n.is_read).length)
         }
+        setLoading(false)
       })
 
     // Subscribe to real-time notifications
@@ -96,6 +98,7 @@ export function useNotifications() {
   return {
     notifications,
     unreadCount,
+    loading,
     markAsRead,
     markAllAsRead,
   }

@@ -1,54 +1,58 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils/cn"
-import toast from "react-hot-toast"
 import { useRouter } from "next/navigation"
+import { format } from "date-fns"
+import { BellRing, Send } from "lucide-react"
+import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { EmptyState } from "@/components/ui/empty-state"
+import { cn } from "@/lib/utils/cn"
 
 type NotificationWithUser =
   Database["public"]["Tables"]["notifications"]["Row"] & {
     users?: { full_name: string | null; email: string | null } | null
   }
 
-interface AdminNotificationComposerProps {
-  recentNotifications: NotificationWithUser[]
-}
-
-const audienceOptions = [
-  { value: "all", label: "All users" },
-  { value: "students", label: "Users" },
-  { value: "canteen_owner", label: "Canteen owners" },
-  { value: "single", label: "Specific email" },
-]
+const audiences = [
+  { value: "all", label: "Everyone", hint: "All registered accounts" },
+  { value: "students", label: "Students", hint: "Customer accounts only" },
+  { value: "canteen_owner", label: "Canteen owners", hint: "Kitchen staff" },
+  { value: "single", label: "One person", hint: "By email address" },
+] as const
 
 export function AdminNotificationComposer({
   recentNotifications,
-}: AdminNotificationComposerProps) {
+}: {
+  recentNotifications: NotificationWithUser[]
+}) {
   const router = useRouter()
-  const [audience, setAudience] = useState("all")
+  const [audience, setAudience] = useState<string>("all")
   const [email, setEmail] = useState("")
   const [title, setTitle] = useState("")
   const [message, setMessage] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [sending, setSending] = useState(false)
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSend = async (event: React.FormEvent) => {
+    event.preventDefault()
+
     if (!title.trim() || !message.trim()) {
-      toast.error("Title and message are required")
+      toast.error("A title and message are both required")
       return
     }
     if (audience === "single" && !email.trim()) {
-      toast.error("Provide an email to target")
+      toast.error("Enter the recipient's email")
       return
     }
+
+    setSending(true)
     try {
-      setLoading(true)
-      const res = await fetch("/api/admin/notifications/broadcast", {
+      const response = await fetch("/api/admin/notifications/broadcast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -59,114 +63,162 @@ export function AdminNotificationComposer({
         }),
       })
 
-      if (!res.ok) {
-        const body = await res.json()
-        throw new Error(body.error || "Failed to send notification")
+      if (!response.ok) {
+        const body = await response.json()
+        throw new Error(body.error || "Could not send that notification")
       }
 
       toast.success("Notification sent")
-      setMessage("")
       setTitle("")
+      setMessage("")
       setEmail("")
       setAudience("all")
       router.refresh()
     } catch (error: any) {
-      toast.error(error.message || "Failed to send notification")
+      toast.error(error?.message || "Could not send that notification")
     } finally {
-      setLoading(false)
+      setSending(false)
     }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card>
-        <CardContent className="space-y-4 p-6">
+        <CardHeader>
+          <CardTitle>Compose</CardTitle>
+        </CardHeader>
+
+        <CardContent>
           <form onSubmit={handleSend} className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              {audienceOptions.map((option) => (
-                <button
-                  type="button"
-                  key={option.value}
-                  onClick={() => setAudience(option.value)}
-                  className={cn(
-                    "rounded-2xl border px-4 py-3 text-left text-sm font-medium transition",
-                    audience === option.value
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-slate-200 bg-white"
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            {audience === "single" && (
+            <fieldset>
+              <legend className="muted-label mb-2">Send to</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {audiences.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setAudience(option.value)}
+                    aria-pressed={audience === option.value}
+                    className={cn(
+                      "rounded-xl border p-3 text-left transition-colors",
+                      audience === option.value
+                        ? "border-primary bg-primary-soft"
+                        : "border-border bg-surface"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "block text-sm font-semibold",
+                        audience === option.value
+                          ? "text-primary"
+                          : "text-foreground"
+                      )}
+                    >
+                      {option.label}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {option.hint}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            {audience === "single" ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="notify-email">Recipient email</Label>
+                <Input
+                  id="notify-email"
+                  type="email"
+                  inputMode="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="student@college.edu"
+                />
+              </div>
+            ) : null}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="notify-title">
+                Title <span className="text-destructive">*</span>
+              </Label>
               <Input
-                type="email"
-                placeholder="recipient@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="notify-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Canteens closed on Friday"
+                maxLength={100}
               />
-            )}
-            <Input
-              placeholder="Notification title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-            <Textarea
-              rows={4}
-              placeholder="Write a concise message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
-            <div className="flex justify-end">
-              <Button
-                type="submit"
-                className="rounded-full px-6"
-                disabled={loading}
-              >
-                {loading ? "Sending..." : "Send notification"}
-              </Button>
             </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="notify-message">
+                Message <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="notify-message"
+                rows={4}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Keep it short — it appears as a push notification."
+                maxLength={500}
+              />
+              <p className="text-right text-xs text-muted-foreground tabular-nums">
+                {message.length}/500
+              </p>
+            </div>
+
+            <Button type="submit" size="lg" block loading={sending}>
+              {sending ? null : <Send className="h-4 w-4" />}
+              {sending ? "Sending…" : "Send notification"}
+            </Button>
           </form>
         </CardContent>
       </Card>
 
-      <div>
-        <h2 className="mb-3 text-lg font-semibold">Recent notifications</h2>
-        {recentNotifications.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-sm text-muted-foreground">
-              No notifications sent yet.
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {recentNotifications.map((notification) => (
-              <Card key={notification.id} className="border border-slate-100">
-                <CardContent className="space-y-1 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm text-muted-foreground">
-                      {notification.users?.full_name ||
-                        notification.users?.email ||
-                        "User"}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recently sent</CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          {recentNotifications.length === 0 ? (
+            <EmptyState
+              icon={BellRing}
+              title="Nothing sent yet"
+              description="Announcements you broadcast show up here."
+              compact
+            />
+          ) : (
+            <ul className="divide-y divide-border">
+              {recentNotifications.map((notification) => (
+                <li key={notification.id} className="space-y-1 py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-semibold text-foreground">
+                      {notification.title}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(notification.created_at).toLocaleString()}
-                    </p>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {format(
+                        new Date(notification.created_at),
+                        "d MMM, h:mm a"
+                      )}
+                    </span>
                   </div>
-                  <p className="font-semibold text-foreground">
-                    {notification.title}
-                  </p>
                   <p className="text-sm text-muted-foreground">
                     {notification.message}
                   </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+                  <p className="text-xs text-muted-foreground">
+                    To{" "}
+                    {notification.users?.full_name ||
+                      notification.users?.email ||
+                      "a user"}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
-

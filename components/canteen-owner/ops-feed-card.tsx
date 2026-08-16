@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Phone } from "lucide-react"
+import { StatusBadge } from "@/components/ui/status-badge"
+import { formatTime } from "@/lib/utils/format"
 
 interface OpsFeedCardProps {
   events: {
@@ -12,57 +12,46 @@ interface OpsFeedCardProps {
   }[]
 }
 
-const statusCopy: Record<string, { label: string; color: string }> = {
-  pending: { label: "Awaiting confirmation", color: "bg-yellow-100 text-yellow-700" },
-  confirmed: { label: "Confirmed", color: "bg-blue-100 text-blue-700" },
-  preparing: { label: "In the kitchen", color: "bg-orange-100 text-orange-700" },
-  ready: { label: "Ready to pickup", color: "bg-emerald-100 text-emerald-700" },
-  completed: { label: "Completed", color: "bg-emerald-100 text-emerald-700" },
-  cancelled: { label: "Cancelled", color: "bg-rose-100 text-rose-700" },
-}
-
 export function OpsFeedCard({ events }: OpsFeedCardProps) {
   return (
-    <Card className="border-orange-50 bg-white">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Ops timeline</CardTitle>
+        <CardTitle>Recent activity</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+
+      <CardContent>
         {events.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-orange-100 p-4 text-sm text-muted-foreground">
-            Orders placed will show up here in realtime.
-          </div>
+          <p className="rounded-xl bg-muted p-3 text-sm text-muted-foreground">
+            New orders will appear here as they come in.
+          </p>
         ) : (
-          <div className="space-y-4">
-            {events.map((event) => {
-              const status = statusCopy[event.status] || statusCopy.pending
-              return (
-                <div key={event.id} className="flex items-start gap-3">
-                  <div className="mt-1 h-2 w-2 rounded-full bg-primary" />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold">
-                        {event.customer || "Guest"} · ₹{Number(event.amount || 0).toFixed(0)}
-                      </p>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(event.createdAt).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+          <ul className="space-y-3">
+            {events.map((event) => (
+              <li key={event.id} className="flex items-start gap-3">
+                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {event.customer || "Guest"}
+                      <span className="ml-1.5 font-normal tabular-nums text-muted-foreground">
+                        ₹{Number(event.amount || 0).toFixed(0)}
                       </span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-2">
-                      <Badge className={status.color}>{status.label}</Badge>
-                    </div>
+                    </p>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {formatTime(event.createdAt)}
+                    </span>
                   </div>
+                  <StatusBadge
+                    status={event.status}
+                    size="sm"
+                    className="mt-1"
+                  />
                 </div>
-              )
-            })}
-          </div>
+              </li>
+            ))}
+          </ul>
         )}
       </CardContent>
     </Card>
   )
 }
-
-

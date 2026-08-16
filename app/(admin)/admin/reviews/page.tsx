@@ -1,5 +1,8 @@
-import { ReviewsModeration } from "@/components/admin/reviews-moderation"
 import { requireRole } from "@/lib/auth/require-role"
+import { ConsoleHeader } from "@/components/layout/console-shell"
+import { ReviewsModeration } from "@/components/admin/reviews-moderation"
+
+export const metadata = { title: "Reviews" }
 
 export default async function ReviewsPage() {
   const { supabase } = await requireRole(["admin"])
@@ -8,21 +11,16 @@ export default async function ReviewsPage() {
     .from("reviews")
     .select("*, users(full_name, email), canteens(name), items(name)")
     .order("created_at", { ascending: false })
-    .limit(100)
+    .limit(200)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 via-white to-gray-50/30 p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
-          Review Moderation
-        </h1>
-        <p className="text-muted-foreground">
-          Moderate and manage customer reviews
-        </p>
-      </div>
+    <>
+      <ConsoleHeader
+        title="Reviews"
+        description="Remove abuse and spam — leave honest criticism in place"
+      />
 
-      <ReviewsModeration reviews={reviews || []} />
-    </div>
+      <ReviewsModeration reviews={(reviews ?? []) as any} />
+    </>
   )
 }
-

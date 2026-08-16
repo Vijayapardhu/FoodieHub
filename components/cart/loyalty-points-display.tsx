@@ -1,146 +1,142 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Gift, Sparkles } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Sparkles } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils/cn"
+
+type Tier = "bronze" | "silver" | "gold" | "platinum"
+
+const TIERS: Record<
+  Tier,
+  { name: string; multiplier: number; nextAt: number; accent: string }
+> = {
+  bronze: { name: "Bronze", multiplier: 1, nextAt: 2000, accent: "bg-amber-600" },
+  silver: { name: "Silver", multiplier: 1.2, nextAt: 5000, accent: "bg-slate-400" },
+  gold: { name: "Gold", multiplier: 1.5, nextAt: 10000, accent: "bg-amber-400" },
+  platinum: {
+    name: "Platinum",
+    multiplier: 2,
+    nextAt: Infinity,
+    accent: "bg-violet-500",
+  },
+}
+
+const ORDER: Tier[] = ["bronze", "silver", "gold", "platinum"]
 
 interface LoyaltyPointsDisplayProps {
   canteenId: string | null
   orderAmount: number
 }
 
-const TIER_INFO = {
-  bronze: { name: "Bronze", color: "bg-amber-500", multiplier: 1 },
-  silver: { name: "Silver", color: "bg-gray-400", multiplier: 1.2 },
-  gold: { name: "Gold", color: "bg-yellow-500", multiplier: 1.5 },
-  platinum: { name: "Platinum", color: "bg-purple-500", multiplier: 2 },
-}
-
-export function LoyaltyPointsDisplay({ canteenId, orderAmount }: LoyaltyPointsDisplayProps) {
-  const [loyaltyData, setLoyaltyData] = useState<{
+export function LoyaltyPointsDisplay({
+  canteenId,
+  orderAmount,
+}: LoyaltyPointsDisplayProps) {
+  const [data, setData] = useState<{
     points: number
-    tier: keyof typeof TIER_INFO
-    total_earned: number
+    tier: Tier
+    totalEarned: number
   } | null>(null)
-  const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
 
   useEffect(() => {
-    if (canteenId) {
-      fetchLoyaltyPoints()
-    }
-  }, [canteenId])
-
-  const fetchLoyaltyPoints = async () => {
     if (!canteenId) return
+    let cancelled = false
 
-    try {
-      setLoading(true)
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) {
-        setLoading(false)
-        return
+    const load = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        if (!user || cancelled) return
+
+        const { data: row } = await supabase
+          .from("loyalty_points")
+          .select("points, tier, total_earned")
+          .eq("user_id", user.id)
+          .eq("canteen_id", canteenId)
+          .maybeSingle()
+
+        if (row && !cancelled) {
+          setData({
+            points: row.points,
+            tier: (row.tier as Tier) ?? "bronze",
+            totalEarned: row.total_earned,
+          })
+        }
+      } catch (error) {
+        console.error("[loyalty] load failed", error)
       }
-
-      const { data, error } = await supabase
-        .from("loyalty_points")
-        .select("points, tier, total_earned")
-        .eq("user_id", user.id)
-        .eq("canteen_id", canteenId)
-        .maybeSingle()
-
-      if (error && error.code !== "PGRST116") {
-        console.error("Error fetching loyalty points:", error)
-      }
-
-      if (data) {
-        setLoyaltyData({
-          points: data.points,
-          tier: data.tier as keyof typeof TIER_INFO,
-          total_earned: data.total_earned,
-        })
-      }
-    } catch (error: any) {
-      console.error("Error:", error)
-    } finally {
-      setLoading(false)
     }
-  }
 
-  if (!canteenId || loading || !loyaltyData) {
-    return null
-  }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [supabase, canteenId])
 
-  const pointsToEarn = Math.floor(orderAmount / 10) * TIER_INFO[loyaltyData.tier].multiplier
-  const tierInfo = TIER_INFO[loyaltyData.tier]
-  const nextTierPoints = {
-    bronze: 2000,
-    silver: 5000,
-    gold: 10000,
-    platinum: Infinity,
-  }[loyaltyData.tier]
+  if (!canteenId || !data) return null
 
-  const progressToNextTier =
-    loyaltyData.tier !== "platinum"
-      ? Math.min(100, (loyaltyData.total_earned / nextTierPoints) * 100)
-      : 100
+  const tier = TIERS[data.tier]
+  const earning = Math.floor((orderAmount / 10) * tier.multiplier)
+  const nextTier = ORDER[ORDER.indexOf(data.tier) + 1]
+  const progress =
+    nextTier === undefined
+      ? 100
+      : Math.min(100, (data.totalEarned / tier.nextAt) * 100)
 
   return (
-    <Card className="border-2 border-purple-100 bg-gradient-to-br from-purple-50 to-orange-50">
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-purple-500" />
-            <span className="font-semibold text-sm">Loyalty Points</span>
+    <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Sparkles className="h-4 w-4 text-primary" />
+          Loyalty
+        </span>
+        <Badge variant="soft" size="sm">
+          {tier.name}
+          {tier.multiplier > 1 ? ` · ${tier.multiplier}×` : ""}
+        </Badge>
+      </div>
+
+      <div className="flex items-baseline justify-between">
+        <span className="text-sm text-muted-foreground">Points balance</span>
+        <span className="text-xl font-bold tabular-nums text-foreground">
+          {data.points}
+        </span>
+      </div>
+
+      {earning > 0 ? (
+        <p className="rounded-xl bg-success-soft px-3 py-2 text-sm text-success">
+          You&apos;ll earn <strong className="tabular-nums">+{earning}</strong>{" "}
+          points when this order is collected.
+        </p>
+      ) : null}
+
+      {nextTier ? (
+        <div className="space-y-1.5">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Progress to {TIERS[nextTier].name}</span>
+            <span className="tabular-nums">
+              {data.totalEarned} / {tier.nextAt}
+            </span>
           </div>
-          <Badge className={`${tierInfo.color} text-white`}>{tierInfo.name}</Badge>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Current Points</span>
-            <span className="text-lg font-bold text-purple-600">{loyaltyData.points}</span>
+          <div
+            role="progressbar"
+            aria-valuenow={Math.round(progress)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Progress to ${TIERS[nextTier].name}`}
+            className="h-2 w-full overflow-hidden rounded-full bg-muted"
+          >
+            <div
+              className={cn("h-full rounded-full transition-all", tier.accent)}
+              style={{ width: `${progress}%` }}
+            />
           </div>
-
-          {pointsToEarn > 0 && (
-            <div className="rounded-lg bg-white/80 p-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Points from this order</span>
-                <span className="font-semibold text-purple-600">+{pointsToEarn}</span>
-              </div>
-              <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                <Gift className="h-3 w-3" />
-                <span>
-                  {tierInfo.multiplier > 1 && `${tierInfo.name} member: ${tierInfo.multiplier}x points!`}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {loyaltyData.tier !== "platinum" && (
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Progress to {Object.keys(TIER_INFO)[Object.keys(TIER_INFO).indexOf(loyaltyData.tier) + 1]}</span>
-                <span className="text-muted-foreground">
-                  {loyaltyData.total_earned} / {nextTierPoints}
-                </span>
-              </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                <div
-                  className={`h-full ${tierInfo.color} transition-all`}
-                  style={{ width: `${progressToNextTier}%` }}
-                />
-              </div>
-            </div>
-          )}
         </div>
-      </CardContent>
-    </Card>
+      ) : null}
+    </div>
   )
 }
-
-

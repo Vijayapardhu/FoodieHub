@@ -23,7 +23,9 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  // Edge functions are Deno, not Next.js: they resolve `npm:`/`jsr:` specifiers
+  // and use the Deno global, none of which exist in this program.
+  "exclude": ["node_modules", "supabase/functions"]
 }
 
 

@@ -1,245 +1,279 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { format } from "date-fns"
+import { Pencil, Plus, Tags, Trash2 } from "lucide-react"
+import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
-import { Card, CardContent } from "@/components/ui/card"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { EmptyState } from "@/components/ui/empty-state"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { createClient } from "@/lib/supabase/client"
-import toast from "react-hot-toast"
 
 type Category = Database["public"]["Tables"]["categories"]["Row"]
 
-interface CategoriesTableProps {
+export function CategoriesTable({
+  categories: initial,
+}: {
   categories: Category[]
-}
-
-export function CategoriesTable({ categories: initial }: CategoriesTableProps) {
+}) {
+  const router = useRouter()
   const [categories, setCategories] = useState(initial)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [editorOpen, setEditorOpen] = useState(false)
   const [editing, setEditing] = useState<Category | null>(null)
-  const [form, setForm] = useState({ name: "", description: "" })
-  const supabase = createClient()
-
-  const handleChange = (field: keyof typeof form, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }))
-  }
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
+  const [working, setWorking] = useState(false)
 
   const openCreate = () => {
     setEditing(null)
-    setForm({ name: "", description: "" })
-    setDialogOpen(true)
+    setName("")
+    setDescription("")
+    setEditorOpen(true)
   }
 
   const openEdit = (category: Category) => {
     setEditing(category)
-    setForm({
-      name: category.name,
-      description: category.description || "",
-    })
-    setDialogOpen(true)
+    setName(category.name)
+    setDescription(category.description ?? "")
+    setEditorOpen(true)
   }
 
-  const upsertCategory = async () => {
-    if (!form.name.trim()) {
-      toast.error("Category name is required")
+  const save = async () => {
+    if (!name.trim()) {
+      toast.error("Give the category a name")
       return
     }
+
+    setSaving(true)
     try {
-      setLoading(true)
+      const supabase = createClient()
+      const payload = {
+        name: name.trim(),
+        description: description.trim() || null,
+      }
+
       if (editing) {
         const { data, error } = await supabase
           .from("categories")
-          .update({
-            name: form.name.trim(),
-            description: form.description.trim() || null,
-          })
+          .update(payload)
           .eq("id", editing.id)
           .select("*")
           .single()
-
         if (error) throw error
 
-        setCategories((prev) =>
-          prev.map((cat) => (cat.id === editing.id ? (data as Category) : cat)),
+        setCategories((list) =>
+          list.map((entry) =>
+            entry.id === editing.id ? (data as Category) : entry
+          )
         )
         toast.success("Category updated")
       } else {
         const { data, error } = await supabase
           .from("categories")
-          .insert({
-            name: form.name.trim(),
-            description: form.description.trim() || null,
-          })
+          .insert(payload)
           .select("*")
           .single()
-
         if (error) throw error
 
-        setCategories((prev) => [data as Category, ...prev])
+        setCategories((list) => [data as Category, ...list])
         toast.success("Category created")
       }
-      setDialogOpen(false)
+
+      setEditorOpen(false)
+      router.refresh()
     } catch (error: any) {
-      toast.error(error.message || "Failed to save category")
+      toast.error(error?.message || "Could not save that category")
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
-  const deleteCategory = async (categoryId: string) => {
-    if (
-      !confirm(
-        "Delete this category? Menu items linked to it will become uncategorized.",
-      )
-    ) {
-      return
-    }
+  const remove = async () => {
+    if (!deleteTarget) return
+    setWorking(true)
     try {
+      const supabase = createClient()
       const { error } = await supabase
         .from("categories")
         .delete()
-        .eq("id", categoryId)
-
+        .eq("id", deleteTarget.id)
       if (error) throw error
 
-      setCategories((prev) => prev.filter((cat) => cat.id !== categoryId))
+      setCategories((list) =>
+        list.filter((entry) => entry.id !== deleteTarget.id)
+      )
+      setDeleteTarget(null)
       toast.success("Category deleted")
+      router.refresh()
     } catch (error: any) {
-      toast.error(error.message || "Failed to delete category")
+      toast.error(error?.message || "Could not delete that category")
+    } finally {
+      setWorking(false)
     }
   }
 
   return (
-    <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {categories.length} categories
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground tabular-nums">
+          {categories.length}{" "}
+          {categories.length === 1 ? "category" : "categories"}
         </p>
-        <Button onClick={openCreate} className="rounded-full">
+        <Button onClick={openCreate}>
+          <Plus className="h-4 w-4" />
           Add category
         </Button>
       </div>
 
-      <Card className="hidden md:block">
-        <CardContent className="p-0">
-          <table className="w-full">
-            <thead className="border-b bg-muted/30">
-              <tr>
-                <th className="px-6 py-3 text-left text-sm font-medium">Name</th>
-                <th className="px-6 py-3 text-left text-sm font-medium">
-                  Description
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {categories.map((category) => (
-                <tr key={category.id} className="border-b">
-                  <td className="px-6 py-4 font-medium">{category.name}</td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">
-                    {category.description || "—"}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">
-                    {new Date(category.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 space-x-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openEdit(category)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => deleteCategory(category.id)}
-                    >
-                      Delete
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+      {categories.length === 0 ? (
+        <EmptyState
+          icon={Tags}
+          title="No categories yet"
+          description="Categories group dishes across every canteen's menu."
+          action={{ label: "Add the first one", onClick: openCreate }}
+        />
+      ) : (
+        <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {categories.map((category) => (
+            <li
+              key={category.id}
+              className="flex items-start gap-3 rounded-2xl border border-border bg-card p-3.5"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                <Tags className="h-4 w-4" />
+              </span>
 
-      <div className="space-y-3 md:hidden">
-        {categories.map((category) => (
-          <Card key={category.id} className="border border-slate-100">
-            <CardContent className="space-y-2 p-4">
-              <p className="font-semibold">{category.name}</p>
-              <p className="text-sm text-muted-foreground">
-                {category.description || "No description"}
-              </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-foreground">
+                  {category.name}
+                </p>
+                <p className="line-clamp-2 text-xs text-muted-foreground">
+                  {category.description || "No description"}
+                </p>
+                <p className="mt-1 text-2xs text-muted-foreground">
+                  Added {format(new Date(category.created_at), "d MMM yyyy")}
+                </p>
+              </div>
+
+              <div className="flex shrink-0 gap-1">
                 <Button
-                  size="sm"
-                  variant="outline"
+                  size="icon-sm"
+                  variant="ghost"
                   onClick={() => openEdit(category)}
+                  aria-label={`Edit ${category.name}`}
                 >
-                  Edit
+                  <Pencil className="h-4 w-4" />
                 </Button>
                 <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => deleteCategory(category.id)}
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={() => setDeleteTarget(category)}
+                  aria-label={`Delete ${category.name}`}
+                  className="text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
                 >
-                  Delete
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            </li>
+          ))}
+        </ul>
+      )}
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="space-y-4">
+      <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editing ? "Edit category" : "Add new category"}
+              {editing ? "Edit category" : "New category"}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <Input
-              placeholder="Category name"
-              value={form.name}
-              onChange={(e) => handleChange("name", e.target.value)}
-            />
-            <Textarea
-              rows={3}
-              placeholder="Description"
-              value={form.description}
-              onChange={(e) => handleChange("description", e.target.value)}
-            />
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="category-name">
+                Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="category-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. South Indian"
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="category-description">Description</Label>
+              <Textarea
+                id="category-description"
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="What belongs in this category"
+              />
+            </div>
           </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+            <Button
+              variant="outline"
+              block
+              onClick={() => setEditorOpen(false)}
+              disabled={saving}
+            >
               Cancel
             </Button>
-            <Button onClick={upsertCategory} disabled={loading}>
-              {loading ? "Saving..." : "Save"}
+            <Button block loading={saving} onClick={save}>
+              {editing ? "Save" : "Create"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete “{deleteTarget?.name}”?</DialogTitle>
+            <DialogDescription>
+              Dishes filed under it stay on their menus but lose this grouping.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              block
+              onClick={() => setDeleteTarget(null)}
+              disabled={working}
+            >
+              Keep it
+            </Button>
+            <Button
+              variant="destructive"
+              block
+              loading={working}
+              onClick={remove}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }
-

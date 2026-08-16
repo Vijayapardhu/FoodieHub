@@ -1,103 +1,102 @@
 "use client"
 
 import { useState } from "react"
-import { Bell } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import Link from "next/link"
+import { Bell, CheckCheck } from "lucide-react"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import { Button } from "@/components/ui/button"
+import { NotificationList } from "@/components/notifications/notification-list"
 import { useNotifications } from "@/lib/hooks/use-notifications"
-import { formatDistanceToNow } from "date-fns"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
+import { cn } from "@/lib/utils/cn"
 
-export function NotificationCenter() {
+/** Bell + unread dot for the app bar. Opens the notification sheet. */
+export function NotificationBell({ className }: { className?: string }) {
   const [open, setOpen] = useState(false)
-  const { notifications, unreadCount, markAsRead, markAllAsRead } =
-    useNotifications()
-
-  const handleNotificationClick = (notificationId: string) => {
-    markAsRead(notificationId)
-  }
+  const { unreadCount } = useNotifications()
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="relative"
+      <button
+        type="button"
         onClick={() => setOpen(true)}
+        aria-label={
+          unreadCount > 0
+            ? `Notifications, ${unreadCount} unread`
+            : "Notifications"
+        }
+        className={cn(
+          "relative flex h-11 w-11 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-muted active:scale-95",
+          className
+        )}
       >
         <Bell className="h-5 w-5" />
-        {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-white">
-            {unreadCount}
+        {unreadCount > 0 ? (
+          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-destructive-foreground">
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
-        )}
-      </Button>
+        ) : null}
+      </button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Notifications</DialogTitle>
-              {unreadCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={markAllAsRead}
-                  className="text-xs"
-                >
-                  Mark all as read
-                </Button>
-              )}
-            </div>
-          </DialogHeader>
-          <div className="max-h-[400px] space-y-2 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                No notifications
-              </p>
-            ) : (
-              notifications.map((notification) => (
-                <Card
-                  key={notification.id}
-                  className={`cursor-pointer transition-colors ${
-                    !notification.is_read ? "bg-muted" : ""
-                  }`}
-                  onClick={() => handleNotificationClick(notification.id)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold">{notification.title}</p>
-                          {!notification.is_read && (
-                            <Badge className="h-2 w-2 rounded-full p-0" />
-                          )}
-                        </div>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {notification.message}
-                        </p>
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          {formatDistanceToNow(
-                            new Date(notification.created_at),
-                            { addSuffix: true }
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <NotificationSheet open={open} onOpenChange={setOpen} />
     </>
   )
 }
 
+export function NotificationSheet({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const { notifications, unreadCount, markAsRead, markAllAsRead } =
+    useNotifications()
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="h-[80dvh]">
+        <SheetHeader className="flex-row items-center justify-between gap-3 pr-12">
+          <SheetTitle>Notifications</SheetTitle>
+          {unreadCount > 0 ? (
+            <Button variant="ghost" size="sm" onClick={markAllAsRead}>
+              <CheckCheck className="h-4 w-4" />
+              Mark all read
+            </Button>
+          ) : null}
+        </SheetHeader>
+
+        <SheetBody className="space-y-3 pb-6">
+          <NotificationList
+            notifications={notifications.slice(0, 12)}
+            onOpen={(notification) => {
+              if (!notification.is_read) markAsRead(notification.id)
+              onOpenChange(false)
+            }}
+            compact
+          />
+
+          {notifications.length > 0 ? (
+            <Link
+              href="/notifications"
+              onClick={() => onOpenChange(false)}
+              className="block rounded-xl border border-border py-3 text-center text-sm font-semibold text-primary"
+            >
+              See all notifications
+            </Link>
+          ) : null}
+        </SheetBody>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+/** Kept for existing call sites that render the whole bell + sheet unit. */
+export function NotificationCenter() {
+  return <NotificationBell />
+}

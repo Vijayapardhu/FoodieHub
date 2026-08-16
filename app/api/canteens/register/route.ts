@@ -1,18 +1,19 @@
-import { NextRequest, NextResponse } from "next/server"
 import { createSecureHandler, successResponse, errorResponse } from "@/lib/api/middleware"
 import { z } from "zod"
+import { defaultOperatingHours } from "@/lib/utils/operating-hours"
 
 const canteenRegistrationSchema = z.object({
   name: z.string().min(1, "Canteen name is required").max(100),
   description: z.string().max(500).optional(),
   address: z.string().max(200).optional(),
+  contact_phone: z.string().max(20).optional(),
   operating_hours: z
     .record(
       z.string(),
       z.object({
         open: z.string(),
         close: z.string(),
-        is_open: z.boolean().optional(),
+        closed: z.boolean().optional(),
       })
     )
     .optional(),
@@ -37,23 +38,14 @@ export const POST = createSecureHandler({
         )
       }
 
-      const { name, description, address, operating_hours } = body as {
-        name: string
-        description?: string
-        address?: string
-        operating_hours?: Record<string, any>
-      }
-
-      // Default operating hours if not provided
-      const defaultOperatingHours = {
-        monday: { open: "08:00", close: "20:00", is_open: true },
-        tuesday: { open: "08:00", close: "20:00", is_open: true },
-        wednesday: { open: "08:00", close: "20:00", is_open: true },
-        thursday: { open: "08:00", close: "20:00", is_open: true },
-        friday: { open: "08:00", close: "20:00", is_open: true },
-        saturday: { open: "09:00", close: "18:00", is_open: true },
-        sunday: { open: "10:00", close: "16:00", is_open: false },
-      }
+      const { name, description, address, contact_phone, operating_hours } =
+        body as {
+          name: string
+          description?: string
+          address?: string
+          contact_phone?: string
+          operating_hours?: Record<string, any>
+        }
 
       // Create canteen (needs admin approval)
       const { data: canteen, error } = await supabase
@@ -63,8 +55,11 @@ export const POST = createSecureHandler({
           name,
           description: description || null,
           address: address || null,
-          operating_hours: operating_hours || defaultOperatingHours,
-          is_open: false, // Start as closed until owner opens it
+          contact_phone: contact_phone || null,
+          // Shape must match lib/utils/operating-hours so the settings editor
+          // can read it back without falling through to its defaults.
+          operating_hours: operating_hours || defaultOperatingHours(),
+          is_open: false, // Owner flips this on when they start serving
           is_approved: false, // Needs admin approval
         })
         .select()

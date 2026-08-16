@@ -59,6 +59,12 @@ export interface Database {
           address: string | null
           address_reference: string | null
           google_maps_url: string | null
+          is_approved: boolean
+          approved_by: string | null
+          approved_at: string | null
+          rejection_reason: string | null
+          slug: string | null
+          prep_minutes: number | null
         }
         Insert: {
           id?: string
@@ -77,6 +83,12 @@ export interface Database {
           address?: string | null
           address_reference?: string | null
           google_maps_url?: string | null
+          is_approved?: boolean
+          approved_by?: string | null
+          approved_at?: string | null
+          rejection_reason?: string | null
+          slug?: string | null
+          prep_minutes?: number | null
         }
         Update: {
           id?: string
@@ -95,6 +107,12 @@ export interface Database {
           address?: string | null
           address_reference?: string | null
           google_maps_url?: string | null
+          is_approved?: boolean
+          approved_by?: string | null
+          approved_at?: string | null
+          rejection_reason?: string | null
+          slug?: string | null
+          prep_minutes?: number | null
         }
       }
       categories: {
@@ -136,6 +154,8 @@ export interface Database {
           gallery_images: string[] | null
           is_featured: boolean
           featured_image_url: string | null
+          slug: string | null
+          prep_minutes: number | null
         }
         Insert: {
           id?: string
@@ -155,6 +175,8 @@ export interface Database {
           gallery_images?: string[] | null
           is_featured?: boolean
           featured_image_url?: string | null
+          slug?: string | null
+          prep_minutes?: number | null
         }
         Update: {
           id?: string
@@ -174,6 +196,8 @@ export interface Database {
           gallery_images?: string[] | null
           is_featured?: boolean
           featured_image_url?: string | null
+          slug?: string | null
+          prep_minutes?: number | null
         }
       }
       orders: {
@@ -193,12 +217,31 @@ export interface Database {
           customer_phone: string | null
           created_at: string
           updated_at: string
+          // Added by migration 012_add_booking_features
+          scheduled_pickup_time: string | null
+          order_type: 'immediate' | 'scheduled' | 'recurring' | null
+          preferred_time_slot: string | null
+          estimated_preparation_time: number | null
+          dietary_notes: string | null
+          special_instructions: string | null
+          is_group_order: boolean | null
+          group_order_code: string | null
+          decline_reason: string | null
         }
         Insert: {
           id?: string
           user_id: string
           canteen_id: string
           token: string
+          scheduled_pickup_time?: string | null
+          order_type?: 'immediate' | 'scheduled' | 'recurring' | null
+          preferred_time_slot?: string | null
+          estimated_preparation_time?: number | null
+          dietary_notes?: string | null
+          special_instructions?: string | null
+          is_group_order?: boolean | null
+          group_order_code?: string | null
+          decline_reason?: string | null
           qr_code_url?: string | null
           status?: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled'
           total_amount: number
@@ -227,6 +270,15 @@ export interface Database {
           customer_phone?: string | null
           created_at?: string
           updated_at?: string
+          scheduled_pickup_time?: string | null
+          order_type?: 'immediate' | 'scheduled' | 'recurring' | null
+          preferred_time_slot?: string | null
+          estimated_preparation_time?: number | null
+          dietary_notes?: string | null
+          special_instructions?: string | null
+          is_group_order?: boolean | null
+          group_order_code?: string | null
+          decline_reason?: string | null
         }
       }
       order_items: {
@@ -267,6 +319,7 @@ export interface Database {
           photos: string[]
           owner_response: string | null
           owner_response_at: string | null
+          public_code: string | null
           created_at: string
           updated_at: string
         }
@@ -281,6 +334,7 @@ export interface Database {
           photos?: string[]
           owner_response?: string | null
           owner_response_at?: string | null
+          public_code?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -295,6 +349,7 @@ export interface Database {
           photos?: string[]
           owner_response?: string | null
           owner_response_at?: string | null
+          public_code?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -410,12 +465,310 @@ export interface Database {
           created_at?: string
         }
       }
+      // Added by migration 012_add_booking_features
+      order_templates: {
+        Row: {
+          id: string
+          user_id: string
+          canteen_id: string
+          name: string
+          description: string | null
+          items: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          canteen_id: string
+          name: string
+          description?: string | null
+          items: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          canteen_id?: string
+          name?: string
+          description?: string | null
+          items?: Json
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      loyalty_points: {
+        Row: {
+          id: string
+          user_id: string
+          canteen_id: string | null
+          points: number
+          total_earned: number
+          total_redeemed: number
+          tier: 'bronze' | 'silver' | 'gold' | 'platinum'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          canteen_id?: string | null
+          points?: number
+          total_earned?: number
+          total_redeemed?: number
+          tier?: 'bronze' | 'silver' | 'gold' | 'platinum'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          canteen_id?: string | null
+          points?: number
+          total_earned?: number
+          total_redeemed?: number
+          tier?: 'bronze' | 'silver' | 'gold' | 'platinum'
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      loyalty_transactions: {
+        Row: {
+          id: string
+          user_id: string
+          canteen_id: string | null
+          order_id: string | null
+          points: number
+          transaction_type: 'earned' | 'redeemed' | 'expired' | 'adjusted'
+          description: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          canteen_id?: string | null
+          order_id?: string | null
+          points: number
+          transaction_type: 'earned' | 'redeemed' | 'expired' | 'adjusted'
+          description?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          canteen_id?: string | null
+          order_id?: string | null
+          points?: number
+          transaction_type?: 'earned' | 'redeemed' | 'expired' | 'adjusted'
+          description?: string | null
+          created_at?: string
+        }
+      }
+      // Added by migration 019_platform_settings
+      platform_settings: {
+        Row: {
+          id: boolean
+          platform_name: string
+          support_email: string | null
+          support_phone: string | null
+          token_length: number
+          order_cancellation_window_minutes: number
+          default_preparation_minutes: number
+          max_scheduled_days_ahead: number
+          ordering_enabled: boolean
+          scheduled_orders_enabled: boolean
+          reviews_enabled: boolean
+          loyalty_enabled: boolean
+          new_canteens_require_approval: boolean
+          maintenance_message: string | null
+          promo_daily_rate: number
+          updated_by: string | null
+          updated_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: boolean
+          platform_name?: string
+          support_email?: string | null
+          support_phone?: string | null
+          token_length?: number
+          order_cancellation_window_minutes?: number
+          default_preparation_minutes?: number
+          max_scheduled_days_ahead?: number
+          ordering_enabled?: boolean
+          scheduled_orders_enabled?: boolean
+          reviews_enabled?: boolean
+          loyalty_enabled?: boolean
+          new_canteens_require_approval?: boolean
+          maintenance_message?: string | null
+          promo_daily_rate?: number
+          updated_by?: string | null
+          updated_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: boolean
+          platform_name?: string
+          support_email?: string | null
+          support_phone?: string | null
+          token_length?: number
+          order_cancellation_window_minutes?: number
+          default_preparation_minutes?: number
+          max_scheduled_days_ahead?: number
+          ordering_enabled?: boolean
+          scheduled_orders_enabled?: boolean
+          reviews_enabled?: boolean
+          loyalty_enabled?: boolean
+          new_canteens_require_approval?: boolean
+          maintenance_message?: string | null
+          promo_daily_rate?: number
+          updated_by?: string | null
+          updated_at?: string
+          created_at?: string
+        }
+      }
+      settings_audit_log: {
+        Row: {
+          id: string
+          changed_by: string | null
+          changes: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          changed_by?: string | null
+          changes: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          changed_by?: string | null
+          changes?: Json
+          created_at?: string
+        }
+      }
+      user_dietary_preferences: {
+        Row: {
+          id: string
+          user_id: string
+          allergies: string[]
+          dietary_restrictions: string[]
+          preferred_cuisines: string[]
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          allergies?: string[]
+          dietary_restrictions?: string[]
+          preferred_cuisines?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          allergies?: string[]
+          dietary_restrictions?: string[]
+          preferred_cuisines?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      // Added by migration 023_promo_banners
+      promo_banners: {
+        Row: {
+          id: string
+          canteen_id: string
+          offer_id: string | null
+          headline: string
+          subtext: string | null
+          image_url: string | null
+          cta_label: string
+          status: 'pending' | 'approved' | 'rejected' | 'paused'
+          placement: 'home_hero' | 'home_inline' | 'orders' | 'cart'
+          review_note: string | null
+          priority: number
+          starts_at: string
+          ends_at: string
+          amount_due: number
+          amount_paid: number
+          payment_reference: string | null
+          impressions: number
+          clicks: number
+          created_by: string | null
+          reviewed_by: string | null
+          reviewed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          canteen_id: string
+          offer_id?: string | null
+          headline: string
+          subtext?: string | null
+          image_url?: string | null
+          cta_label?: string
+          status?: 'pending' | 'approved' | 'rejected' | 'paused'
+          placement?: 'home_hero' | 'home_inline' | 'orders' | 'cart'
+          review_note?: string | null
+          priority?: number
+          starts_at?: string
+          ends_at: string
+          amount_due?: number
+          amount_paid?: number
+          payment_reference?: string | null
+          impressions?: number
+          clicks?: number
+          created_by?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          canteen_id?: string
+          offer_id?: string | null
+          headline?: string
+          subtext?: string | null
+          image_url?: string | null
+          cta_label?: string
+          status?: 'pending' | 'approved' | 'rejected' | 'paused'
+          placement?: 'home_hero' | 'home_inline' | 'orders' | 'cart'
+          review_note?: string | null
+          priority?: number
+          starts_at?: string
+          ends_at?: string
+          amount_due?: number
+          amount_paid?: number
+          payment_reference?: string | null
+          impressions?: number
+          clicks?: number
+          created_by?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      // Added by migration 023_promo_banners
+      track_promo_banner: {
+        Args: { banner_id: string; event?: 'impression' | 'click' }
+        Returns: undefined
+      }
     }
     Enums: {
       user_role: 'user' | 'canteen_owner' | 'admin'

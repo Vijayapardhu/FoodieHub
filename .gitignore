@@ -37,3 +37,7 @@ next-env.d.ts
 
 
 
+
+# Local tooling config (machine-specific, not part of the app)
+.claude/
+.agents/

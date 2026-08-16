@@ -2,134 +2,143 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Store } from "lucide-react"
+import toast from "react-hot-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import toast from "react-hot-toast"
 
 export default function CanteenRegisterPage() {
-  const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
+  const [address, setAddress] = useState("")
+  const [contactPhone, setContactPhone] = useState("")
 
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    address: "",
-  })
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!formData.name.trim()) {
-      toast.error("Canteen name is required")
+    if (!name.trim()) {
+      toast.error("Your canteen needs a name")
       return
     }
 
+    setLoading(true)
     try {
-      setLoading(true)
-
       const response = await fetch("/api/canteens/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim(),
+          address: address.trim(),
+          contact_phone: contactPhone.trim(),
+        }),
       })
 
       const data = await response.json()
-
       if (!response.ok) {
-        throw new Error(data.error || "Failed to register canteen")
+        throw new Error(data.error || "Could not register your canteen")
       }
 
-      toast.success("Canteen registered successfully!")
+      toast.success("Canteen registered — an admin will review it shortly")
       router.push("/canteen")
       router.refresh()
     } catch (error: any) {
-      toast.error(error.message || "Failed to register canteen")
+      toast.error(error?.message || "Could not register your canteen")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 via-white to-gray-50/30">
-      <div className="container mx-auto max-w-2xl p-6">
-        <Card className="rounded-3xl border border-slate-200 bg-white/90 shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-2xl bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
-              Register Your Canteen
-            </CardTitle>
-            <CardDescription>
-              Set up your canteen to start accepting orders
-            </CardDescription>
-          </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Canteen Name *</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="e.g., Central Canteen"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                required
-                disabled={loading}
-              />
-            </div>
+    <div className="mx-auto max-w-lg space-y-5">
+      <header className="space-y-3 text-center">
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+          <Store className="h-6 w-6" />
+        </span>
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+            Register your canteen
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Add the basics now — you can fill in hours, photos and location
+            after an admin approves it.
+          </p>
+        </div>
+      </header>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Tell customers about your canteen..."
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                disabled={loading}
-                rows={4}
-              />
-            </div>
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4 rounded-2xl border border-border bg-card p-4"
+      >
+        <div className="space-y-1.5">
+          <Label htmlFor="canteen-name">
+            Canteen name <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="canteen-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Central Canteen"
+            required
+            disabled={loading}
+          />
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                type="text"
-                placeholder="e.g., Building A, Ground Floor"
-                value={formData.address}
-                onChange={(e) =>
-                  setFormData({ ...formData, address: e.target.value })
-                }
-                disabled={loading}
-              />
-            </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="canteen-description">Description</Label>
+          <Textarea
+            id="canteen-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="What you serve and what you're known for"
+            rows={3}
+            disabled={loading}
+          />
+        </div>
 
-            <div className="flex gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.back()}
-                disabled={loading}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading} className="flex-1">
-                {loading ? "Registering..." : "Register Canteen"}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-        </Card>
-      </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="canteen-address">Where you are</Label>
+          <Input
+            id="canteen-address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="e.g. Block A, ground floor"
+            disabled={loading}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="canteen-phone">Contact phone</Label>
+          <Input
+            id="canteen-phone"
+            type="tel"
+            inputMode="tel"
+            value={contactPhone}
+            onChange={(e) => setContactPhone(e.target.value)}
+            placeholder="+91 98765 43210"
+            disabled={loading}
+          />
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={() => router.back()}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" size="lg" className="flex-1" loading={loading}>
+            Register
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }
-

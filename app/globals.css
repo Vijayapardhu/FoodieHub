@@ -2,50 +2,163 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ------------------------------------------------------------------
+   Design tokens — Sage & Cream
+
+   Light is the default and the identity: the canvas is bright cream, and
+   cards sit on it in pure white. That inversion — white as the *raised*
+   colour, not the ground — is what stops the page reading as an untouched
+   framework default. Neutrals are tinted toward the brand hue rather than
+   being pure grey, so nothing here is a colour that came out of a box.
+
+   Dark is opt-in only. The theme script in components/theme-provider.tsx
+   resolves to light unless the user has explicitly chosen otherwise, and
+   sets the `.dark` class on <html> before first paint.
+------------------------------------------------------------------- */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Bright cream ground (#FCF9EF) — warm enough to actually read as
+       cream rather than as an off-white that looks like a rendering fault */
+    --background: 44 70% 97%;
+    /* Green-charcoal, not black: text belongs to the same family as the brand */
+    --foreground: 148 22% 14%;
+
+    /* White is the raised colour here — cards lift off the cream */
+    --surface: 0 0% 100%;
+    /* Soft sage band for alternating sections (#EFF4EA) */
+    --surface-muted: 95 28% 94%;
+    --surface-raised: 0 0% 100%;
+
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 148 22% 14%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 16 100% 60%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 0 72% 50%;
-    --radius: 0.5rem;
+    --popover-foreground: 148 22% 14%;
+
+    /* Garden green (#2E7D5B). Dark enough to carry cream text at 5:1, so it
+       works as a solid button fill without a second "accessible" variant. */
+    --primary: 154 46% 34%;
+    /* Cream rather than white on green — pure white against a warm ground
+       reads as a colour mistake at large sizes. */
+    --primary-foreground: 44 70% 97%;
+    --primary-soft: 150 40% 94%;
+    --primary-strong: 156 50% 26%;
+
+    /* Legacy alias from the previous palette; folded into the brand so any
+       markup still referencing it stays consistent. */
+    --acid: 154 46% 34%;
+    --acid-foreground: 44 70% 97%;
+
+    /* Deepest green, for the footer and heavy text — never a hero background */
+    --ink: 150 24% 12%;
+    --ink-foreground: 44 70% 97%;
+
+    --secondary: 45 40% 93%;
+    --secondary-foreground: 148 22% 18%;
+
+    --muted: 45 40% 93%;
+    /* Green-grey at 6.2:1 on cream. Washed-out grey is what makes a page
+       feel cheap, so this is darker than a typical placeholder tone. */
+    --muted-foreground: 150 10% 36%;
+
+    --accent: 150 40% 94%;
+    --accent-foreground: 156 55% 22%;
+
+    --destructive: 4 72% 48%;
+    --destructive-foreground: 44 70% 97%;
+    --destructive-soft: 4 80% 96%;
+
+    /* Yellower and lighter than the brand so "open" and "ready" stay
+       scannable next to green chrome. */
+    --success: 142 55% 34%;
+    --success-foreground: 44 70% 97%;
+    --success-soft: 145 45% 93%;
+
+    --warning: 38 88% 45%;
+    --warning-foreground: 35 70% 14%;
+    --warning-soft: 44 90% 93%;
+
+    /* Teal-blue: the one cool hue, reserved for neutral information */
+    --info: 195 65% 35%;
+    --info-foreground: 44 70% 97%;
+    --info-soft: 195 55% 94%;
+
+    /* Regulatory marks — these two are fixed by convention, not by taste */
+    --veg: 142 60% 32%;
+    --nonveg: 4 72% 48%;
+
+    /* Warm hairline (#E7E4DA) — a cool grey border on a warm ground looks dirty */
+    --border: 44 28% 88%;
+    --input: 44 24% 83%;
+    --ring: 154 46% 34%;
+
+    /* Shadows carry a green cast so they sit in the palette rather than
+       greying it down */
+    --shadow-color: 150 30% 15%;
+    --radius: 0.75rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 0 72% 50%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 0 72% 50%;
+    /* Deep green-charcoal rather than black, so dark mode is the same brand */
+    --background: 150 14% 7%;
+    --foreground: 45 25% 95%;
+
+    --surface: 150 12% 10%;
+    --surface-muted: 150 14% 8%;
+    --surface-raised: 150 10% 14%;
+
+    --card: 150 12% 10%;
+    --card-foreground: 45 25% 95%;
+
+    --popover: 150 12% 11%;
+    --popover-foreground: 45 25% 95%;
+
+    /* The light-mode green is too dark to read on a dark ground; this is the
+       same hue lifted into the range that works there. */
+    --primary: 152 48% 55%;
+    --primary-foreground: 150 30% 8%;
+    --primary-soft: 152 30% 18%;
+    --primary-strong: 152 48% 48%;
+
+    --acid: 152 48% 55%;
+    --acid-foreground: 150 30% 8%;
+
+    --ink: 150 16% 5%;
+    --ink-foreground: 45 25% 95%;
+
+    --secondary: 150 8% 17%;
+    --secondary-foreground: 45 20% 92%;
+
+    --muted: 150 8% 17%;
+    --muted-foreground: 145 8% 66%;
+
+    --accent: 152 26% 20%;
+    --accent-foreground: 150 50% 78%;
+
+    --destructive: 4 70% 58%;
+    --destructive-foreground: 150 30% 8%;
+    --destructive-soft: 4 45% 18%;
+
+    --success: 142 50% 48%;
+    --success-foreground: 150 40% 8%;
+    --success-soft: 145 40% 15%;
+
+    --warning: 40 85% 58%;
+    --warning-foreground: 38 90% 10%;
+    --warning-soft: 40 50% 16%;
+
+    --info: 195 60% 52%;
+    --info-foreground: 195 80% 8%;
+    --info-soft: 195 45% 18%;
+
+    --veg: 142 50% 50%;
+    --nonveg: 4 70% 58%;
+
+    --border: 150 8% 20%;
+    --input: 150 8% 23%;
+    --ring: 152 48% 58%;
+
+    --shadow-color: 150 50% 2%;
   }
 }
 
@@ -53,8 +166,118 @@
   * {
     @apply border-border;
   }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* Smooth scroll for in-page anchors. The reduced-motion block below
+       overrides this to `auto` for anyone who asks for less movement. */
+    scroll-behavior: smooth;
+    /* Anchor targets clear the sticky app bar */
+    scroll-padding-top: calc(theme("spacing.appbar") + 0.75rem);
+    /* WCAG 2.4.11: keep focused elements out from under the fixed tab bar
+       and any sticky action bar when the browser scrolls them into view. */
+    scroll-padding-bottom: calc(
+      theme("spacing.tabbar") + 5rem + env(safe-area-inset-bottom)
+    );
+  }
+
+  /* Same guarantee for programmatic focus, which ignores scroll-padding. */
+  :focus-visible {
+    scroll-margin-top: calc(theme("spacing.appbar") + 0.75rem);
+    scroll-margin-bottom: calc(
+      theme("spacing.tabbar") + 5rem + env(safe-area-inset-bottom)
+    );
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    /* Stop iOS rubber-banding the whole page behind fixed chrome */
+    overscroll-behavior-y: none;
+    /* Grey flash on tap looks broken on a native-feeling app */
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Inputs below 16px make iOS Safari zoom the viewport on focus. */
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+
+  /* Visible focus only for keyboard users, never on touch taps */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary) / 0.22);
+  }
+
+  /* Slim scrollbars on desktop; mobile hides them natively */
+  @media (pointer: fine) {
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background-color: hsl(var(--border));
+      border: 3px solid transparent;
+      background-clip: content-box;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: hsl(var(--muted-foreground) / 0.5);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Page shell: reserves room for the fixed app bar and tab bar. */
+  .app-page {
+    @apply min-h-screen bg-background pb-[calc(theme(spacing.tabbar)+env(safe-area-inset-bottom)+1rem)] md:pb-10;
+  }
+
+  .app-container {
+    @apply mx-auto w-full max-w-3xl px-4 sm:px-5 lg:max-w-5xl;
+  }
+
+  .app-container-wide {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-5 lg:px-8;
+  }
+
+  /* Horizontal rails that bleed to the screen edge but keep aligned padding */
+  .rail {
+    @apply -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-1 sm:-mx-5 sm:px-5;
+    scrollbar-width: none;
+  }
+  .rail::-webkit-scrollbar {
+    display: none;
+  }
+  .rail > * {
+    @apply snap-start;
+  }
+
+  .section-title {
+    @apply text-lg font-semibold tracking-tight text-foreground;
+  }
+
+  .muted-label {
+    @apply text-xs font-medium uppercase tracking-wider text-muted-foreground;
   }
 }
 
@@ -66,17 +289,80 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
-  
-  /* Safe area support for mobile */
+
+  /* Safe-area helpers for fixed chrome on notched devices */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .px-safe {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+  /* Kept for compatibility with existing markup */
   .safe-area-inset-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
-  
-  /* Smooth transitions */
-  * {
-    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
+
+  /* Guarantees a 44x44 hit area without changing the visual size */
+  .touch-target {
+    @apply relative;
+  }
+  .touch-target::after {
+    content: "";
+    @apply absolute left-1/2 top-1/2 h-11 w-11 -translate-x-1/2 -translate-y-1/2;
+  }
+
+  /* Momentum scrolling for rails and sheets */
+  .scroll-touch {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Presses feel responsive on touch without a hover state to lean on */
+  .press {
+    @apply transition-transform duration-100 ease-out active:scale-[0.97];
+  }
+
+  .tap-transparent {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .glass {
+    @apply bg-surface/80 backdrop-blur-xl backdrop-saturate-150;
+  }
+
+  /* Fades the trailing edge of a horizontal rail to hint at more content */
+  .mask-fade-r {
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+  }
+
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
   }
 }
 
+/* Print: strip app chrome so invoices and tokens come out clean */
+@media print {
+  .print\:hidden,
+  nav,
+  header[data-app-bar],
+  [data-tab-bar] {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+}

@@ -1,22 +1,45 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Database } from "@/types/database.types"
-import { format } from "date-fns"
-import Image from "next/image"
-import { QRCodeSVG } from "qrcode.react"
-import { ArrowLeft, Phone, X, RotateCcw, Printer, Download, FileText } from "lucide-react"
-import Link from "next/link"
-import { useRealtimeOrders } from "@/lib/hooks/use-realtime-orders"
 import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
-import toast from "react-hot-toast"
+import Image from "next/image"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useCartStore } from "@/store/cart-store"
-import { downloadInvoice, printInvoice } from "@/lib/utils/invoice"
+import { QRCodeSVG } from "qrcode.react"
+import { format } from "date-fns"
+import {
+  Clock,
+  Copy,
+  Download,
+  MessageSquare,
+  Phone,
+  Printer,
+  RotateCcw,
+  Share2,
+  Star,
+  XCircle,
+} from "lucide-react"
+import toast from "react-hot-toast"
+import { Database } from "@/types/database.types"
+import { Button } from "@/components/ui/button"
+import { StatusBadge } from "@/components/ui/status-badge"
 import { ImagePlaceholder } from "@/components/ui/image-placeholder"
+import { OrderTimeline } from "@/components/orders/order-timeline"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { useRealtimeOrders } from "@/lib/hooks/use-realtime-orders"
+import { useCartStore } from "@/store/cart-store"
+import { createClient } from "@/lib/supabase/client"
+import { downloadInvoice, printInvoice } from "@/lib/utils/invoice"
+import { isCustomerCancellable, type OrderStatus } from "@/lib/utils/order-status"
+import { cartPath, orderFeedbackPath } from "@/lib/utils/public-id"
+import { etaDetail, etaLabel, orderEta } from "@/lib/utils/eta"
+import { cn } from "@/lib/utils/cn"
 
 type Order = Database["public"]["Tables"]["orders"]["Row"] & {
   canteens: Database["public"]["Tables"]["canteens"]["Row"]
@@ -25,354 +48,407 @@ type Order = Database["public"]["Tables"]["orders"]["Row"] & {
       items: Database["public"]["Tables"]["items"]["Row"]
     }
   >
-  users?: {
-    full_name: string | null
-    email: string | null
-  } | null
+  users?: { full_name: string | null; email: string | null } | null
+  decline_reason?: string | null
+  special_instructions?: string | null
+  dietary_notes?: string | null
+  scheduled_pickup_time?: string | null
 }
 
-interface TokenTrackingProps {
-  order: Order
-}
-
-const statusSteps = [
-  { key: "pending", label: "Order Placed", progress: 0 },
-  { key: "confirmed", label: "Confirmed", progress: 25 },
-  { key: "preparing", label: "Preparing", progress: 50 },
-  { key: "ready", label: "Ready", progress: 75 },
-  { key: "completed", label: "Completed", progress: 100 },
-]
-
-export function TokenTracking({ order: initialOrder }: TokenTrackingProps) {
-  const [order, setOrder] = useState(initialOrder)
-  const [cancelling, setCancelling] = useState(false)
+export function TokenTracking({ order: initialOrder }: { order: Order }) {
   const router = useRouter()
-  const supabase = createClient()
-  const { addItem, clearCart } = useCartStore()
+  const [order, setOrder] = useState(initialOrder)
+  const [cancelOpen, setCancelOpen] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
 
-  const realtimeOrder = useRealtimeOrders(order.id, (updatedOrder) => {
-    setOrder(updatedOrder as Order)
-  })
+  const realtimeOrder = useRealtimeOrders(order.id)
 
   useEffect(() => {
-    if (realtimeOrder) {
-      setOrder(realtimeOrder as Order)
-    }
+    if (realtimeOrder) setOrder(realtimeOrder as Order)
   }, [realtimeOrder])
 
-  const currentStep = statusSteps.findIndex((step) => step.key === order.status)
-  const progress = statusSteps[currentStep]?.progress || 0
+  const status = order.status as OrderStatus
 
-  const canCancel = order.status === "pending" || order.status === "confirmed"
-  const canReorder = order.status === "completed" || order.status === "cancelled"
+  // Recomputed on a timer so a countdown someone is watching actually counts
+  // down, rather than freezing at whatever it said when the page loaded.
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    if (status === "completed" || status === "cancelled") return
+    const timer = window.setInterval(() => setNow(new Date()), 30_000)
+    return () => window.clearInterval(timer)
+  }, [status])
 
-  const handleCancelOrder = async () => {
-    if (!confirm("Are you sure you want to cancel this order?")) {
-      return
-    }
+  const eta = orderEta(order, now)
+  const etaText = etaLabel(eta)
+  const etaDetailText = etaDetail(eta)
 
+  const canCancel = isCustomerCancellable(status)
+  const finished = status === "completed" || status === "cancelled"
+  const ready = status === "ready"
+
+  const handleCancel = async () => {
+    setCancelling(true)
     try {
-      setCancelling(true)
+      const supabase = createClient()
       const { error } = await supabase
         .from("orders")
         .update({ status: "cancelled" })
         .eq("id", order.id)
+        // Guard against the kitchen accepting it between the tap and the write.
+        .in("status", ["pending", "confirmed"])
+        .select()
+        .maybeSingle()
 
       if (error) throw error
 
-      toast.success("Order cancelled successfully")
+      setCancelOpen(false)
+      toast.success("Order cancelled")
       router.refresh()
     } catch (error: any) {
-      toast.error(error.message || "Failed to cancel order")
+      toast.error(error?.message || "Could not cancel this order")
     } finally {
       setCancelling(false)
     }
   }
 
   const handleReorder = () => {
-    if (!order.order_items || order.order_items.length === 0) {
-      toast.error("No items to reorder")
+    if (!order.order_items?.length) {
+      toast.error("Nothing to reorder")
       return
     }
 
-    // Clear current cart for this canteen
-    const canteenId = order.canteen_id
-    clearCart()
+    const { addItem, items, removeItem } = useCartStore.getState()
 
-    // Add all items from this order
-    order.order_items.forEach((orderItem) => {
+    // Replace this canteen's lines only; other canteens' carts stay intact.
+    items
+      .filter((item) => item.canteenId === order.canteen_id)
+      .forEach((item) => removeItem(item.itemId))
+
+    let skipped = 0
+    for (const orderItem of order.order_items) {
+      if (!orderItem.items?.is_available) {
+        skipped++
+        continue
+      }
       for (let i = 0; i < orderItem.quantity; i++) {
         addItem({
           itemId: orderItem.item_id,
           name: orderItem.items.name,
-          price: Number(orderItem.price),
+          price: Number(orderItem.items.price),
           imageUrl: orderItem.items.image_url,
-          canteenId: canteenId,
+          canteenId: order.canteen_id,
           canteenName: order.canteens?.name || "Canteen",
+          itemSlug: orderItem.items.slug ?? null,
+          canteenSlug: order.canteens?.slug ?? null,
         })
       }
-    })
+    }
 
-    toast.success("Items added to cart!")
-    router.push(`/cart?canteen=${canteenId}`)
+    if (skipped === order.order_items.length) {
+      toast.error("None of these items are available right now")
+      return
+    }
+
+    toast.success(
+      skipped > 0
+        ? `Added to cart · ${skipped} item${skipped === 1 ? "" : "s"} unavailable`
+        : "Added to cart"
+    )
+    router.push(cartPath({ id: order.canteen_id, slug: order.canteens?.slug }))
   }
 
-  const handlePrintReceipt = () => {
+  const copyToken = async () => {
     try {
-      printInvoice(order)
-      toast.success("Opening print dialog...")
-    } catch (error: any) {
-      toast.error("Failed to print invoice")
-      console.error("Print error:", error)
+      await navigator.clipboard.writeText(order.token)
+      toast.success("Token copied")
+    } catch {
+      toast.error("Could not copy the token")
     }
   }
 
-  const handleDownloadInvoice = () => {
-    try {
-      downloadInvoice(order)
-      toast.success("Invoice downloaded successfully")
-    } catch (error: any) {
-      toast.error("Failed to download invoice")
-      console.error("Download error:", error)
+  const shareToken = async () => {
+    const text = `My FoodieHub pickup token at ${
+      order.canteens?.name ?? "the canteen"
+    } is ${order.token}`
+
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: "FoodieHub token", text })
+        return
+      } catch {
+        // Share sheet dismissed — fall through to the clipboard.
+      }
     }
+    copyToken()
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/orders">
-          <button className="rounded-full p-2 hover:bg-muted">
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-        </Link>
-        <h1 className="text-2xl font-bold">Token Tracking</h1>
-      </div>
+    <div className="space-y-5">
+      {/* Token card — the one thing the student needs at the counter */}
+      <section
+        className={
+          ready
+            ? "rounded-2xl border-2 border-success bg-success-soft p-5 text-center"
+            : "rounded-2xl border border-border bg-card p-5 text-center shadow-card"
+        }
+      >
+        <div className="flex items-center justify-center gap-2">
+          <StatusBadge status={status} />
+          {order.scheduled_pickup_time ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-info-soft px-2.5 py-1 text-xs font-semibold text-info">
+              <Clock className="h-3 w-3" />
+              {format(new Date(order.scheduled_pickup_time), "d MMM, h:mm a")}
+            </span>
+          ) : null}
+        </div>
 
-      {/* Order Status Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Order Status</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="font-medium">Progress</span>
-              <span className="text-muted-foreground">{progress}%</span>
-            </div>
-            <div className="h-3 w-full overflow-hidden rounded-full bg-gray-200">
-              <div
-                className="h-full bg-primary transition-all duration-500"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+        <p className="mt-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          Pickup token
+        </p>
+        <p className="font-mono text-5xl font-black tracking-[0.15em] text-primary">
+          {order.token}
+        </p>
+
+        <div className="mt-4 flex justify-center">
+          <div className="rounded-2xl border-2 border-border bg-white p-3">
+            <QRCodeSVG value={order.token} size={148} level="M" />
           </div>
+        </div>
 
-          {/* Status Steps */}
-          <div className="space-y-3">
-            {statusSteps.map((step, index) => {
-              const isActive = index <= currentStep
-              const isCurrent = index === currentStep
-
-              return (
-                <div
-                  key={step.key}
-                  className={`flex items-center gap-3 rounded-lg p-3 ${
-                    isActive ? "bg-primary/10" : "bg-muted/50"
-                  }`}
-                >
-                  <div
-                    className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                      isActive
-                        ? "bg-primary text-white"
-                        : "bg-gray-300 text-gray-600"
-                    }`}
-                  >
-                    {isActive ? "✓" : index + 1}
-                  </div>
-                  <div className="flex-1">
-                    <p
-                      className={`font-medium ${
-                        isCurrent ? "text-primary" : ""
-                      }`}
-                    >
-                      {step.label}
-                    </p>
-                    {isCurrent && order.status === "preparing" && (
-                      <p className="text-sm text-muted-foreground">
-                        Estimated wait time: 15-20 minutes
-                      </p>
-                    )}
-                    {isCurrent && order.status === "ready" && (
-                      <p className="text-sm text-muted-foreground">
-                        Your order is ready for pickup!
-                      </p>
-                    )}
-                  </div>
-                  {isCurrent && (
-                    <Badge className="bg-primary">Current</Badge>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Token & QR Code */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Token</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-center gap-6">
-            <div className="rounded-lg border-2 border-primary p-4">
-              <QRCodeSVG value={order.token} size={120} />
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">Token Code</p>
-              <p className="text-4xl font-mono font-bold text-primary">
-                {order.token}
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Show this at the canteen
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Order Details */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Order Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            {(order.order_items ?? []).map((item) => (
-              <div key={item.id} className="flex gap-4">
-                <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
-                  {item.items.image_url ? (
-                    <Image
-                      src={item.items.image_url}
-                      alt={item.items.name}
-                      fill
-                      className="object-cover"
-                      sizes="64px"
-                    />
-                  ) : (
-                    <ImagePlaceholder type="item" size="sm" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold">{item.items.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Qty: {item.quantity}
-                  </p>
-                  <p className="font-semibold text-primary">
-                    ₹{Number(item.price).toFixed(2)} × {item.quantity} = ₹
-                    {(Number(item.price) * item.quantity).toFixed(2)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="border-t pt-4">
-            <div className="flex justify-between">
-              <span className="text-lg font-semibold">Total</span>
-              <span className="text-xl font-bold text-primary">
-                ₹{Number(order.total_amount).toFixed(2)}
-              </span>
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Canteen: {order.canteens?.name ?? "Canteen"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Order placed: {format(new Date(order.created_at), "PPpp")}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Action Buttons */}
-      <div className="flex flex-col gap-3 sm:flex-row">
-        {canCancel && (
-          <Button
-            onClick={handleCancelOrder}
-            disabled={cancelling}
-            variant="outline"
-            className="flex-1 gap-2 border-destructive text-destructive hover:bg-destructive/10"
-            size="lg"
+        {/* The answer to "when is my food ready", directly under the token
+            that answers "which order is mine". */}
+        {etaText && !finished ? (
+          <p
+            className={cn(
+              "mt-3 text-base font-bold",
+              eta.kind === "overdue"
+                ? "text-warning"
+                : ready
+                  ? "text-success"
+                  : "text-primary"
+            )}
           >
-            <X className="h-4 w-4" />
-            {cancelling ? "Cancelling..." : "Cancel Order"}
+            {etaText}
+          </p>
+        ) : null}
+
+        <p className="mt-2 text-sm text-muted-foreground">
+          Show this at {order.canteens?.name ?? "the counter"} and pay on
+          collection.
+        </p>
+
+        <div className="mt-4 flex justify-center gap-2">
+          <Button variant="outline" size="sm" onClick={copyToken}>
+            <Copy className="h-4 w-4" />
+            Copy
           </Button>
-        )}
-        {canReorder && (
-          <Button
-            onClick={handleReorder}
-            variant="outline"
-            className="flex-1 gap-2"
-            size="lg"
-          >
+          <Button variant="outline" size="sm" onClick={shareToken}>
+            <Share2 className="h-4 w-4" />
+            Share
+          </Button>
+        </div>
+      </section>
+
+      {order.decline_reason ? (
+        <section className="rounded-2xl border border-destructive/30 bg-destructive-soft p-4">
+          <p className="text-sm font-bold text-destructive">
+            {order.canteens?.name ?? "The canteen"} declined this order
+          </p>
+          <p className="mt-1 text-sm text-destructive/90">
+            {order.decline_reason}
+          </p>
+          <p className="mt-2 text-xs text-destructive/80">
+            Nothing was charged — you pay at the counter, and there was no
+            counter to pay at.
+          </p>
+        </section>
+      ) : null}
+
+      {/* Live status */}
+      <section className="rounded-2xl border border-border bg-card p-4 shadow-card">
+        <h2 className="mb-4 text-sm font-semibold text-foreground">
+          Order progress
+        </h2>
+
+        <OrderTimeline status={status} />
+
+        {etaDetailText ? (
+          <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">
+            {etaDetailText}
+          </p>
+        ) : null}
+      </section>
+
+      {/* Items */}
+      <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+        <h2 className="border-b border-border px-4 py-3 text-sm font-semibold text-foreground">
+          {order.order_items?.length ?? 0}{" "}
+          {order.order_items?.length === 1 ? "item" : "items"}
+        </h2>
+
+        <ul className="divide-y divide-border">
+          {(order.order_items ?? []).map((line) => (
+            <li key={line.id} className="flex items-center gap-3 p-3.5">
+              <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-muted">
+                {line.items?.image_url ? (
+                  <Image
+                    src={line.items.image_url}
+                    alt=""
+                    fill
+                    sizes="56px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <ImagePlaceholder type="item" size="sm" />
+                )}
+              </span>
+
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-1 text-sm font-semibold text-foreground">
+                  {line.items?.name ?? "Item"}
+                </p>
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  ₹{Number(line.price).toFixed(2)} × {line.quantity}
+                </p>
+              </div>
+
+              <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">
+                ₹{(Number(line.price) * line.quantity).toFixed(2)}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <dl className="space-y-2 border-t border-border p-4 text-sm">
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Payment</dt>
+            <dd className="text-foreground">
+              {order.payment_status === "completed"
+                ? "Paid at counter"
+                : "Pay at counter"}
+            </dd>
+          </div>
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Placed</dt>
+            <dd className="text-foreground">
+              {format(new Date(order.created_at), "d MMM yyyy, h:mm a")}
+            </dd>
+          </div>
+          <div className="flex justify-between border-t border-border pt-2 text-base font-bold">
+            <dt>Total</dt>
+            <dd className="tabular-nums">
+              ₹{Number(order.total_amount).toFixed(2)}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      {order.special_instructions || order.dietary_notes ? (
+        <section className="space-y-2 rounded-2xl border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold text-foreground">
+            Notes for the kitchen
+          </h2>
+          {order.special_instructions ? (
+            <p className="text-sm text-muted-foreground">
+              {order.special_instructions}
+            </p>
+          ) : null}
+          {order.dietary_notes ? (
+            <p className="rounded-xl bg-warning-soft p-3 text-sm text-warning">
+              {order.dietary_notes}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {/* Actions */}
+      <section className="grid grid-cols-2 gap-2">
+        {order.canteens?.contact_phone ? (
+          <Button variant="outline" asChild>
+            <a href={`tel:${order.canteens.contact_phone}`}>
+              <Phone className="h-4 w-4" />
+              Call canteen
+            </a>
+          </Button>
+        ) : null}
+
+        {finished ? (
+          <Button variant="outline" onClick={handleReorder}>
             <RotateCcw className="h-4 w-4" />
             Reorder
           </Button>
-        )}
-        <div className="flex gap-2">
-          <Button
-            onClick={handlePrintReceipt}
-            variant="outline"
-            className="gap-2"
-            size="lg"
-          >
-            <Printer className="h-4 w-4" />
-            Print Invoice
-          </Button>
-          <Button
-            onClick={handleDownloadInvoice}
-            variant="outline"
-            className="gap-2 bg-primary text-white hover:bg-primary/90"
-            size="lg"
-          >
-            <FileText className="h-4 w-4" />
-            Download Invoice
-          </Button>
-        </div>
-        {(order.status === "completed" || order.status === "cancelled") && (
-          <Link href={`/orders/${order.id}/feedback`} className="flex-1">
-            <Button className="w-full gap-2 bg-primary text-white hover:bg-primary/90" size="lg">
-              Submit Feedback
-            </Button>
-          </Link>
-        )}
-      </div>
+        ) : null}
 
-      {/* Contact Canteen */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Need to talk to {order.canteens?.name ?? "the canteen"}?
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <p className="text-sm text-muted-foreground">
-            {order.canteens?.contact_phone
-              ? "Call the kitchen directly for special instructions or urgent updates."
-              : "This canteen hasn’t shared a phone number yet."}
+        <Button variant="outline" onClick={() => printInvoice(order)}>
+          <Printer className="h-4 w-4" />
+          Print bill
+        </Button>
+
+        <Button variant="outline" onClick={() => downloadInvoice(order)}>
+          <Download className="h-4 w-4" />
+          Save bill
+        </Button>
+
+        {status === "completed" ? (
+          <Button className="col-span-2" asChild>
+            <Link href={orderFeedbackPath(order)}>
+              <Star className="h-4 w-4" />
+              Rate this order
+            </Link>
+          </Button>
+        ) : null}
+
+        {canCancel ? (
+          <Button
+            variant="outline"
+            className="col-span-2 border-destructive/40 text-destructive hover:bg-destructive-soft"
+            onClick={() => setCancelOpen(true)}
+          >
+            <XCircle className="h-4 w-4" />
+            Cancel order
+          </Button>
+        ) : null}
+
+        {!finished && !canCancel ? (
+          <p className="col-span-2 flex items-start gap-2 rounded-xl bg-muted p-3 text-xs text-muted-foreground">
+            <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            The kitchen has started cooking, so this order can no longer be
+            cancelled from the app. Call the canteen if something is wrong.
           </p>
-          {order.canteens?.contact_phone && (
-            <Button asChild className="gap-2 rounded-full px-6">
-              <a href={`tel:${order.canteens.contact_phone}`}>
-                <Phone className="h-4 w-4" />
-                Call now
-              </a>
+        ) : null}
+      </section>
+
+      <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel this order?</DialogTitle>
+            <DialogDescription>
+              Token {order.token} at {order.canteens?.name ?? "the canteen"}{" "}
+              will be released. You can&apos;t undo this, but you can order
+              again any time.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              block
+              onClick={() => setCancelOpen(false)}
+              disabled={cancelling}
+            >
+              Keep it
             </Button>
-          )}
-        </CardContent>
-      </Card>
+            <Button
+              variant="destructive"
+              block
+              loading={cancelling}
+              onClick={handleCancel}
+            >
+              Cancel order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-

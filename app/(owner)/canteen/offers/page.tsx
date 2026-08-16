@@ -1,9 +1,12 @@
-import { createClient } from "@/lib/supabase/server"
+import Link from "next/link"
 import { redirect } from "next/navigation"
+import { Plus } from "lucide-react"
+import { createClient } from "@/lib/supabase/server"
+import { ConsoleHeader } from "@/components/layout/console-shell"
 import { OffersList } from "@/components/canteen-owner/offers-list"
 import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { Plus } from "lucide-react"
+
+export const metadata = { title: "Offers" }
 
 export default async function OffersPage() {
   const supabase = await createClient()
@@ -11,19 +14,15 @@ export default async function OffersPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect("/login")
-  }
+  if (!user) redirect("/login")
 
   const { data: canteen } = await supabase
     .from("canteens")
     .select("id")
     .eq("owner_id", user.id)
-    .single()
+    .maybeSingle()
 
-  if (!canteen) {
-    redirect("/canteen")
-  }
+  if (!canteen) redirect("/canteen")
 
   const { data: offers } = await supabase
     .from("offers")
@@ -32,26 +31,21 @@ export default async function OffersPage() {
     .order("created_at", { ascending: false })
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 via-white to-gray-50/30 p-4 md:p-6">
-      <div className="mb-4 flex flex-col gap-4 md:mb-6 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent md:text-3xl">
-            Offers & Promotions
-          </h1>
-          <p className="text-sm text-muted-foreground md:text-base">
-            Manage your promotional offers
-          </p>
-        </div>
-        <Link href="/canteen/offers/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Offer
+    <>
+      <ConsoleHeader
+        title="Offers"
+        description="Discounts run once an admin approves them"
+        actions={
+          <Button asChild>
+            <Link href="/canteen/offers/new">
+              <Plus className="h-4 w-4" />
+              New offer
+            </Link>
           </Button>
-        </Link>
-      </div>
+        }
+      />
 
-      <OffersList offers={offers || []} />
-    </div>
+      <OffersList offers={offers ?? []} />
+    </>
   )
 }
-

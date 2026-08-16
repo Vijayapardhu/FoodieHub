@@ -1,93 +1,107 @@
 import Link from "next/link"
 import Image from "next/image"
-import { Card, CardContent } from "@/components/ui/card"
-import { Clock, Star, MapPin } from "lucide-react"
+import { Clock, MapPin, Star } from "lucide-react"
 import { Database } from "@/types/database.types"
 import { FavoriteButton } from "@/components/menu/favorite-button"
+import { ImagePlaceholder } from "@/components/ui/image-placeholder"
+import { cn } from "@/lib/utils/cn"
+import { canteenPath } from "@/lib/utils/public-id"
 
 type Canteen = Database["public"]["Tables"]["canteens"]["Row"]
 
 interface CanteenCardProps {
   canteen: Canteen
+  className?: string
+  /** Fixed-width variant for horizontal rails. */
+  compact?: boolean
 }
 
-export function CanteenCard({ canteen }: CanteenCardProps) {
+export function CanteenCard({ canteen, className, compact }: CanteenCardProps) {
+  const closed = !canteen.is_open
+
   return (
-    <div className="relative group">
-      <Link href={`/canteen/${canteen.id}`}>
-        <Card className="overflow-hidden rounded-2xl border-0 bg-white shadow-sm transition-all hover:shadow-xl hover:-translate-y-1">
-          {/* Banner Image */}
-          <div className="relative h-48 w-full">
-            {canteen.banner_url ? (
-              <Image
-                src={canteen.banner_url}
-                alt={canteen.name}
-                fill
-                className="object-cover transition-transform group-hover:scale-105"
-              />
-            ) : (
-              <div className="h-full w-full bg-gradient-to-br from-primary/20 via-primary/10 to-orange-50" />
-            )}
-            {/* Gradient Overlay */}
-            <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
-            
-            {/* Logo */}
-            {canteen.logo_url && (
-              <div className="absolute -bottom-8 left-4">
-                <div className="relative h-16 w-16 overflow-hidden rounded-xl border-4 border-white bg-white shadow-lg">
-                  <Image
-                    src={canteen.logo_url}
-                    alt={canteen.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              </div>
-            )}
-            
-            {/* Rating Badge */}
-            <div className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-sm px-3 py-1.5 shadow-md">
-              <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-              <span className="text-xs font-bold text-foreground">{canteen.rating.toFixed(1)}</span>
-            </div>
+    <article
+      className={cn(
+        "group relative overflow-hidden rounded-2xl border border-border bg-card shadow-card",
+        "transition-transform duration-150 ease-spring active:scale-[0.99] md:hover:shadow-lift",
+        compact && "w-64 shrink-0",
+        className
+      )}
+    >
+      <Link href={canteenPath(canteen)} className="block">
+        <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted">
+          {canteen.banner_url ? (
+            <Image
+              src={canteen.banner_url}
+              alt=""
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              className={cn(
+                "object-cover transition-transform duration-300 md:group-hover:scale-105",
+                closed && "grayscale"
+              )}
+            />
+          ) : (
+            <ImagePlaceholder type="canteen" size="xl" />
+          )}
+
+          {/* Keeps the rating chip readable over any photo */}
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/55 to-transparent" />
+
+          <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-xs font-bold text-white backdrop-blur-sm">
+            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+            {canteen.rating.toFixed(1)}
+            <span className="font-normal text-white/70">
+              ({canteen.total_reviews})
+            </span>
+          </span>
+
+          {closed ? (
+            <span className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
+              <span className="rounded-full bg-foreground/85 px-3 py-1.5 text-xs font-bold text-background">
+                Closed right now
+              </span>
+            </span>
+          ) : null}
+        </div>
+
+        <div className="space-y-1.5 p-3.5">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="line-clamp-1 flex-1 text-base font-bold tracking-tight text-foreground">
+              {canteen.name}
+            </h3>
+            <span
+              className={cn(
+                "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-bold",
+                canteen.is_open
+                  ? "bg-success-soft text-success"
+                  : "bg-muted text-muted-foreground"
+              )}
+            >
+              <Clock className="h-3 w-3" />
+              {canteen.is_open ? "Open" : "Closed"}
+            </span>
           </div>
 
-          <CardContent className="pt-10 pb-4 px-4">
-            {/* Name and Status */}
-            <div className="flex items-start justify-between mb-2">
-              <h3 className="text-lg font-bold text-foreground pr-2">{canteen.name}</h3>
-              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 ${
-                canteen.is_open 
-                  ? "bg-green-50 text-green-700" 
-                  : "bg-gray-100 text-gray-600"
-              }`}>
-                <Clock className={`h-3 w-3 ${canteen.is_open ? "text-green-600" : "text-gray-500"}`} />
-                {canteen.is_open ? "Open" : "Closed"}
-              </div>
-            </div>
+          {canteen.description ? (
+            <p className="line-clamp-2 text-sm text-muted-foreground">
+              {canteen.description}
+            </p>
+          ) : null}
 
-            {/* Description */}
-            {canteen.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                {canteen.description}
-              </p>
-            )}
-
-            {/* Address */}
-            {canteen.address && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
-                <MapPin className="h-3.5 w-3.5 shrink-0" />
-                <span className="line-clamp-1">{canteen.address}</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          {canteen.address ? (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
+              <span className="line-clamp-1">{canteen.address}</span>
+            </p>
+          ) : null}
+        </div>
       </Link>
-      
-      {/* Favorite Button */}
-      <div className="absolute right-4 top-4 z-10">
+
+      {/* Sits outside the Link so tapping it doesn't navigate */}
+      <div className="absolute right-2 top-2">
         <FavoriteButton canteenId={canteen.id} />
       </div>
-    </div>
+    </article>
   )
 }

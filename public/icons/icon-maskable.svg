@@ -1,0 +1,18 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FoodieHub">
+  <defs>
+    <linearGradient id="fhm" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3A8F69"/>
+      <stop offset="1" stop-color="#1F5C42"/>
+    </linearGradient>
+  </defs>
+  <!-- Full bleed, square corners: Android and iOS apply their own mask, and
+       a pre-rounded icon inside their mask gets clipped twice. The mark is a
+       wide, short bar — its half-diagonal is 197px, so even at full scale it
+       clears the 204px safe radius. 88% keeps a little breathing room without
+       leaving the icon looking lost in its own tile. -->
+  <rect width="512" height="512" fill="url(#fhm)"/>
+  <g transform="translate(256 256) scale(.88) translate(-256 -256)">
+    <rect x="76" y="178" width="360" height="42" rx="21" fill="#FCF9EF"/>
+    <path d="M108 220a148 118 0 0 0 296 0z" fill="#FCF9EF"/>
+  </g>
+</svg>

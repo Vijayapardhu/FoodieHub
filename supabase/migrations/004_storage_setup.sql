@@ -1,7 +1,10 @@
--- Create storage buckets (run these in Supabase Dashboard > Storage)
-
--- Note: Buckets need to be created manually in Supabase Dashboard
--- This file documents the required buckets and policies
+-- Storage policies for the four FoodieHub buckets.
+--
+-- NOTE: the buckets themselves are created in 022_storage_buckets.sql. This
+-- file used to say they had to be made by hand in the Dashboard, which meant
+-- they never were, and every upload in the app failed. Apply 022 as well as
+-- this file — policies without buckets, or buckets without policies, both
+-- leave uploads broken.
 
 -- Storage Buckets to Create:
 -- 1. 'items' - for menu item images

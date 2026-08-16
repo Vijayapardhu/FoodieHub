@@ -6,6 +6,10 @@ import { cn } from "@/lib/utils/cn"
 
 const Tabs = TabsPrimitive.Root
 
+/**
+ * Segmented-control styling. Scrolls horizontally rather than wrapping so a
+ * long tab set never blows up the layout on a narrow phone.
+ */
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
@@ -13,7 +17,7 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
+      "scrollbar-hide inline-flex w-full items-center gap-1 overflow-x-auto rounded-xl bg-muted p-1 text-muted-foreground",
       className
     )}
     {...props}
@@ -28,7 +32,11 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+      "inline-flex h-10 flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-sm font-semibold",
+      "transition-colors duration-150 [-webkit-tap-highlight-color:transparent]",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      "disabled:pointer-events-none disabled:opacity-50",
+      "data-[state=active]:bg-surface data-[state=active]:text-foreground data-[state=active]:shadow-soft",
       className
     )}
     {...props}
@@ -43,7 +51,7 @@ const TabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "mt-4 focus-visible:outline-none data-[state=active]:animate-fade-in",
       className
     )}
     {...props}
@@ -52,4 +60,3 @@ const TabsContent = React.forwardRef<
 TabsContent.displayName = TabsPrimitive.Content.displayName
 
 export { Tabs, TabsList, TabsTrigger, TabsContent }
-

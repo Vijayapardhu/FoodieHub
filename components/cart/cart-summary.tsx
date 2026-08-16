@@ -1,18 +1,24 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { useCartStore } from "@/store/cart-store"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import { BookmarkCheck, Clock, MessageSquare, Sparkles, TicketPercent } from "lucide-react"
 import toast from "react-hot-toast"
-import { OffersSelector } from "./offers-selector"
+import { Database } from "@/types/database.types"
+import { useCartStore } from "@/store/cart-store"
+import { createClient } from "@/lib/supabase/client"
+import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { Disclosure } from "@/components/ui/disclosure"
+import { StickyBar } from "@/components/ui/sticky-bar"
+import { generateToken } from "@/lib/utils/token"
+import { OffersSelector } from "./offers-selector"
 import { OrderScheduling } from "./order-scheduling"
 import { OrderTemplates } from "./order-templates"
 import { DietaryPreferences } from "./dietary-preferences"
 import { LoyaltyPointsDisplay } from "./loyalty-points-display"
+
+type Offer = Database["public"]["Tables"]["offers"]["Row"]
 
 interface CartSummaryProps {
   canteenId: string | null
@@ -20,55 +26,63 @@ interface CartSummaryProps {
 
 export function CartSummary({ canteenId }: CartSummaryProps) {
   const router = useRouter()
-  const supabase = createClient()
-  const { items, getItemsByCanteen } = useCartStore()
+  const [supabase] = useState(() => createClient())
+  const items = useCartStore((state) => state.items)
+
   const [loading, setLoading] = useState(false)
-  const [selectedOffer, setSelectedOffer] = useState<any>(null)
+  const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null)
   const [discount, setDiscount] = useState(0)
   const [specialInstructions, setSpecialInstructions] = useState("")
-  const [scheduledPickupTime, setScheduledPickupTime] = useState<Date | null>(null)
+  const [scheduledPickupTime, setScheduledPickupTime] = useState<Date | null>(
+    null
+  )
   const [preferredTimeSlot, setPreferredTimeSlot] = useState<string | null>(null)
   const [dietaryNotes, setDietaryNotes] = useState("")
 
-  const cartItems = canteenId ? getItemsByCanteen(canteenId) : items
+  const cartItems = useMemo(
+    () => (canteenId ? items.filter((i) => i.canteenId === canteenId) : items),
+    [items, canteenId]
+  )
 
-  const groupedItems = useMemo(() => {
-    return items.reduce<Record<string, typeof items>>((acc, item) => {
-      if (!acc[item.canteenId]) {
-        acc[item.canteenId] = []
-      }
-      acc[item.canteenId].push(item)
-      return acc
-    }, {})
-  }, [items])
+  const groups = useMemo(() => {
+    if (canteenId) return [{ canteenId, items: cartItems }]
 
-  const activeGroups = canteenId
-    ? [[canteenId, cartItems] as const]
-    : Object.entries(groupedItems)
+    const map = new Map<string, typeof items>()
+    for (const item of items) {
+      const list = map.get(item.canteenId) ?? []
+      list.push(item)
+      map.set(item.canteenId, list)
+    }
+    return Array.from(map, ([id, groupItems]) => ({
+      canteenId: id,
+      items: groupItems,
+    }))
+  }, [items, cartItems, canteenId])
 
-  const computeSubtotal = (list: typeof items) =>
-    list.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const sum = (list: typeof items) =>
+    list.reduce((total, item) => total + item.price * item.quantity, 0)
 
-  const subtotal = canteenId
-    ? computeSubtotal(cartItems)
-    : activeGroups.reduce((sum, [, groupItems]) => sum + computeSubtotal(groupItems), 0)
-
-  const total = canteenId ? Math.max(0, subtotal - discount) : subtotal
+  const subtotal = sum(cartItems)
+  // Offers are per canteen, so they only apply when checking out one canteen.
+  const appliedDiscount = canteenId ? discount : 0
+  const total = Math.max(0, subtotal - appliedDiscount)
+  const itemCount = cartItems.reduce((n, item) => n + item.quantity, 0)
 
   const handlePlaceOrder = async () => {
-    if (activeGroups.length === 0 || cartItems.length === 0 && !!canteenId) {
+    if (cartItems.length === 0) {
       toast.error("Your cart is empty")
       return
     }
 
+    setLoading(true)
     try {
-      setLoading(true)
       const {
         data: { user },
       } = await supabase.auth.getUser()
 
       if (!user) {
-        toast.error("Please login again")
+        toast.error("Please log in again")
+        router.push("/login")
         return
       }
 
@@ -84,136 +98,170 @@ export function CartSummary({ canteenId }: CartSummaryProps) {
         (user.user_metadata?.name as string | undefined) ||
         user.email ||
         null
-      const customerPhone = profile?.phone_number || null
 
-      const createdOrderIds: string[] = []
+      const createdOrderHandles: string[] = []
 
-      for (const [groupCanteenId, groupItems] of activeGroups) {
-        if (groupItems.length === 0) continue
+      for (const group of groups) {
+        if (group.items.length === 0) continue
 
-        const groupSubtotal = computeSubtotal(groupItems)
+        const groupSubtotal = sum(group.items)
         const groupTotal =
-          canteenId && groupCanteenId === canteenId
-            ? Math.max(0, groupSubtotal - discount)
+          canteenId && group.canteenId === canteenId
+            ? Math.max(0, groupSubtotal - appliedDiscount)
             : groupSubtotal
 
-        const token = Math.random().toString(36).substring(2, 8).toUpperCase()
-
-        const orderData: any = {
+        const orderData: Record<string, unknown> = {
           user_id: user.id,
-          canteen_id: groupCanteenId,
-          token,
+          canteen_id: group.canteenId,
+          token: generateToken(6),
           status: "pending",
           total_amount: groupTotal,
           payment_method: "on_shop",
           payment_status: "pending",
           customer_name: customerName,
-          customer_phone: customerPhone,
+          customer_phone: profile?.phone_number || null,
           order_type: scheduledPickupTime ? "scheduled" : "immediate",
           special_instructions: specialInstructions.trim() || null,
           dietary_notes: dietaryNotes.trim() || null,
         }
 
-        if (scheduledPickupTime && groupCanteenId === canteenId) {
+        if (scheduledPickupTime && group.canteenId === canteenId) {
           orderData.scheduled_pickup_time = scheduledPickupTime.toISOString()
           orderData.preferred_time_slot = preferredTimeSlot
         }
 
         const { data: order, error: orderError } = await supabase
           .from("orders")
-          .insert(orderData)
+          .insert(orderData as any)
           .select()
           .single()
 
         if (orderError) throw orderError
-        createdOrderIds.push(order.id)
+        // Keep the token, not the uuid: it's what the order is addressed by.
+        createdOrderHandles.push(order.token ?? order.id)
 
-        const orderItems = groupItems.map((item) => ({
-          order_id: order.id,
-          item_id: item.itemId,
-          quantity: item.quantity,
-          price: item.price,
-        }))
-
-        const { error: itemsError } = await supabase
-          .from("order_items")
-          .insert(orderItems)
+        const { error: itemsError } = await supabase.from("order_items").insert(
+          group.items.map((item) => ({
+            order_id: order.id,
+            item_id: item.itemId,
+            quantity: item.quantity,
+            price: item.price,
+          }))
+        )
 
         if (itemsError) throw itemsError
 
-        groupItems.forEach((item) => {
+        // Only clear lines that actually made it into an order.
+        group.items.forEach((item) => {
           useCartStore.getState().removeItem(item.itemId)
         })
       }
 
-      if (createdOrderIds.length === 0) {
-        toast.error("Unable to create orders. Please try again.")
+      if (createdOrderHandles.length === 0) {
+        toast.error("Could not create your order. Please try again.")
         return
       }
 
       toast.success(
-        createdOrderIds.length === 1
-          ? "Order placed successfully!"
-          : `Created ${createdOrderIds.length} orders (one per canteen)`
+        createdOrderHandles.length === 1
+          ? "Order placed"
+          : `${createdOrderHandles.length} orders placed, one per canteen`
       )
 
-      if (createdOrderIds.length === 1) {
-        router.push(`/orders/${createdOrderIds[0]}`)
-      } else {
-        router.push("/orders")
-      }
+      router.push(
+        createdOrderHandles.length === 1
+          ? `/orders/${createdOrderHandles[0]}`
+          : "/orders"
+      )
     } catch (error: any) {
-      toast.error(error.message || "Failed to place order")
+      toast.error(error?.message || "Could not place your order")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <Card className="sticky top-20">
-      <CardHeader>
-        <CardTitle>Order Summary</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {!canteenId && activeGroups.length > 0 && (
-          <div className="rounded-2xl border border-dashed border-orange-100/80 bg-orange-50/50 p-4 text-sm text-muted-foreground">
-            <p>
-              Checkout will create {activeGroups.length}{" "}
-              {activeGroups.length === 1 ? "order" : "orders"}, one per canteen. Each
-              order gets its own pickup token.
-            </p>
-            <div className="mt-3 space-y-2 text-foreground">
-              {activeGroups.map(([groupCanteenId, groupItems]) => (
-                <div key={groupCanteenId} className="flex items-center justify-between">
-                  <span className="font-medium">
-                    {groupItems[0]?.canteenName ?? "Canteen"}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    ₹{computeSubtotal(groupItems).toFixed(2)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {canteenId && (
+    <>
+      <div className="space-y-3">
+        {canteenId ? (
           <>
             <LoyaltyPointsDisplay canteenId={canteenId} orderAmount={total} />
-            <OrderTemplates canteenId={canteenId} />
-            <OffersSelector
-              canteenId={canteenId}
-              orderAmount={subtotal}
-              onOfferSelected={(offer, discountAmount) => {
-                setSelectedOffer(offer)
-                setDiscount(discountAmount)
-              }}
-            />
-            <OrderScheduling
-              onScheduleChange={(scheduledTime, timeSlot) => {
-                setScheduledPickupTime(scheduledTime)
-                setPreferredTimeSlot(timeSlot)
-              }}
-            />
+
+            <Disclosure
+              title="Offers"
+              icon={TicketPercent}
+              summary={
+                selectedOffer
+                  ? `${selectedOffer.title} · saving ₹${discount.toFixed(0)}`
+                  : "Check available discounts"
+              }
+            >
+              <OffersSelector
+                canteenId={canteenId}
+                orderAmount={subtotal}
+                onOfferSelected={(offer, discountAmount) => {
+                  setSelectedOffer(offer)
+                  setDiscount(discountAmount)
+                }}
+              />
+            </Disclosure>
+
+            <Disclosure
+              title="Pickup time"
+              icon={Clock}
+              summary={
+                scheduledPickupTime
+                  ? scheduledPickupTime.toLocaleString()
+                  : "As soon as it's ready"
+              }
+            >
+              <OrderScheduling
+                onScheduleChange={(scheduledTime, timeSlot) => {
+                  setScheduledPickupTime(scheduledTime)
+                  setPreferredTimeSlot(timeSlot)
+                }}
+              />
+            </Disclosure>
+
+            <Disclosure
+              title="Saved orders"
+              icon={BookmarkCheck}
+              summary="Reload a usual order, or save this one"
+            >
+              <OrderTemplates canteenId={canteenId} />
+            </Disclosure>
+          </>
+        ) : null}
+
+        <Disclosure
+          title="Notes for the kitchen"
+          icon={MessageSquare}
+          summary={
+            specialInstructions.trim() || dietaryNotes.trim()
+              ? "Notes added"
+              : "Allergies, spice level, packing"
+          }
+        >
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label
+                htmlFor="special-instructions"
+                className="text-sm font-medium text-foreground"
+              >
+                Special instructions
+              </label>
+              <Textarea
+                id="special-instructions"
+                placeholder="e.g. less spicy, extra chutney, pack separately"
+                value={specialInstructions}
+                onChange={(e) => setSpecialInstructions(e.target.value)}
+                maxLength={500}
+              />
+              <p className="text-right text-xs text-muted-foreground tabular-nums">
+                {specialInstructions.length}/500
+              </p>
+            </div>
+
             <DietaryPreferences
               cartItems={cartItems.map((item) => ({
                 itemId: item.itemId,
@@ -221,56 +269,61 @@ export function CartSummary({ canteenId }: CartSummaryProps) {
               }))}
               onNotesChange={setDietaryNotes}
             />
-          </>
-        )}
-        <div className="space-y-2">
-          <label htmlFor="special-instructions" className="text-sm font-medium">
-            Special Instructions (Optional)
-          </label>
-          <Textarea
-            id="special-instructions"
-            placeholder="Add any special instructions for your order..."
-            value={specialInstructions}
-            onChange={(e) => setSpecialInstructions(e.target.value)}
-            className="min-h-[80px] resize-none rounded-lg"
-            maxLength={500}
-          />
-          <p className="text-xs text-muted-foreground">
-            {specialInstructions.length}/500 characters
-          </p>
-        </div>
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Subtotal</span>
-            <span>₹{subtotal.toFixed(2)}</span>
           </div>
-          {discount > 0 && (
-            <div className="flex justify-between text-sm text-green-600">
-              <span>Discount</span>
-              <span>-₹{discount.toFixed(2)}</span>
+        </Disclosure>
+
+        {/* Bill */}
+        <div className="space-y-2.5 rounded-2xl border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold text-foreground">Bill details</h2>
+
+          <dl className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">
+                Item total ({itemCount} {itemCount === 1 ? "item" : "items"})
+              </dt>
+              <dd className="tabular-nums text-foreground">
+                ₹{subtotal.toFixed(2)}
+              </dd>
             </div>
-          )}
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Payment</span>
-            <span>On Shop Payment</span>
-          </div>
-          <div className="border-t pt-2">
-            <div className="flex justify-between font-bold">
-              <span>Total</span>
-              <span>₹{total.toFixed(2)}</span>
+
+            {appliedDiscount > 0 ? (
+              <div className="flex justify-between text-success">
+                <dt className="inline-flex items-center gap-1">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {selectedOffer?.title ?? "Discount"}
+                </dt>
+                <dd className="tabular-nums">
+                  −₹{appliedDiscount.toFixed(2)}
+                </dd>
+              </div>
+            ) : null}
+
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Payment</dt>
+              <dd className="text-foreground">Pay at the counter</dd>
             </div>
-          </div>
+
+            <div className="flex justify-between border-t border-border pt-2.5 text-base font-bold">
+              <dt>To pay</dt>
+              <dd className="tabular-nums">₹{total.toFixed(2)}</dd>
+            </div>
+          </dl>
         </div>
+      </div>
+
+      <StickyBar>
         <Button
-          onClick={handlePlaceOrder}
-          disabled={loading || cartItems.length === 0}
-          className="w-full bg-primary hover:bg-primary/90"
           size="lg"
+          block
+          loading={loading}
+          disabled={cartItems.length === 0}
+          onClick={handlePlaceOrder}
+          className="justify-between"
         >
-          {loading ? "Placing Order..." : "Checkout"}
+          <span className="tabular-nums">₹{total.toFixed(2)}</span>
+          <span>{loading ? "Placing order…" : "Place order"}</span>
         </Button>
-      </CardContent>
-    </Card>
+      </StickyBar>
+    </>
   )
 }
-

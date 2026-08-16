@@ -52,7 +52,7 @@ export function generateInvoiceHTML(order: Order): string {
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
     .header {
-      border-bottom: 3px solid #f97316;
+      border-bottom: 3px solid #2E7D5B;
       padding-bottom: 20px;
       margin-bottom: 30px;
       display: flex;
@@ -60,7 +60,7 @@ export function generateInvoiceHTML(order: Order): string {
       align-items: flex-start;
     }
     .logo-section h1 {
-      color: #f97316;
+      color: #2E7D5B;
       font-size: 28px;
       margin-bottom: 5px;
     }
@@ -88,7 +88,7 @@ export function generateInvoiceHTML(order: Order): string {
       margin-bottom: 30px;
     }
     .detail-box h3 {
-      color: #f97316;
+      color: #2E7D5B;
       font-size: 14px;
       text-transform: uppercase;
       margin-bottom: 10px;
@@ -105,7 +105,7 @@ export function generateInvoiceHTML(order: Order): string {
       margin-bottom: 20px;
     }
     .items-table thead {
-      background: #f97316;
+      background: #2E7D5B;
       color: white;
     }
     .items-table th {
@@ -137,7 +137,7 @@ export function generateInvoiceHTML(order: Order): string {
     }
     .totals-box {
       width: 300px;
-      border: 2px solid #f97316;
+      border: 2px solid #2E7D5B;
       padding: 20px;
       border-radius: 8px;
     }
@@ -150,8 +150,8 @@ export function generateInvoiceHTML(order: Order): string {
     .total-row.grand-total {
       font-size: 20px;
       font-weight: bold;
-      color: #f97316;
-      border-top: 2px solid #f97316;
+      color: #2E7D5B;
+      border-top: 2px solid #2E7D5B;
       padding-top: 10px;
       margin-top: 10px;
     }
@@ -173,8 +173,8 @@ export function generateInvoiceHTML(order: Order): string {
       margin-top: 5px;
     }
     .status-pending { background: #fef3c7; color: #92400e; }
-    .status-confirmed { background: #dbeafe; color: #1e40af; }
-    .status-preparing { background: #fed7aa; color: #9a3412; }
+    .status-confirmed { background: #e7f4ec; color: #21603f; }
+    .status-preparing { background: #fdf0d5; color: #8a5a06; }
     .status-ready { background: #d1fae5; color: #065f46; }
     .status-completed { background: #d1fae5; color: #065f46; }
     .status-cancelled { background: #fee2e2; color: #991b1b; }

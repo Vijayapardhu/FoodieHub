@@ -1,9 +1,12 @@
-import { Navbar } from "@/components/layout/navbar"
-import { BottomNav } from "@/components/layout/bottom-nav"
-import { OrdersListWithFilters } from "@/components/orders/orders-list-with-filters"
 import Link from "next/link"
-import { HelpCircle } from "lucide-react"
+import { MessageSquare } from "lucide-react"
+import { AppShell } from "@/components/layout/app-shell"
+import { OrdersListWithFilters } from "@/components/orders/orders-list-with-filters"
 import { requireRole } from "@/lib/auth/require-role"
+import { ACTIVE_ORDER_STATUSES } from "@/lib/utils/order-status"
+import { PromoSlot } from "@/components/promo/promo-slot"
+
+export const metadata = { title: "Orders" }
 
 export default async function OrdersPage() {
   const { supabase, user } = await requireRole([
@@ -12,71 +15,60 @@ export default async function OrdersPage() {
     "admin",
   ])
 
-  const orderListSelect = `
+  const select = `
     *,
-    canteens:canteens!inner(
+    canteens:canteens(
       id,
       name,
       contact_phone
     )
   `
 
-  const { data: activeOrdersData, error: activeError } = await supabase
-    .from("orders")
-    .select(orderListSelect)
-    .eq("user_id", user.id)
-    .in("status", ["pending", "confirmed", "preparing", "ready"])
-    .order("created_at", { ascending: false })
+  const [
+    { data: activeOrdersData, error: activeError },
+    { data: pastOrdersData, error: pastError },
+  ] = await Promise.all([
+    supabase
+      .from("orders")
+      .select(select)
+      .eq("user_id", user.id)
+      .in("status", ACTIVE_ORDER_STATUSES)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("orders")
+      .select(select)
+      .eq("user_id", user.id)
+      .in("status", ["completed", "cancelled"])
+      .order("created_at", { ascending: false })
+      .limit(60),
+  ])
 
-  const { data: pastOrdersData, error: pastError } = await supabase
-    .from("orders")
-    .select(orderListSelect)
-    .eq("user_id", user.id)
-    .in("status", ["completed", "cancelled"])
-    .order("created_at", { ascending: false })
-
-  if (activeError) {
-    console.error("[orders] failed to fetch active orders", activeError)
-  }
-  if (pastError) {
-    console.error("[orders] failed to fetch past orders", pastError)
-  }
-
-  const activeOrders = activeOrdersData ?? []
-  const pastOrders = pastOrdersData ?? []
-  const showGlobalPlaceholder =
-    activeOrders.length === 0 && pastOrders.length === 0
+  if (activeError) console.error("[orders] active", activeError)
+  if (pastError) console.error("[orders] past", pastError)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 via-white to-gray-50/30 pb-20">
-      <Navbar />
-      <div className="mx-auto max-w-3xl px-4 py-6 space-y-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
-              Orders
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Track active tokens or revisit a previous meal—clean and simple.
-            </p>
-          </div>
-          <Link
-            href="/profile/feedback"
-            className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white px-4 py-2 text-sm font-medium text-primary transition-all hover:bg-primary/5 hover:shadow-sm"
-          >
-            <HelpCircle className="h-4 w-4" />
-            Manage feedback
-          </Link>
-        </header>
-
+    <AppShell
+      title="Orders"
+      actions={
+        <Link
+          href="/profile/feedback"
+          className="flex h-11 w-11 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-muted"
+          aria-label="Your reviews"
+        >
+          <MessageSquare className="h-5 w-5" />
+        </Link>
+      }
+    >
+      <div className="space-y-4">
         <OrdersListWithFilters
-          activeOrders={activeOrders}
-          pastOrders={pastOrders}
-          showGlobalPlaceholder={showGlobalPlaceholder}
+          activeOrders={(activeOrdersData ?? []) as any}
+          pastOrders={(pastOrdersData ?? []) as any}
         />
+
+        {/* Read by someone with time on their hands, waiting for a token to
+            turn green — a good place to sell, and a bad place to shout. */}
+        <PromoSlot placement="orders" />
       </div>
-      <BottomNav />
-    </div>
+    </AppShell>
   )
 }
-

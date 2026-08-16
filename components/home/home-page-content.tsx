@@ -1,251 +1,464 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Search, Flame, Sparkles, UtensilsCrossed } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import Image from "next/image"
 import Link from "next/link"
+import Image from "next/image"
+import { Search, Store, UtensilsCrossed, X } from "lucide-react"
 import { Database } from "@/types/database.types"
+import { Input } from "@/components/ui/input"
+import { Chip, ChipRail } from "@/components/ui/chip"
+import { EmptyState } from "@/components/ui/empty-state"
+import { Section, SectionHeader } from "@/components/ui/section-header"
 import { CanteenCard } from "@/components/canteen/canteen-card"
-import { Skeleton } from "@/components/ui/loading-state"
-import { ImagePlaceholder } from "@/components/ui/image-placeholder"
+import { ItemCard } from "@/components/menu/item-card"
+import { useDebounce } from "@/lib/hooks/use-debounce"
+import { PromoCarousel } from "@/components/home/promo-carousel"
+import type { PromoSlide } from "@/lib/utils/promo-banners"
+import {
+  BrowseFilters,
+  FilterButton,
+  FilterSheet,
+  countActiveFilters,
+  defaultFilters,
+} from "@/components/home/home-filters"
 
 type Canteen = Database["public"]["Tables"]["canteens"]["Row"]
-type Item = Database["public"]["Tables"]["items"]["Row"] & {
-  canteens: { name: string } | null
-}
 type Category = Database["public"]["Tables"]["categories"]["Row"]
+type Item = Database["public"]["Tables"]["items"]["Row"] & {
+  canteens: { id: string; slug: string | null; name: string; is_open: boolean } | null
+}
 
 interface HomePageContentProps {
   canteens: Canteen[]
   featuredItems: Item[]
   categories: Category[]
+  items: Item[]
+  /** Paid banner slots, best-priority first. */
+  promos?: PromoSlide[]
+  greetingName?: string | null
+  /** "Your usual" rail, rendered by the server when there's a past order. */
+  reorder?: React.ReactNode
+  /** Live-order banner, rendered by the server when one is in flight. */
+  activeOrder?: React.ReactNode
+  /** Mid-page advertising slot. */
+  inlinePromo?: React.ReactNode
+}
+
+function greeting() {
+  const hour = new Date().getHours()
+  if (hour < 12) return "Good morning"
+  if (hour < 17) return "Good afternoon"
+  return "Good evening"
 }
 
 export function HomePageContent({
   canteens,
   featuredItems,
   categories,
+  items,
+  promos,
+  greetingName,
+  reorder,
+  activeOrder,
+  inlinePromo,
 }: HomePageContentProps) {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [activeFilter, setActiveFilter] = useState("all")
+  const [rawQuery, setRawQuery] = useState("")
+  const [filters, setFilters] = useState<BrowseFilters>(defaultFilters)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
-  const filteredCanteens = useMemo(() => {
-    const bySearch = searchQuery
-      ? canteens.filter((c) =>
-          c.name.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      : canteens
-
-    if (activeFilter === "trending") {
-      return bySearch.slice().sort((a, b) => b.rating - a.rating)
+  // The categories table has no image column, so each tile borrows the photo
+  // of its best-rated dish. That keeps the tiles honest — they show food the
+  // canteens actually serve — without a schema change, and it needs no
+  // separate upload flow for owners to keep up to date.
+  const categoryCovers = useMemo(() => {
+    const best: Record<string, { url: string; rating: number }> = {}
+    for (const item of items) {
+      if (!item.image_url || !item.category_id) continue
+      const current = best[item.category_id]
+      if (!current || item.rating > current.rating) {
+        best[item.category_id] = { url: item.image_url, rating: item.rating }
+      }
     }
+    return Object.fromEntries(
+      Object.entries(best).map(([id, v]) => [id, v.url])
+    ) as Record<string, string>
+  }, [items])
 
-    if (activeFilter === "new") {
-      return bySearch
-        .slice()
-        .sort((a, b) =>
-          (b.created_at || "").localeCompare(a.created_at || "")
-        )
+  // Typing filters a client-side list, so a short debounce is enough to stop
+  // re-sorting the whole catalogue on every keystroke.
+  const query = useDebounce(rawQuery, 180).trim().toLowerCase()
+  const searching = query.length > 0
+  const activeCount = countActiveFilters(filters)
+
+  const matchedCanteens = useMemo(() => {
+    let list = canteens
+
+    if (filters.openOnly) list = list.filter((c) => c.is_open)
+    if (filters.minRating !== null)
+      list = list.filter((c) => c.rating >= filters.minRating!)
+    if (query)
+      list = list.filter(
+        (c) =>
+          c.name.toLowerCase().includes(query) ||
+          c.description?.toLowerCase().includes(query)
+      )
+
+    const sorted = [...list]
+    switch (filters.sort) {
+      case "rating":
+        sorted.sort((a, b) => b.rating - a.rating)
+        break
+      case "name":
+        sorted.sort((a, b) => a.name.localeCompare(b.name))
+        break
+      default:
+        // Open canteens first — a closed one can't take the order.
+        sorted.sort((a, b) => Number(b.is_open) - Number(a.is_open))
     }
+    return sorted
+  }, [canteens, filters, query])
 
-    return bySearch
-  }, [canteens, searchQuery, activeFilter])
+  const matchedItems = useMemo(() => {
+    let list = items
 
-  const showGlobalPlaceholder =
-    canteens.length === 0 && featuredItems.length === 0 && categories.length === 0
+    if (filters.categoryId)
+      list = list.filter((i) => i.category_id === filters.categoryId)
+    if (filters.vegOnly) list = list.filter((i) => i.is_vegetarian)
+    if (filters.openOnly) list = list.filter((i) => i.canteens?.is_open)
+    if (filters.minPrice !== null)
+      list = list.filter((i) => Number(i.price) >= filters.minPrice!)
+    if (filters.maxPrice !== null)
+      list = list.filter((i) => Number(i.price) <= filters.maxPrice!)
+    if (filters.minRating !== null)
+      list = list.filter((i) => i.rating >= filters.minRating!)
+    if (query)
+      list = list.filter(
+        (i) =>
+          i.name.toLowerCase().includes(query) ||
+          i.description?.toLowerCase().includes(query) ||
+          i.canteens?.name.toLowerCase().includes(query)
+      )
+
+    const sorted = [...list]
+    switch (filters.sort) {
+      case "rating":
+        sorted.sort((a, b) => b.rating - a.rating)
+        break
+      case "price-asc":
+        sorted.sort((a, b) => Number(a.price) - Number(b.price))
+        break
+      case "price-desc":
+        sorted.sort((a, b) => Number(b.price) - Number(a.price))
+        break
+      case "name":
+        sorted.sort((a, b) => a.name.localeCompare(b.name))
+        break
+      default:
+        sorted.sort((a, b) => b.rating - a.rating)
+    }
+    return sorted
+  }, [items, filters, query])
+
+  // Any filter beyond canteen-level ones means the user is shopping for dishes.
+  const dishMode =
+    searching ||
+    filters.categoryId !== null ||
+    filters.vegOnly ||
+    filters.minPrice !== null ||
+    filters.maxPrice !== null
+
+  const clearAll = () => {
+    setRawQuery("")
+    setFilters(defaultFilters)
+  }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-8">
-      {/* Welcome Section */}
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Discover Amazing Food
+    <div className="space-y-6 sm:space-y-7">
+      {/* Anything already in flight comes first — that is what somebody
+          opening the app mid-morning is checking on. */}
+      {activeOrder}
+
+      <header className="space-y-3">
+        {/* One line on a phone. The old two-line greeting pushed the search
+            box and the first row of food below the fold on a small screen. */}
+        <div className="flex items-baseline justify-between gap-3">
+          <h1 className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
+            {greeting()}
+            {greetingName ? `, ${greetingName.split(" ")[0]}` : ""}
           </h1>
-          <p className="text-muted-foreground">
-            Explore canteens and order your favorite meals
-          </p>
         </div>
 
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search canteens, items, or dishes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-12 rounded-xl border-gray-200 bg-white pl-11 pr-4 shadow-sm focus:border-primary focus:ring-primary/20 transition-all"
-          />
-        </div>
-
-        {/* Filters */}
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-          {[
-            { key: "all", label: "All" },
-            { key: "trending", label: "Trending", icon: Flame },
-            { key: "new", label: "New", icon: Sparkles },
-          ].map((filter) => {
-            const Icon = filter.icon
-            const isActive = activeFilter === filter.key
-            return (
-              <button
-                key={filter.key}
-                onClick={() => setActiveFilter(filter.key)}
-                className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all whitespace-nowrap ${
-                  isActive
-                    ? "bg-gradient-to-r from-primary to-orange-400 text-white shadow-lg shadow-primary/25 scale-105"
-                    : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                {Icon && <Icon className="h-4 w-4" />}
-                {filter.label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Featured Banner */}
-      {featuredItems.length > 0 && (
-        <Link href={`/items/${featuredItems[0].id}`}>
-          <div className="group relative overflow-hidden rounded-2xl cursor-pointer transition-transform hover:scale-[1.01]">
-            <div className="relative h-56 w-full bg-gradient-to-br from-orange-100 via-primary/10 to-orange-50">
-              {featuredItems[0].image_url ? (
-                <Image
-                  src={featuredItems[0].image_url}
-                  alt={featuredItems[0].name}
-                  fill
-                  className="object-cover transition-transform group-hover:scale-105"
-                />
-              ) : null}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="px-3 py-1 rounded-full bg-primary/90 backdrop-blur-sm text-xs font-semibold">
-                    Featured
-                  </div>
-                </div>
-                <h2 className="text-2xl font-bold mb-1">{featuredItems[0].name}</h2>
-                <p className="text-white/80 text-sm">{featuredItems[0].canteens?.name}</p>
-              </div>
-            </div>
-          </div>
-        </Link>
-      )}
-
-      {/* Categories */}
-      {categories.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-foreground">Categories</h2>
-            <span className="text-sm text-muted-foreground">Browse by type</span>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            {categories.map((category) => (
-              <Link
-                key={category.id}
-                href={`/home?category=${category.id}`}
-                className="group flex min-w-[120px] flex-col items-center gap-3 rounded-xl bg-white p-4 shadow-sm border border-gray-100 transition-all hover:shadow-md hover:-translate-y-1"
-              >
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-orange-100 transition-transform group-hover:scale-110">
-                  <UtensilsCrossed className="h-6 w-6 text-primary/70" />
-                </div>
-                <span className="text-sm font-semibold text-foreground">{category.name}</span>
-              </Link>
-            ))}
+        {/*
+         * Sticky search. On a long scrolling home screen the search box is the
+         * fastest route to a specific dish, and having to flick back to the
+         * top to reach it is the single most annoying thing about browsing on
+         * a phone. It docks under the app bar instead.
+         */}
+        <div className="sticky top-appbar z-30 -mx-4 bg-background/95 px-4 py-2 backdrop-blur-md sm:-mx-5 sm:px-5">
+          <div className="flex items-center gap-2">
+            <Input
+              type="search"
+              inputMode="search"
+              placeholder="Search dishes or canteens"
+              value={rawQuery}
+              onChange={(e) => setRawQuery(e.target.value)}
+              aria-label="Search dishes or canteens"
+              startAdornment={<Search />}
+              endAdornment={
+                rawQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => setRawQuery("")}
+                    aria-label="Clear search"
+                    className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted"
+                  >
+                    <X />
+                  </button>
+                ) : undefined
+              }
+            />
+            <FilterButton
+              count={activeCount}
+              onClick={() => setFiltersOpen(true)}
+            />
           </div>
         </div>
-      )}
 
-      {/* Featured Items */}
-      {featuredItems.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-foreground">Featured Items</h2>
-            <Link
-              href="/favorites"
-              className="text-sm font-medium text-primary hover:underline"
+        <ChipRail>
+          <Chip
+            active={filters.openOnly}
+            onClick={() =>
+              setFilters((f) => ({ ...f, openOnly: !f.openOnly }))
+            }
+          >
+            Open now
+          </Chip>
+          <Chip
+            active={filters.vegOnly}
+            onClick={() => setFilters((f) => ({ ...f, vegOnly: !f.vegOnly }))}
+          >
+            Pure veg
+          </Chip>
+          <Chip
+            active={filters.sort === "rating"}
+            onClick={() =>
+              setFilters((f) => ({
+                ...f,
+                sort: f.sort === "rating" ? "relevance" : "rating",
+              }))
+            }
+          >
+            Top rated
+          </Chip>
+          <Chip
+            active={filters.sort === "price-asc"}
+            onClick={() =>
+              setFilters((f) => ({
+                ...f,
+                sort: f.sort === "price-asc" ? "relevance" : "price-asc",
+              }))
+            }
+          >
+            Budget first
+          </Chip>
+          {categories.slice(0, 8).map((category) => (
+            <Chip
+              key={category.id}
+              active={filters.categoryId === category.id}
+              onClick={() =>
+                setFilters((f) => ({
+                  ...f,
+                  categoryId:
+                    f.categoryId === category.id ? null : category.id,
+                }))
+              }
             >
-              See all →
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {featuredItems.slice(0, 6).map((item) => (
-              <Link
-                key={item.id}
-                href={`/items/${item.id}`}
-                className="group"
-              >
-                <Card className="overflow-hidden rounded-xl border-0 bg-white shadow-sm transition-all hover:shadow-lg hover:-translate-y-1">
-                  <div className="relative h-40 w-full bg-gray-100">
-                    {item.featured_image_url || item.image_url ? (
-                      <Image
-                        src={item.featured_image_url || item.image_url!}
-                        alt={item.name}
-                        fill
-                        className="object-cover transition-transform group-hover:scale-105"
-                      />
-                    ) : (
-                      <ImagePlaceholder type="item" size="xl" />
-                    )}
-                  </div>
-                  <CardContent className="p-4 space-y-2">
-                    <h3 className="line-clamp-1 font-semibold text-foreground text-sm">
-                      {item.name}
-                    </h3>
-                    <p className="text-xs text-muted-foreground line-clamp-1">
-                      {item.canteens?.name}
-                    </p>
-                    <div className="flex items-center justify-between pt-1">
-                      <p className="font-bold text-primary">₹{item.price}</p>
-                      <span className="rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-primary">
-                        Featured
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+              {category.name}
+            </Chip>
+          ))}
+        </ChipRail>
+      </header>
 
-      {/* Canteens */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-foreground">All Canteens</h2>
-          <span className="text-sm text-muted-foreground">
-            {filteredCanteens.length} {filteredCanteens.length === 1 ? "canteen" : "canteens"}
-          </span>
-        </div>
-        
-        {filteredCanteens.length === 0 ? (
-          showGlobalPlaceholder ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 3 }).map((_, idx) => (
-                <Skeleton key={idx} className="h-64 rounded-2xl" />
+      <FilterSheet
+        categories={categories}
+        value={filters}
+        onChange={setFilters}
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+      />
+
+      {dishMode ? (
+        <Section>
+          <SectionHeader
+            title={searching ? `Results for “${rawQuery.trim()}”` : "Dishes"}
+            subtitle={`${matchedItems.length} ${
+              matchedItems.length === 1 ? "dish" : "dishes"
+            }${
+              matchedCanteens.length && searching
+                ? ` · ${matchedCanteens.length} canteens`
+                : ""
+            }`}
+          />
+
+          {matchedItems.length === 0 ? (
+            <EmptyState
+              icon={UtensilsCrossed}
+              title="No dishes match"
+              description="Try a different search term, or loosen the filters."
+              action={{ label: "Clear filters", onClick: clearAll }}
+              compact
+            />
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+              {matchedItems.slice(0, 40).map((item) => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  canteenId={item.canteen_id}
+                  canteenSlug={item.canteens?.slug}
+                  canteenName={item.canteens?.name ?? "Canteen"}
+                  subtitle={item.canteens?.name}
+                />
               ))}
             </div>
-          ) : (
-            <Card className="rounded-2xl border-dashed border-gray-200 bg-gray-50 p-12 text-center">
-              <p className="text-muted-foreground">
-                {canteens.length === 0
-                  ? "No canteens available yet. Check back soon!"
-                  : "No canteens match your search. Try a different term."}
-              </p>
-            </Card>
-          )
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredCanteens.map((canteen) => (
-              <CanteenCard key={canteen.id} canteen={canteen} />
-            ))}
-          </div>
-        )}
-      </div>
+          )}
+
+          {searching && matchedCanteens.length > 0 ? (
+            <div className="space-y-3 pt-4">
+              <SectionHeader title="Matching canteens" />
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {matchedCanteens.map((canteen) => (
+                  <CanteenCard key={canteen.id} canteen={canteen} />
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </Section>
+      ) : (
+        <>
+          {/* Paid placement, so it sits high — but below the reorder rail,
+              which is the fastest path to checkout for a returning student
+              and shouldn't be pushed down by advertising. */}
+          {reorder}
+
+          {promos && promos.length > 0 ? (
+            <PromoCarousel slides={promos} />
+          ) : null}
+
+          {featuredItems.length > 0 ? (
+            <Section>
+              <SectionHeader
+                title="Today's picks"
+                subtitle="Hand-picked by the kitchens"
+              />
+              <div className="rail">
+                {featuredItems.map((item) => (
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    canteenId={item.canteen_id}
+                    canteenSlug={item.canteens?.slug}
+                    canteenName={item.canteens?.name ?? "Canteen"}
+                    subtitle={item.canteens?.name}
+                    compact
+                  />
+                ))}
+              </div>
+            </Section>
+          ) : null}
+
+          {categories.length > 0 ? (
+            <Section>
+              <SectionHeader title="What are you after?" />
+
+              {/*
+               * A rail on phones, a grid from `sm` up. Three tiny tiles per
+               * row wasted the width and buried the later categories under a
+               * wall of text; a horizontal rail gives each one a big enough
+               * photo to recognise and a 44px-plus tap target.
+               */}
+              <div className="rail sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-3 sm:overflow-visible sm:px-0 lg:grid-cols-6">
+                {categories.map((category) => {
+                  const cover = categoryCovers[category.id]
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() =>
+                        setFilters((f) => ({ ...f, categoryId: category.id }))
+                      }
+                      className="flex w-20 shrink-0 flex-col items-center gap-2 rounded-2xl border border-border bg-card p-2.5 text-center transition-transform active:scale-95 sm:w-auto sm:p-3"
+                    >
+                      <span className="relative h-14 w-14 overflow-hidden rounded-xl bg-primary-soft sm:h-11 sm:w-11">
+                        {cover ? (
+                          <Image
+                            src={cover}
+                            alt=""
+                            fill
+                            sizes="56px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center">
+                            <UtensilsCrossed className="h-5 w-5 text-primary" />
+                          </span>
+                        )}
+                      </span>
+                      <span className="line-clamp-2 text-2xs font-semibold leading-tight text-foreground sm:text-xs">
+                        {category.name}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </Section>
+          ) : null}
+
+          {inlinePromo}
+
+          <Section>
+            <SectionHeader
+              title="All canteens"
+              subtitle={`${matchedCanteens.length} on campus`}
+            />
+
+            {matchedCanteens.length === 0 ? (
+              <EmptyState
+                icon={Store}
+                title={
+                  canteens.length === 0
+                    ? "No canteens yet"
+                    : "Nothing matches those filters"
+                }
+                description={
+                  canteens.length === 0
+                    ? "Once a canteen is approved it will show up here."
+                    : "Try turning off “Open now”, or widen the rating filter."
+                }
+                action={
+                  canteens.length === 0
+                    ? undefined
+                    : { label: "Clear filters", onClick: clearAll }
+                }
+                compact
+              />
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {matchedCanteens.map((canteen) => (
+                  <CanteenCard key={canteen.id} canteen={canteen} />
+                ))}
+              </div>
+            )}
+          </Section>
+
+          <p className="pt-2 text-center text-xs text-muted-foreground">
+            Pay at the counter · Show your token to collect ·{" "}
+            <Link href="/orders" className="font-semibold text-primary">
+              Track an order
+            </Link>
+          </p>
+        </>
+      )}
     </div>
   )
 }

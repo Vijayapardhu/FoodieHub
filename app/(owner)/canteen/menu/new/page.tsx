@@ -1,6 +1,9 @@
-import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
+import { ConsoleHeader } from "@/components/layout/console-shell"
 import { NewItemForm } from "@/components/canteen-owner/new-item-form"
+
+export const metadata = { title: "Add dish" }
 
 export default async function NewItemPage() {
   const supabase = await createClient()
@@ -8,19 +11,15 @@ export default async function NewItemPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect("/login")
-  }
+  if (!user) redirect("/login")
 
   const { data: canteen } = await supabase
     .from("canteens")
     .select("id")
     .eq("owner_id", user.id)
-    .single()
+    .maybeSingle()
 
-  if (!canteen) {
-    redirect("/canteen")
-  }
+  if (!canteen) redirect("/canteen")
 
   const { data: categories } = await supabase
     .from("categories")
@@ -28,18 +27,15 @@ export default async function NewItemPage() {
     .order("name")
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 via-white to-gray-50/30 p-4 md:p-6">
-      <div className="mb-4 md:mb-6">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent md:text-3xl">
-          Add New Item
-        </h1>
-        <p className="text-sm text-muted-foreground md:text-base">
-          Create a new menu item
-        </p>
-      </div>
+    <>
+      <ConsoleHeader
+        title="Add a dish"
+        description="It goes live on your menu as soon as you save"
+      />
 
-      <NewItemForm canteenId={canteen.id} categories={categories || []} />
-    </div>
+      <div className="mx-auto max-w-2xl pb-24 lg:max-w-6xl lg:pb-0">
+        <NewItemForm canteenId={canteen.id} categories={categories ?? []} />
+      </div>
+    </>
   )
 }
-

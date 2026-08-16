@@ -1,5 +1,9 @@
-import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
+import { Store } from "lucide-react"
+import { createClient } from "@/lib/supabase/server"
+import { ConsoleHeader } from "@/components/layout/console-shell"
+import { EmptyState } from "@/components/ui/empty-state"
+import { Badge } from "@/components/ui/badge"
 import { DashboardStats } from "@/components/canteen-owner/dashboard-stats"
 import { RecentOrders } from "@/components/canteen-owner/recent-orders"
 import { QuickActions } from "@/components/canteen-owner/quick-actions"
@@ -7,6 +11,9 @@ import { RevenueTrendCard } from "@/components/canteen-owner/revenue-trend-card"
 import { AttentionItemsCard } from "@/components/canteen-owner/attention-items-card"
 import { TopDishesCard } from "@/components/canteen-owner/top-dishes-card"
 import { OpsFeedCard } from "@/components/canteen-owner/ops-feed-card"
+import { ACTIVE_ORDER_STATUSES } from "@/lib/utils/order-status"
+
+export const metadata = { title: "Dashboard" }
 
 export default async function CanteenDashboardPage() {
   const supabase = await createClient()
@@ -14,33 +21,22 @@ export default async function CanteenDashboardPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect("/login")
-  }
+  if (!user) redirect("/login")
 
-  // Get canteen owned by user
   const { data: canteen } = await supabase
     .from("canteens")
     .select("*")
     .eq("owner_id", user.id)
-    .single()
+    .maybeSingle()
 
   if (!canteen) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center max-w-md">
-          <h2 className="text-2xl font-bold mb-4">No Canteen Found</h2>
-          <p className="mt-2 text-muted-foreground mb-6">
-            You haven't registered a canteen yet. Register your canteen to start accepting orders.
-          </p>
-          <a
-            href="/canteen/register"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            Register Your Canteen
-          </a>
-        </div>
-      </div>
+      <EmptyState
+        icon={Store}
+        title="No canteen registered yet"
+        description="Register your canteen to publish a menu and start taking orders."
+        action={{ label: "Register your canteen", href: "/canteen/register" }}
+      />
     )
   }
 
@@ -65,7 +61,7 @@ export default async function CanteenDashboardPage() {
       .from("orders")
       .select("*")
       .eq("canteen_id", canteen.id)
-      .in("status", ["pending", "confirmed", "preparing", "ready"])
+      .in("status", ACTIVE_ORDER_STATUSES)
       .order("created_at", { ascending: false })
       .limit(5),
     supabase
@@ -82,147 +78,143 @@ export default async function CanteenDashboardPage() {
       .limit(5),
     supabase
       .from("order_items")
-      .select(
-        "quantity, items!inner(id, name, image_url, canteen_id)"
-      )
+      .select("quantity, items!inner(id, name, image_url, canteen_id)")
       .gte("created_at", startOfWeek.toISOString())
-      .limit(200),
+      .limit(400),
   ])
 
-  const weekOrderList = weekOrdersResponse.data ?? []
-  const activeOrders = activeOrdersResponse.data
+  const weekOrders = weekOrdersResponse.data ?? []
+  const activeOrders = activeOrdersResponse.data ?? []
   const opsTimeline = opsTimelineResponse.data ?? []
   const unavailableItems = unavailableItemsResponse.data ?? []
+
   type TopItemRow = {
     quantity: number | null
-    items: { id: string; name: string; image_url: string | null; canteen_id: string } | null
+    items: {
+      id: string
+      name: string
+      image_url: string | null
+      canteen_id: string
+    } | null
   }
   const topItemsRaw = (topItemsResponse.data as TopItemRow[] | null) ?? []
-  const todayRevenue = weekOrderList
-    .filter((order) => {
-      const created = new Date(order.created_at)
-      return created >= today
-    })
+
+  const inRange = (value: string, from: Date, to?: Date) => {
+    const created = new Date(value)
+    return created >= from && (!to || created < to)
+  }
+
+  const todayRevenue = weekOrders
+    .filter((order) => inRange(order.created_at, today))
     .reduce((sum, order) => sum + Number(order.total_amount), 0)
 
   const yesterdayStart = new Date(today)
   yesterdayStart.setDate(yesterdayStart.getDate() - 1)
-  const yesterdayRevenue = weekOrderList
-    .filter((order) => {
-      const created = new Date(order.created_at)
-      return created >= yesterdayStart && created < today
-    })
+  const yesterdayRevenue = weekOrders
+    .filter((order) => inRange(order.created_at, yesterdayStart, today))
     .reduce((sum, order) => sum + Number(order.total_amount), 0)
 
+  // With no trade yesterday any change is undefined rather than +100%.
   const revenueDelta =
     yesterdayRevenue === 0
-      ? 100
-      : ((todayRevenue - yesterdayRevenue) / Math.max(yesterdayRevenue, 1)) *
-        100
+      ? todayRevenue > 0
+        ? 100
+        : 0
+      : ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100
 
-  const readyOrders =
-    activeOrders?.filter((order) => order.status === "ready").length || 0
-
-  const weeklyRevenueByDay = Array.from({ length: 7 }).map((_, idx) => {
+  const weeklyRevenueByDay = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(startOfWeek)
-    date.setDate(startOfWeek.getDate() + idx)
-    const label = date.toLocaleDateString("en-IN", {
-      weekday: "short",
-    })
-    const dayRevenue = weekOrderList
-      .filter((order) => {
-        const created = new Date(order.created_at)
-        return (
-          created.getFullYear() === date.getFullYear() &&
-          created.getMonth() === date.getMonth() &&
-          created.getDate() === date.getDate()
-        )
-      })
-      .reduce((sum, order) => sum + Number(order.total_amount), 0)
-    return { label, value: dayRevenue }
-  })
+    date.setDate(startOfWeek.getDate() + index)
+    const nextDate = new Date(date)
+    nextDate.setDate(date.getDate() + 1)
 
-  const attentionItems = unavailableItems.map((item) => ({
-    id: item.id,
-    name: item.name,
-    imageUrl: item.image_url,
-    price: item.price,
-  }))
+    return {
+      label: date.toLocaleDateString("en-IN", { weekday: "short" }),
+      value: weekOrders
+        .filter((order) => inRange(order.created_at, date, nextDate))
+        .reduce((sum, order) => sum + Number(order.total_amount), 0),
+    }
+  })
 
   const topItemMap = new Map<
     string,
     { id: string; name: string; imageUrl: string | null; count: number }
   >()
-  topItemsRaw
-    .filter((row) => row.items?.canteen_id === canteen.id)
-    .forEach((row) => {
-      const item = row.items
-      if (!item) return
-      const existing = topItemMap.get(item.id) || {
-        id: item.id,
-        name: item.name,
-        imageUrl: item.image_url,
-        count: 0,
-      }
-      existing.count += row.quantity || 0
-      topItemMap.set(item.id, existing)
-    })
+  for (const row of topItemsRaw) {
+    const item = row.items
+    if (!item || item.canteen_id !== canteen.id) continue
+    const existing = topItemMap.get(item.id) ?? {
+      id: item.id,
+      name: item.name,
+      imageUrl: item.image_url,
+      count: 0,
+    }
+    existing.count += row.quantity ?? 0
+    topItemMap.set(item.id, existing)
+  }
 
   const topDishes = Array.from(topItemMap.values())
     .sort((a, b) => b.count - a.count)
-    .slice(0, 4)
-
-  const opsFeed = (opsTimeline ?? []).map((entry) => ({
-    id: entry.id,
-    status: entry.status,
-    createdAt: entry.created_at,
-    customer: entry.customer_name,
-    amount: entry.total_amount,
-  }))
+    .slice(0, 5)
 
   const metrics = {
     todayRevenue,
     revenueDelta,
-    activeOrders: activeOrders?.length || 0,
-    readyOrders,
+    activeOrders: activeOrders.length,
+    readyOrders: activeOrders.filter((order) => order.status === "ready").length,
     rating: Number(canteen.rating),
     avgTicket:
-      weekOrderList.length > 0
-        ? weekOrderList.reduce(
+      weekOrders.length > 0
+        ? weekOrders.reduce(
             (sum, order) => sum + Number(order.total_amount),
             0
-          ) / weekOrderList.length
+          ) / weekOrders.length
         : 0,
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 via-white to-gray-50/30 p-4 md:p-6">
-      <div className="mb-4 md:mb-6">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent md:text-3xl">
-          Dashboard
-        </h1>
-        <p className="text-sm text-muted-foreground md:text-base">
-          Welcome back, {canteen.name}
-        </p>
-      </div>
+    <>
+      <ConsoleHeader
+        title={canteen.name}
+        description="Today at a glance"
+        actions={
+          <Badge variant={canteen.is_open ? "success" : "muted"}>
+            {canteen.is_open ? "Open" : "Closed"}
+          </Badge>
+        }
+      />
 
-      <DashboardStats metrics={metrics} />
+      <div className="space-y-4">
+        <DashboardStats metrics={metrics} />
 
-      <div className="mt-4 grid gap-4 md:mt-6 md:gap-6 lg:grid-cols-3">
-        <RevenueTrendCard weeklyData={weeklyRevenueByDay} />
-        <AttentionItemsCard items={attentionItems} />
-        <OpsFeedCard events={opsFeed} />
-      </div>
-
-      <div className="mt-4 grid gap-4 md:mt-6 md:gap-6 lg:grid-cols-2">
-        <RecentOrders orders={activeOrders || []} />
-        <TopDishesCard dishes={topDishes} />
-      </div>
-
-      <div className="mt-4 grid gap-4 md:mt-6 md:gap-6 lg:grid-cols-2">
         <QuickActions canteenId={canteen.id} />
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <RecentOrders orders={activeOrders} />
+          <RevenueTrendCard weeklyData={weeklyRevenueByDay} />
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-3">
+          <TopDishesCard dishes={topDishes} />
+          <AttentionItemsCard
+            items={unavailableItems.map((item) => ({
+              id: item.id,
+              name: item.name,
+              imageUrl: item.image_url,
+              price: item.price,
+            }))}
+          />
+          <OpsFeedCard
+            events={opsTimeline.map((entry) => ({
+              id: entry.id,
+              status: entry.status,
+              createdAt: entry.created_at,
+              customer: entry.customer_name,
+              amount: entry.total_amount,
+            }))}
+          />
+        </div>
       </div>
-    </div>
+    </>
   )
 }
-

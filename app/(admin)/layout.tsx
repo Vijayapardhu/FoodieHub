@@ -1,4 +1,4 @@
-import { AdminSidebar } from "@/components/admin/admin-sidebar"
+import { ConsoleShell } from "@/components/layout/console-shell"
 import { requireRole } from "@/lib/auth/require-role"
 
 export default async function AdminGroupLayout({
@@ -8,11 +8,7 @@ export default async function AdminGroupLayout({
 }) {
   await requireRole(["admin"])
 
-  return (
-    <div className="flex min-h-screen">
-      <AdminSidebar />
-      <main className="flex-1">{children}</main>
-    </div>
-  )
+  // Only a plain string crosses to the client component; the nav config holds
+  // icon components, which are not serializable.
+  return <ConsoleShell variant="admin">{children}</ConsoleShell>
 }
-

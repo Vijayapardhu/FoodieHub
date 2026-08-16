@@ -1,20 +1,25 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-import { useState, useMemo } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Plus, Minus, RefreshCw, Search, ArrowUpDown } from "lucide-react"
-import { useCartStore } from "@/store/cart-store"
-import { Input } from "@/components/ui/input"
+import { useMemo, useState } from "react"
+import { Search, UtensilsCrossed, X } from "lucide-react"
 import { Database } from "@/types/database.types"
-import Image from "next/image"
-import Link from "next/link"
-import { Skeleton } from "@/components/ui/loading-state"
+import { Input } from "@/components/ui/input"
+import { Chip, ChipRail } from "@/components/ui/chip"
+import { EmptyState } from "@/components/ui/empty-state"
+import { Section, SectionHeader } from "@/components/ui/section-header"
 import { CanteenHero } from "@/components/canteen/canteen-hero"
 import { FeaturedItemsRail } from "@/components/canteen/featured-items-rail"
 import { FeedbackCarousel } from "@/components/canteen/feedback-carousel"
-import { ImagePlaceholder } from "@/components/ui/image-placeholder"
+import { MenuItemRow } from "@/components/menu/menu-item-row"
+import { StickyCart } from "@/components/cart/sticky-cart"
+import {
+  BrowseFilters,
+  FilterButton,
+  FilterSheet,
+  countActiveFilters,
+  defaultFilters,
+} from "@/components/home/home-filters"
+import { useDebounce } from "@/lib/hooks/use-debounce"
 
 type Canteen = Database["public"]["Tables"]["canteens"]["Row"]
 type Category = Database["public"]["Tables"]["categories"]["Row"]
@@ -34,8 +39,6 @@ interface CanteenMenuPageProps {
   reviews: Review[]
 }
 
-type SortOption = "name" | "price-asc" | "price-desc" | "rating"
-
 export function CanteenMenuPage({
   canteen,
   categories,
@@ -44,385 +47,245 @@ export function CanteenMenuPage({
   comboItems,
   reviews,
 }: CanteenMenuPageProps) {
-  const router = useRouter()
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [sortBy, setSortBy] = useState<SortOption>("name")
-  const { addItem, updateQuantity, items: cartItems } = useCartStore()
+  const [rawQuery, setRawQuery] = useState("")
+  const [filters, setFilters] = useState<BrowseFilters>(defaultFilters)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
-  const filteredItems = useMemo(() => {
-    let filtered = items
+  const query = useDebounce(rawQuery, 180).trim().toLowerCase()
+  const activeCount = countActiveFilters(filters)
 
-    // Filter by category
-    if (selectedCategory) {
-      filtered = filtered.filter((item) => item.category_id === selectedCategory)
-    }
+  // Only the categories this canteen actually stocks, in menu order.
+  const usedCategories = useMemo(() => {
+    const ids = new Set(items.map((i) => i.category_id))
+    return categories.filter((c) => ids.has(c.id))
+  }, [categories, items])
 
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim()
-      filtered = filtered.filter(
-        (item) =>
-          item.name.toLowerCase().includes(query) ||
-          item.description?.toLowerCase().includes(query)
+  const filtered = useMemo(() => {
+    let list = items
+
+    if (filters.categoryId)
+      list = list.filter((i) => i.category_id === filters.categoryId)
+    if (filters.vegOnly) list = list.filter((i) => i.is_vegetarian)
+    if (filters.minPrice !== null)
+      list = list.filter((i) => Number(i.price) >= filters.minPrice!)
+    if (filters.maxPrice !== null)
+      list = list.filter((i) => Number(i.price) <= filters.maxPrice!)
+    if (filters.minRating !== null)
+      list = list.filter((i) => i.rating >= filters.minRating!)
+    if (query)
+      list = list.filter(
+        (i) =>
+          i.name.toLowerCase().includes(query) ||
+          i.description?.toLowerCase().includes(query)
       )
+
+    const sorted = [...list]
+    switch (filters.sort) {
+      case "rating":
+        sorted.sort((a, b) => b.rating - a.rating)
+        break
+      case "price-asc":
+        sorted.sort((a, b) => Number(a.price) - Number(b.price))
+        break
+      case "price-desc":
+        sorted.sort((a, b) => Number(b.price) - Number(a.price))
+        break
+      default:
+        // In-stock first, then alphabetical — a sold-out row is dead weight.
+        sorted.sort(
+          (a, b) =>
+            Number(b.is_available) - Number(a.is_available) ||
+            a.name.localeCompare(b.name)
+        )
     }
-
-    // Sort items
-    const sorted = [...filtered].sort((a, b) => {
-      switch (sortBy) {
-        case "name":
-          return a.name.localeCompare(b.name)
-        case "price-asc":
-          return Number(a.price) - Number(b.price)
-        case "price-desc":
-          return Number(b.price) - Number(a.price)
-        case "rating":
-          return (b.rating || 0) - (a.rating || 0)
-        default:
-          return 0
-      }
-    })
-
     return sorted
-  }, [items, selectedCategory, searchQuery, sortBy])
+  }, [items, filters, query])
 
-  const showGlobalPlaceholder = categories.length === 0 && items.length === 0
-
-  const handleAddItem = (item: Item) => {
-    const cartItem = cartItems.find((i) => i.itemId === item.id)
-    if (cartItem) {
-      updateQuantity(item.id, cartItem.quantity + 1)
-    } else {
-      addItem({
-        itemId: item.id,
-        name: item.name,
-        price: Number(item.price),
-        imageUrl: item.image_url,
-        canteenId: canteen.id,
-        canteenName: canteen.name,
-      })
+  /** Group into category sections unless a single category is already picked. */
+  const groups = useMemo(() => {
+    if (filters.categoryId || query || filters.sort !== "relevance") {
+      return [{ id: "all", name: "", items: filtered }]
     }
-  }
 
-  const handleRemoveItem = (itemId: string) => {
-    const cartItem = cartItems.find((i) => i.itemId === itemId)
-    if (cartItem && cartItem.quantity > 1) {
-      updateQuantity(itemId, cartItem.quantity - 1)
-    } else {
-      useCartStore.getState().removeItem(itemId)
+    const byCategory = new Map<string, Item[]>()
+    for (const item of filtered) {
+      const list = byCategory.get(item.category_id) ?? []
+      list.push(item)
+      byCategory.set(item.category_id, list)
     }
+
+    return usedCategories
+      .map((category) => ({
+        id: category.id,
+        name: category.name,
+        items: byCategory.get(category.id) ?? [],
+      }))
+      .filter((group) => group.items.length > 0)
+  }, [filtered, usedCategories, filters.categoryId, filters.sort, query])
+
+  const clearAll = () => {
+    setRawQuery("")
+    setFilters(defaultFilters)
   }
-
-  const getItemQuantity = (itemId: string) => {
-    return cartItems.find((i) => i.itemId === itemId)?.quantity || 0
-  }
-
-  const cartItemCount = cartItems
-    .filter((item) => item.canteenId === canteen.id)
-    .reduce((sum, item) => sum + item.quantity, 0)
-
-  const cartTotal = cartItems
-    .filter((item) => item.canteenId === canteen.id)
-    .reduce((sum, item) => sum + item.price * item.quantity, 0)
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-4 space-y-8 md:px-6 md:py-6 md:space-y-10">
-      <CanteenHero canteen={canteen} />
+    <>
+      <div className="space-y-7">
+        <CanteenHero canteen={canteen} />
 
-      {featuredItems.length > 0 && (
-        <section className="space-y-4">
-          <FeaturedItemsRail
-            title="Chef's featured picks"
-            subtitle="Curated by the kitchen, refreshed daily"
-            items={featuredItems}
-            getQuantity={getItemQuantity}
-            onAdd={handleAddItem}
-            onRemove={handleRemoveItem}
-          />
-        </section>
-      )}
-
-      {comboItems.length > 0 && (
-        <section className="space-y-4">
-          <FeaturedItemsRail
-            title="Top combos"
-            subtitle="Bundle offers crafted for hungry teams"
-            items={comboItems}
-            getQuantity={getItemQuantity}
-            onAdd={handleAddItem}
-            onRemove={handleRemoveItem}
-          />
-        </section>
-      )}
-
-      {reviews.length > 0 && (
-        <section className="space-y-4">
-          <FeedbackCarousel reviews={reviews} />
-        </section>
-      )}
-
-      {/* Categories */}
-      <div className="mb-6 md:mb-8">
-        <div className="mb-3 md:mb-4">
-          <h2 className="text-xl font-bold text-foreground md:text-2xl">Menu</h2>
-          <p className="mt-1 text-xs text-muted-foreground md:text-sm">Explore our delicious offerings</p>
-        </div>
-
-        {/* Search and Sort */}
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search items..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 rounded-full border-2 border-gray-200 pl-10 pr-4 focus:border-primary"
-            />
+        {!canteen.is_open ? (
+          <div className="rounded-2xl border border-warning/30 bg-warning-soft p-3.5 text-sm text-warning">
+            This canteen is closed right now. You can still browse the menu, but
+            orders will only be accepted once it reopens.
           </div>
-          <div className="flex items-center gap-2">
-            <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="h-10 rounded-full border-2 border-gray-200 bg-white px-4 text-sm font-medium focus:border-primary focus:outline-none"
-              aria-label="Sort menu items"
-              title="Sort menu items"
-            >
-              <option value="name">Name (A-Z)</option>
-              <option value="price-asc">Price: Low to High</option>
-              <option value="price-desc">Price: High to Low</option>
-              <option value="rating">Highest Rated</option>
-            </select>
-          </div>
-        </div>
-        <div
-          className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide md:gap-3 md:pb-3"
-        >
-          <button
-            onClick={() => setSelectedCategory(null)}
-            className={`group flex-shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold shadow-sm transition-all duration-200 md:px-5 md:py-2.5 md:text-sm ${
-              selectedCategory === null
-                ? "bg-gradient-to-r from-primary to-orange-500 text-white shadow-md shadow-primary/30 scale-105"
-                : "bg-white text-gray-700 hover:bg-orange-50 hover:shadow-md border border-orange-100"
+        ) : null}
+
+        <FeaturedItemsRail
+          title="Chef's picks"
+          subtitle="Refreshed by the kitchen each day"
+          items={featuredItems}
+          canteenId={canteen.id}
+          canteenSlug={canteen.slug}
+          canteenName={canteen.name}
+        />
+
+        <FeaturedItemsRail
+          title="Combos"
+          subtitle="Bundles that feed a whole table"
+          items={comboItems}
+          canteenId={canteen.id}
+          canteenSlug={canteen.slug}
+          canteenName={canteen.name}
+        />
+
+        <Section>
+          <SectionHeader
+            title="Full menu"
+            subtitle={`${filtered.length} of ${items.length} ${
+              items.length === 1 ? "dish" : "dishes"
             }`}
-          >
-            All Menu
-          </button>
-          {categories.length === 0 ? (
-            showGlobalPlaceholder ? (
-              Array.from({ length: 3 }).map((_, idx) => (
-                <Skeleton key={idx} className="h-9 w-20 flex-shrink-0 rounded-full md:h-10 md:w-24" />
-              ))
-            ) : (
-              <span className="text-xs text-muted-foreground md:text-sm">
-                Categories coming soon
-              </span>
-            )
-          ) : (
-            categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`group flex-shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold shadow-sm transition-all duration-200 md:px-5 md:py-2.5 md:text-sm ${
-                  selectedCategory === category.id
-                    ? "bg-gradient-to-r from-primary to-orange-500 text-white shadow-md shadow-primary/30 scale-105"
-                    : "bg-white text-gray-700 hover:bg-orange-50 hover:shadow-md border border-orange-100"
-                }`}
-              >
-                {category.name}
-              </button>
-            ))
-          )}
-        </div>
-      </div>
+          />
 
-      {/* Menu Items */}
-      <div className="space-y-4 md:space-y-6">
-        {filteredItems.length === 0 ? (
-          showGlobalPlaceholder ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {Array.from({ length: 4 }).map((_, idx) => (
-                <Skeleton key={idx} className="h-32 rounded-2xl" />
+          {/* Sticky so search and categories stay reachable while scrolling.
+              This page hides the app bar, so it pins to the top of the page. */}
+          <div className="sticky top-0 z-30 -mx-4 space-y-3 border-b border-border bg-background/95 px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur-md sm:-mx-5 sm:px-5">
+            <div className="flex items-center gap-2">
+              <Input
+                type="search"
+                inputMode="search"
+                placeholder={`Search ${canteen.name}`}
+                value={rawQuery}
+                onChange={(e) => setRawQuery(e.target.value)}
+                aria-label="Search this menu"
+                startAdornment={<Search />}
+                endAdornment={
+                  rawQuery ? (
+                    <button
+                      type="button"
+                      onClick={() => setRawQuery("")}
+                      aria-label="Clear search"
+                      className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted"
+                    >
+                      <X />
+                    </button>
+                  ) : undefined
+                }
+              />
+              <FilterButton
+                count={activeCount}
+                onClick={() => setFiltersOpen(true)}
+              />
+            </div>
+
+            {usedCategories.length > 0 ? (
+              <ChipRail>
+                <Chip
+                  active={filters.categoryId === null}
+                  onClick={() =>
+                    setFilters((f) => ({ ...f, categoryId: null }))
+                  }
+                >
+                  All
+                </Chip>
+                {usedCategories.map((category) => (
+                  <Chip
+                    key={category.id}
+                    active={filters.categoryId === category.id}
+                    onClick={() =>
+                      setFilters((f) => ({
+                        ...f,
+                        categoryId:
+                          f.categoryId === category.id ? null : category.id,
+                      }))
+                    }
+                    count={
+                      items.filter((i) => i.category_id === category.id).length
+                    }
+                  >
+                    {category.name}
+                  </Chip>
+                ))}
+              </ChipRail>
+            ) : null}
+          </div>
+
+          {filtered.length === 0 ? (
+            <EmptyState
+              icon={UtensilsCrossed}
+              title={
+                items.length === 0 ? "Menu coming soon" : "Nothing matches"
+              }
+              description={
+                items.length === 0
+                  ? "This kitchen hasn't published its dishes yet. Check back shortly."
+                  : "Try a different search term, or reset the filters."
+              }
+              action={
+                items.length === 0
+                  ? { label: "Browse other canteens", href: "/home" }
+                  : { label: "Reset filters", onClick: clearAll }
+              }
+              compact
+            />
+          ) : (
+            <div className="space-y-6">
+              {groups.map((group) => (
+                <div key={group.id}>
+                  {group.name ? (
+                    <h3 className="muted-label pb-1 pt-2">
+                      {group.name} · {group.items.length}
+                    </h3>
+                  ) : null}
+                  <ul>
+                    {group.items.map((item) => (
+                      <MenuItemRow
+                        key={item.id}
+                        item={item}
+                        canteenId={canteen.id}
+                        canteenSlug={canteen.slug}
+                        canteenName={canteen.name}
+                      />
+                    ))}
+                  </ul>
+                </div>
               ))}
             </div>
-          ) : (
-            <Card className="border-dashed">
-              <CardContent className="space-y-4 py-16 text-center">
-                <p className="text-lg font-semibold text-foreground">
-                  Menu coming soon
-                </p>
-                <p className="text-muted-foreground">
-                  Check back later or explore other canteens.
-                </p>
-                <div className="flex justify-center gap-3 pt-4">
-                  <Button
-                    variant="outline"
-                    className="gap-2 rounded-full"
-                    onClick={() => window.location.reload()}
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Retry
-                  </Button>
-                  <Link href="/home">
-                    <Button className="rounded-full bg-primary text-white hover:bg-primary/90">
-                      Browse others
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredItems.map((item) => {
-              const quantity = getItemQuantity(item.id)
-              const isAvailable = item.is_available
+          )}
+        </Section>
 
-              return (
-                <Card
-                  key={item.id}
-                  className={`group cursor-pointer overflow-hidden border-0 bg-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
-                    !isAvailable ? "opacity-60" : ""
-                  }`}
-                  onClick={() => router.push(`/items/${item.id}`)}
-                  role="button"
-                >
-                  <CardContent className="p-0">
-                    {/* Item Image */}
-                    <div className="relative h-40 w-full overflow-hidden bg-gradient-to-br from-orange-50 to-primary/10 md:h-48">
-                      {item.image_url ? (
-                        <Image
-                          src={item.image_url}
-                          alt={item.name}
-                          fill
-                          className="object-cover transition-transform duration-300 group-hover:scale-110"
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        />
-                      ) : (
-                        <ImagePlaceholder type="item" size="xl" />
-                      )}
-                      {!isAvailable && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                          <span className="rounded-full bg-black/70 px-3 py-1.5 text-xs font-semibold text-white md:px-4 md:py-2 md:text-sm">
-                            Unavailable
-                          </span>
-                        </div>
-                      )}
-                      {item.is_featured && (
-                        <div className="absolute left-2 top-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-lg md:left-3 md:top-3 md:px-3 md:text-xs">
-                          ⭐ Featured
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Item Info */}
-                    <div className="space-y-2 p-3 md:space-y-3 md:p-4">
-                      <div>
-                        <h3 className="line-clamp-1 text-base font-bold text-foreground group-hover:text-primary transition-colors md:text-lg">
-                          {item.name}
-                        </h3>
-                        {item.description && (
-                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground md:text-sm">
-                            {item.description}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xl font-bold text-primary md:text-2xl">
-                            ₹{item.price}
-                          </span>
-                          {item.is_vegetarian ? (
-                            <span className="rounded-full bg-green-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm md:px-2.5 md:py-1 md:text-xs">
-                              Veg
-                            </span>
-                          ) : (
-                            <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm md:px-2.5 md:py-1 md:text-xs">
-                              Non-Veg
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {isAvailable && (
-                        <div className="pt-2">
-                          {quantity === 0 ? (
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleAddItem(item)
-                              }}
-                              className="w-full rounded-full bg-gradient-to-r from-primary to-orange-500 text-xs font-semibold shadow-md hover:shadow-lg transition-all hover:scale-[1.02] md:text-sm"
-                              size="lg"
-                            >
-                              <Plus className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
-                              Add to cart
-                            </Button>
-                          ) : (
-                            <div className="flex items-center justify-center gap-2 rounded-full border-2 border-primary bg-orange-50 p-1.5 md:gap-3 md:p-2">
-                              <Button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleRemoveItem(item.id)
-                                }}
-                                size="icon"
-                                variant="ghost"
-                                className="h-7 w-7 rounded-full hover:bg-primary/10 md:h-8 md:w-8"
-                              >
-                                <Minus className="h-3.5 w-3.5 text-primary md:h-4 md:w-4" />
-                              </Button>
-                              <span className="min-w-[2ch] text-center text-base font-bold text-primary md:text-lg">
-                                {quantity}
-                              </span>
-                              <Button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleAddItem(item)
-                                }}
-                                size="icon"
-                                variant="ghost"
-                                className="h-7 w-7 rounded-full hover:bg-primary/10 md:h-8 md:w-8"
-                              >
-                                <Plus className="h-3.5 w-3.5 text-primary md:h-4 md:w-4" />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        )}
+        <FeedbackCarousel reviews={reviews} />
       </div>
 
-      {/* Sticky Add to Cart Button */}
-      {cartItemCount > 0 && (
-        <div className="fixed bottom-20 left-0 right-0 z-40 border-t-2 border-primary/20 bg-white/95 backdrop-blur-lg p-4 shadow-2xl md:bottom-0">
-          <div className="container mx-auto flex items-center justify-between max-w-7xl">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                {cartItemCount} {cartItemCount === 1 ? "item" : "items"} in cart
-              </p>
-              <p className="text-2xl font-bold text-primary">₹{cartTotal.toFixed(2)}</p>
-            </div>
-            <Link href={`/cart?canteen=${canteen.id}`}>
-              <Button
-                size="lg"
-                className="rounded-full bg-gradient-to-r from-primary to-orange-500 px-8 font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all"
-              >
-                View Cart
-              </Button>
-            </Link>
-          </div>
-        </div>
-      )}
-    </div>
+      <FilterSheet
+        categories={usedCategories}
+        value={filters}
+        onChange={setFilters}
+        scope="menu"
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+      />
+
+      <StickyCart canteenId={canteen.id} canteenSlug={canteen.slug} />
+    </>
   )
 }
-

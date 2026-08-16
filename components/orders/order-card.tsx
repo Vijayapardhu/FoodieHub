@@ -1,106 +1,81 @@
 import Link from "next/link"
-import { Card, CardContent } from "@/components/ui/card"
+import { ChevronRight, Store } from "lucide-react"
 import { Database } from "@/types/database.types"
-import { Badge } from "@/components/ui/badge"
-import { formatDistanceToNow } from "date-fns"
+import { StatusBadge } from "@/components/ui/status-badge"
+import { OrderProgressBar } from "@/components/orders/order-timeline"
+import { statusMeta, type OrderStatus } from "@/lib/utils/order-status"
+import { formatRelativeTime } from "@/lib/utils/format"
+import { orderPath } from "@/lib/utils/public-id"
+import { etaLabel, orderEta } from "@/lib/utils/eta"
+import { cn } from "@/lib/utils/cn"
 
 type Order = Database["public"]["Tables"]["orders"]["Row"] & {
   canteens: { name: string } | null
 }
 
-interface OrderCardProps {
-  order: Order
-}
-
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-500",
-  confirmed: "bg-blue-500",
-  preparing: "bg-orange-500",
-  ready: "bg-green-500",
-  completed: "bg-success",
-  cancelled: "bg-destructive",
-}
-
-const statusMessages: Record<string, string> = {
-  pending: "We’ve received your order and will confirm it soon.",
-  confirmed: "Chef has accepted your order. Ingredients being prepped.",
-  preparing: "Your order is sizzling in the kitchen right now.",
-  ready: "Pick-up counter has your order—show the token.",
-  completed: "Order served. Enjoy your meal!",
-  cancelled: "Order cancelled. Reach out if you need help.",
-}
-
-const steps = ["pending", "confirmed", "preparing", "ready", "completed"]
-
-export function OrderCard({ order }: OrderCardProps) {
-  const createdAt = order.created_at ? new Date(order.created_at) : null
-  const createdLabel = createdAt
-    ? formatDistanceToNow(createdAt, { addSuffix: true })
-    : "Just now"
-
-  const currentStep = steps.indexOf(order.status)
-  const progress =
-    currentStep === -1
-      ? 100
-      : Math.min(100, ((currentStep + 1) / steps.length) * 100)
+export function OrderCard({ order }: { order: Order }) {
+  const meta = statusMeta(order.status)
+  const eta = orderEta(order)
+  const etaText = etaLabel(eta)
 
   return (
     <Link
-      href={`/orders/${order.id}`}
-      className="block"
-      aria-label={`Open order ${order.token} details`}
+      href={orderPath(order)}
       prefetch={false}
+      aria-label={`Order ${order.token} from ${
+        order.canteens?.name ?? "canteen"
+      }, ${meta.label}`}
+      className="block rounded-2xl border border-border bg-card p-4 shadow-card transition-transform duration-150 ease-spring active:scale-[0.99] md:hover:shadow-lift"
     >
-      <Card className="overflow-hidden rounded-3xl border-0 bg-white/90 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
-        <CardContent className="p-5">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Token #{order.token}
-              </p>
-              <h3 className="text-lg font-semibold text-foreground">
-                {order.canteens?.name || "Canteen"}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                ₹{Number(order.total_amount).toFixed(2)} · {createdLabel}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1">
-              <Badge className={statusColors[order.status] || "bg-muted"}>
-                {order.status}
-              </Badge>
-            </div>
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+          <Store className="h-4 w-4" />
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <p className="truncate text-sm font-bold text-foreground">
+              {order.canteens?.name || "Canteen"}
+            </p>
+            <StatusBadge status={order.status} size="sm" />
           </div>
 
-          <div className="mt-4">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              {steps.map((step) => (
-                <span
-                  key={step}
-                  className={
-                    steps.indexOf(step) <= currentStep
-                      ? "text-primary font-medium"
-                      : undefined
-                  }
-                >
-                  {step}
-                </span>
-              ))}
-            </div>
-            <div className="mt-2 h-2 w-full rounded-full bg-orange-100">
-              <div
-                className="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-
-          <p className="mt-4 text-sm text-muted-foreground">
-            {statusMessages[order.status] || "Track this order for updates."}
+          <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="font-mono font-bold tracking-wider text-foreground">
+              #{order.token}
+            </span>
+            <span aria-hidden="true">·</span>
+            <span className="tabular-nums">
+              ₹{Number(order.total_amount).toFixed(2)}
+            </span>
+            <span aria-hidden="true">·</span>
+            <span>{formatRelativeTime(order.created_at)}</span>
           </p>
-        </CardContent>
-      </Card>
+        </div>
+
+        <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+      </div>
+
+      <OrderProgressBar
+        status={order.status as OrderStatus}
+        className="mt-3"
+      />
+
+      <div className="mt-2 flex items-baseline justify-between gap-3">
+        <p className="min-w-0 text-xs text-muted-foreground">
+          {meta.customerHint}
+        </p>
+        {etaText ? (
+          <p
+            className={cn(
+              "shrink-0 text-xs font-bold",
+              eta.kind === "overdue" ? "text-warning" : "text-primary"
+            )}
+          >
+            {etaText}
+          </p>
+        ) : null}
+      </div>
     </Link>
   )
 }
-

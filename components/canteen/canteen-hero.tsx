@@ -1,172 +1,145 @@
 "use client"
 
 import Image from "next/image"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { ArrowLeft, Clock, MapPin, Phone, Star } from "lucide-react"
 import { Database } from "@/types/database.types"
-import { MapPin, Phone, ExternalLink, Star, Clock, Award } from "lucide-react"
+import { FavoriteButton } from "@/components/menu/favorite-button"
+import { ImagePlaceholder } from "@/components/ui/image-placeholder"
+import { cn } from "@/lib/utils/cn"
 
 type Canteen = Database["public"]["Tables"]["canteens"]["Row"]
 
-interface CanteenHeroProps {
-  canteen: Canteen
-}
+/**
+ * Immersive header for a canteen page. The banner runs under the status bar and
+ * carries its own back button, so the page can skip the standard app bar and
+ * give the photo the full width of the screen.
+ */
+export function CanteenHero({ canteen }: { canteen: Canteen }) {
+  const router = useRouter()
 
-export function CanteenHero({ canteen }: CanteenHeroProps) {
   return (
-    <section className="mb-8 overflow-hidden rounded-3xl border-0 bg-white shadow-lg shadow-orange-100/50">
-      {/* Hero Banner */}
-      <div className="relative h-64 w-full overflow-hidden bg-gradient-to-br from-orange-100 via-primary/20 to-orange-50 md:h-80">
+    <header className="-mx-4 sm:-mx-5">
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted sm:aspect-[21/9] sm:rounded-2xl">
         {canteen.banner_url ? (
           <Image
             src={canteen.banner_url}
-            alt={canteen.name}
+            alt=""
             fill
-            className="object-cover"
-            sizes="100vw"
             priority
+            sizes="100vw"
+            className={cn("object-cover", !canteen.is_open && "grayscale")}
           />
         ) : (
-          <div className="h-full w-full bg-gradient-to-br from-primary/20 via-orange-100/50 to-primary/10" />
+          <ImagePlaceholder type="canteen" size="xl" />
         )}
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-        
-        {/* Logo and Info Section */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6">
-          <div className="mx-auto max-w-7xl">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div className="flex flex-1 items-end gap-3 md:gap-4">
-                {canteen.logo_url && (
-                  <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-xl ring-2 ring-white/30 md:h-24 md:w-24">
-                    <Image
-                      src={canteen.logo_url}
-                      alt={`${canteen.name} logo`}
-                      fill
-                      className="object-cover"
-                      sizes="96px"
-                    />
-                  </div>
-                )}
-                <div className="min-w-0 flex-1 text-white">
-                  <h1 className="text-2xl font-bold drop-shadow-lg md:text-4xl lg:text-5xl">
-                    {canteen.name}
-                  </h1>
-                  <p className="mt-1 text-sm text-white/90 drop-shadow-md md:text-base line-clamp-2">
-                    {canteen.description || "Campus favourite with quick service"}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 md:gap-3 md:mt-3">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/25 backdrop-blur-md px-3 py-1.5 text-xs font-semibold shadow-sm md:text-sm md:px-4">
-                      <Star className="h-3.5 w-3.5 fill-yellow-300 text-yellow-300 md:h-4 md:w-4" />
-                      <span className="font-bold">{Number(canteen.rating).toFixed(1)}</span>
-                      <span className="text-white/70 text-xs">
-                        ({canteen.total_reviews} {canteen.total_reviews === 1 ? "review" : "reviews"})
-                      </span>
-                    </span>
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold backdrop-blur-md shadow-sm md:text-sm md:px-4 ${
-                        canteen.is_open
-                          ? "bg-green-500/95 text-white"
-                          : "bg-red-500/95 text-white"
-                      }`}
-                    >
-                      <Clock className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                      {canteen.is_open ? "Open now" : "Closed"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Action Buttons */}
-              <div className="flex flex-wrap gap-2 md:gap-3">
-                {canteen.contact_phone && (
-                  <Button
-                    asChild
-                    size="lg"
-                    className="rounded-full bg-white text-primary shadow-lg hover:bg-orange-50 hover:shadow-xl transition-all text-sm md:text-base"
-                  >
-                    <a href={`tel:${canteen.contact_phone}`} className="flex items-center gap-2">
-                      <Phone className="h-4 w-4" />
-                      <span className="hidden sm:inline">Call kitchen</span>
-                      <span className="sm:hidden">Call</span>
-                    </a>
-                  </Button>
-                )}
-                {canteen.google_maps_url && (
-                  <Button
-                    asChild
-                    size="lg"
-                    variant="outline"
-                    className="rounded-full bg-white/95 backdrop-blur-sm border-white/50 text-gray-800 hover:bg-white hover:shadow-lg transition-all text-sm md:text-base"
-                  >
-                    <Link href={canteen.google_maps_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      <span className="hidden sm:inline">View map</span>
-                      <span className="sm:hidden">Map</span>
-                    </Link>
-                  </Button>
-                )}
-              </div>
+
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/35" />
+
+        <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            aria-label="Go back"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-transform active:scale-90"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <FavoriteButton canteenId={canteen.id} />
+        </div>
+
+        <div className="absolute inset-x-0 bottom-0 space-y-2 p-4">
+          <div className="flex items-end gap-3">
+            {canteen.logo_url ? (
+              <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border-2 border-white/90 bg-white">
+                <Image
+                  src={canteen.logo_url}
+                  alt=""
+                  fill
+                  sizes="56px"
+                  className="object-cover"
+                />
+              </span>
+            ) : null}
+
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-white drop-shadow">
+                {canteen.name}
+              </h1>
+              {canteen.description ? (
+                <p className="line-clamp-1 text-sm text-white/85">
+                  {canteen.description}
+                </p>
+              ) : null}
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-md">
+              <Star className="h-3.5 w-3.5 fill-amber-300 text-amber-300" />
+              {Number(canteen.rating).toFixed(1)}
+              <span className="font-normal text-white/70">
+                ({canteen.total_reviews})
+              </span>
+            </span>
+
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold text-white backdrop-blur-md",
+                canteen.is_open ? "bg-success/90" : "bg-destructive/90"
+              )}
+            >
+              <Clock className="h-3.5 w-3.5" />
+              {canteen.is_open ? "Open now" : "Closed"}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Info Grid */}
-      <div className="grid gap-4 border-t border-orange-50/50 bg-gradient-to-b from-white to-orange-50/30 p-4 md:gap-6 md:p-6 md:grid-cols-3">
-        {canteen.address && (
-          <div className="flex items-start gap-3">
-            <div className="rounded-full bg-primary/10 p-2">
-              <MapPin className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Location
+      {/* Contact strip: both actions are one tap on a phone */}
+      {canteen.address || canteen.contact_phone || canteen.google_maps_url ? (
+        <div className="mx-4 -mt-4 flex items-center gap-2 rounded-2xl border border-border bg-card p-3 shadow-card sm:mx-0 sm:mt-3">
+          <div className="min-w-0 flex-1">
+            {canteen.address ? (
+              <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span className="line-clamp-2">
+                  {canteen.address}
+                  {canteen.address_reference
+                    ? ` · near ${canteen.address_reference}`
+                    : ""}
+                </span>
               </p>
-              <p className="mt-1 font-medium text-foreground">
-                {canteen.address}
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Collect at the counter with your token
               </p>
-              {canteen.address_reference && (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  <span className="font-medium">Landmark:</span> {canteen.address_reference}
-                </p>
-              )}
-            </div>
+            )}
           </div>
-        )}
-        
-        <div className="flex items-start gap-3">
-          <div className="rounded-full bg-primary/10 p-2">
-            <Clock className="h-5 w-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Serving Hours
-            </p>
-            <p className="mt-1 font-medium text-foreground">
-              {canteen.operating_hours
-                ? "Check app for schedule"
-                : "Mon - Sat · 9am - 9pm"}
-            </p>
-          </div>
+
+          {canteen.contact_phone ? (
+            <a
+              href={`tel:${canteen.contact_phone}`}
+              aria-label="Call the canteen"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary transition-transform active:scale-90"
+            >
+              <Phone className="h-4 w-4" />
+            </a>
+          ) : null}
+
+          {canteen.google_maps_url ? (
+            <a
+              href={canteen.google_maps_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open in maps"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary transition-transform active:scale-90"
+            >
+              <MapPin className="h-4 w-4" />
+            </a>
+          ) : null}
         </div>
-        
-        <div className="flex items-start gap-3">
-          <div className="rounded-full bg-primary/10 p-2">
-            <Award className="h-5 w-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Highlights
-            </p>
-            <p className="mt-1 font-medium text-foreground">
-              Fast pickup · Quick service · Best combos
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
+      ) : null}
+    </header>
   )
 }
-
-

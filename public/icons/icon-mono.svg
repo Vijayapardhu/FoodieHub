@@ -1,0 +1,6 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FoodieHub">
+  <!-- Safari pinned-tab mask: a single black silhouette on transparent.
+       Safari discards colour and fills it with the user's tab tint. -->
+  <rect x="76" y="178" width="360" height="42" rx="21" fill="#000"/>
+  <path d="M108 220a148 118 0 0 0 296 0z" fill="#000"/>
+</svg>

@@ -1,5 +1,8 @@
 import { requireRole } from "@/lib/auth/require-role"
+import { ConsoleHeader } from "@/components/layout/console-shell"
 import { AdminNotificationComposer } from "@/components/admin/admin-notification-composer"
+
+export const metadata = { title: "Notifications" }
 
 export default async function AdminNotificationsPage() {
   const { supabase } = await requireRole(["admin"])
@@ -11,19 +14,15 @@ export default async function AdminNotificationsPage() {
     .limit(40)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50/50 via-white to-gray-50/30 p-6">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
-          Notifications
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Broadcast announcements or targeted updates to any audience.
-        </p>
-      </header>
-      <AdminNotificationComposer
-        recentNotifications={recentNotifications ?? []}
+    <>
+      <ConsoleHeader
+        title="Notifications"
+        description="Broadcast an announcement, or message one person"
       />
-    </div>
+
+      <AdminNotificationComposer
+        recentNotifications={(recentNotifications ?? []) as any}
+      />
+    </>
   )
 }
-

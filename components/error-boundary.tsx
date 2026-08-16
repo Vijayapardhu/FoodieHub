@@ -1,10 +1,9 @@
 "use client"
 
 import { Component, ReactNode } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { AlertCircle, RefreshCw, Home } from "lucide-react"
 import Link from "next/link"
+import { AlertCircle, Home, RefreshCw } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface Props {
   children: ReactNode
@@ -27,58 +26,49 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("ErrorBoundary caught an error:", error, errorInfo)
+    console.error("[error-boundary]", error, errorInfo)
   }
 
   render() {
-    if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback
-      }
+    if (!this.state.hasError) return this.props.children
+    if (this.props.fallback) return this.props.fallback
 
-      return (
-        <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-50/50 via-white to-gray-50/30 p-4">
-          <Card className="w-full max-w-md rounded-3xl border border-orange-100 bg-white/90 shadow-lg">
-            <CardContent className="p-8 text-center space-y-6">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-                <AlertCircle className="h-8 w-8 text-red-600" />
-              </div>
-              <div className="space-y-2">
-                <h1 className="text-2xl font-bold text-foreground">
-                  Something went wrong
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  {this.state.error?.message || "An unexpected error occurred"}
-                </p>
-              </div>
-              <div className="flex flex-col gap-3">
-                <Button
-                  onClick={() => {
-                    this.setState({ hasError: false, error: null })
-                    window.location.reload()
-                  }}
-                  className="w-full rounded-full bg-primary text-white hover:bg-primary/90"
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Try Again
-                </Button>
-                <Link href="/home" className="w-full">
-                  <Button
-                    variant="outline"
-                    className="w-full rounded-full"
-                  >
-                    <Home className="mr-2 h-4 w-4" />
-                    Go Home
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-5 px-6 text-center">
+        <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive-soft text-destructive">
+          <AlertCircle className="h-7 w-7" />
+        </span>
+
+        <div className="space-y-2">
+          <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+            Something went wrong
+          </h1>
+          <p className="mx-auto max-w-sm text-sm text-muted-foreground text-balance">
+            {this.state.error?.message ||
+              "An unexpected error stopped this screen from loading."}
+          </p>
         </div>
-      )
-    }
 
-    return this.props.children
+        <div className="flex w-full max-w-xs flex-col gap-2">
+          <Button
+            size="lg"
+            block
+            onClick={() => {
+              this.setState({ hasError: false, error: null })
+              window.location.reload()
+            }}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Try again
+          </Button>
+          <Button size="lg" variant="outline" block asChild>
+            <Link href="/home">
+              <Home className="h-4 w-4" />
+              Back to home
+            </Link>
+          </Button>
+        </div>
+      </div>
+    )
   }
 }
-
