@@ -13,6 +13,9 @@ import { CanteenCard } from "@/components/canteen/canteen-card"
 import { ItemCard } from "@/components/menu/item-card"
 import { useDebounce } from "@/lib/hooks/use-debounce"
 import { PromoCarousel } from "@/components/home/promo-carousel"
+import { SectionRail } from "@/components/home/section-rail"
+import { DiscoverySearch } from "@/components/home/discovery-search"
+import { CanteenRailCard } from "@/components/canteen/canteen-rail-card"
 import { InstallBanner } from "@/components/pwa/install-card"
 import type { PromoSlide } from "@/lib/utils/promo-banners"
 import {
@@ -45,6 +48,9 @@ interface HomePageContentProps {
   inlinePromo?: React.ReactNode
 }
 
+/** A dish a kitchen can turn round quickly enough to wait for. */
+const QUICK_MINUTES = 10
+
 function greeting() {
   const hour = new Date().getHours()
   if (hour < 12) return "Good morning"
@@ -66,6 +72,8 @@ export function HomePageContent({
   const [rawQuery, setRawQuery] = useState("")
   const [filters, setFilters] = useState<BrowseFilters>(defaultFilters)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  /** "Fast pickup" — dishes the kitchen can turn round quickly. */
+  const [quickOnly, setQuickOnly] = useState(false)
 
   // The categories table has no image column, so each tile borrows the photo
   // of its best-rated dish. That keeps the tiles honest — they show food the
@@ -132,6 +140,8 @@ export function HomePageContent({
       list = list.filter((i) => Number(i.price) <= filters.maxPrice!)
     if (filters.minRating !== null)
       list = list.filter((i) => i.rating >= filters.minRating!)
+    if (quickOnly)
+      list = list.filter((i) => (i.prep_minutes ?? 99) <= QUICK_MINUTES)
     if (query)
       list = list.filter(
         (i) =>
@@ -158,23 +168,84 @@ export function HomePageContent({
         sorted.sort((a, b) => b.rating - a.rating)
     }
     return sorted
-  }, [items, filters, query])
+  }, [items, filters, query, quickOnly])
 
   // Any filter beyond canteen-level ones means the user is shopping for dishes.
   const dishMode =
     searching ||
     filters.categoryId !== null ||
     filters.vegOnly ||
+    quickOnly ||
     filters.minPrice !== null ||
     filters.maxPrice !== null
+
+  /*
+   * Collections, derived from the catalogue already loaded for search rather
+   * than fetched or invented. Each one is a different reason to want food —
+   * cheap, quick, well liked — which is what turns a list of dishes into
+   * something worth scrolling.
+   */
+  const orderable = useMemo(
+    () => items.filter((item) => item.canteens?.is_open !== false),
+    [items]
+  )
+
+  const underHundred = useMemo(
+    () =>
+      orderable
+        .filter((item) => Number(item.price) <= 99)
+        .sort((a, b) => Number(a.price) - Number(b.price))
+        .slice(0, 12),
+    [orderable]
+  )
+
+  const quickBites = useMemo(
+    () =>
+      orderable
+        .filter((item) => (item.prep_minutes ?? 99) <= QUICK_MINUTES)
+        .sort((a, b) => (a.prep_minutes ?? 99) - (b.prep_minutes ?? 99))
+        .slice(0, 12),
+    [orderable]
+  )
+
+  const studentFavourites = useMemo(
+    () =>
+      orderable
+        .filter((item) => item.total_reviews > 0)
+        .sort((a, b) => b.rating - a.rating)
+        .slice(0, 12),
+    [orderable]
+  )
+
+  /** What each canteen actually cooks, for its card's subtitle. */
+  const cuisinesByCanteen = useMemo(() => {
+    const map = new Map<string, Set<string>>()
+    for (const item of items) {
+      const name = (item as any).categories?.name
+      if (!item.canteen_id) continue
+      const set = map.get(item.canteen_id) ?? new Set<string>()
+      if (name) set.add(name)
+      map.set(item.canteen_id, set)
+    }
+    return map
+  }, [items])
+
+  const openCanteens = useMemo(
+    () =>
+      [...canteens].sort(
+        (a, b) => Number(b.is_open) - Number(a.is_open) || b.rating - a.rating
+      ),
+    [canteens]
+  )
 
   const clearAll = () => {
     setRawQuery("")
     setFilters(defaultFilters)
+    setQuickOnly(false)
   }
 
   return (
-    <div className="space-y-6 sm:space-y-7">
+    <div className="space-y-5 sm:space-y-6">
       {/* Anything already in flight comes first — that is what somebody
           opening the app mid-morning is checking on. */}
       {activeOrder}
@@ -182,57 +253,43 @@ export function HomePageContent({
       <InstallBanner />
 
       <header className="space-y-3">
-        {/* One line on a phone. The old two-line greeting pushed the search
-            box and the first row of food below the fold on a small screen. */}
-        <div className="flex items-baseline justify-between gap-3">
-          <h1 className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
+        {/*
+         * Campus framing, not a delivery address. Everything here is a short
+         * walk away, so a "delivering to" row would be borrowed furniture
+         * from an app this deliberately is not.
+         */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+            Campus food · {canteens.length} canteen
+            {canteens.length === 1 ? "" : "s"}
+          </p>
+          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-foreground">
             {greeting()}
             {greetingName ? `, ${greetingName.split(" ")[0]}` : ""}
           </h1>
+          <p className="text-sm text-muted-foreground">
+            What are you craving today?
+          </p>
         </div>
 
         {/*
-         * Sticky search. On a long scrolling home screen the search box is the
-         * fastest route to a specific dish, and having to flick back to the
-         * top to reach it is the single most annoying thing about browsing on
-         * a phone. It docks under the app bar instead.
+         * Sticky search. On a long discovery page the search box is the
+         * fastest route to a specific dish, and flicking back to the top to
+         * reach it is the most annoying thing about browsing on a phone.
          */}
         <div className="sticky top-appbar z-30 -mx-4 bg-background/95 px-4 py-2 backdrop-blur-md sm:-mx-5 sm:px-5">
-          <div className="flex items-center gap-2">
-            <Input
-              type="search"
-              inputMode="search"
-              placeholder="Search dishes or canteens"
-              value={rawQuery}
-              onChange={(e) => setRawQuery(e.target.value)}
-              aria-label="Search dishes or canteens"
-              startAdornment={<Search />}
-              endAdornment={
-                rawQuery ? (
-                  <button
-                    type="button"
-                    onClick={() => setRawQuery("")}
-                    aria-label="Clear search"
-                    className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted"
-                  >
-                    <X />
-                  </button>
-                ) : undefined
-              }
-            />
-            <FilterButton
-              count={activeCount}
-              onClick={() => setFiltersOpen(true)}
-            />
-          </div>
+          <DiscoverySearch
+            value={rawQuery}
+            onChange={setRawQuery}
+            onOpenFilters={() => setFiltersOpen(true)}
+            activeFilterCount={activeCount}
+          />
         </div>
 
         <ChipRail>
           <Chip
             active={filters.openOnly}
-            onClick={() =>
-              setFilters((f) => ({ ...f, openOnly: !f.openOnly }))
-            }
+            onClick={() => setFilters((f) => ({ ...f, openOnly: !f.openOnly }))}
           >
             Open now
           </Chip>
@@ -254,15 +311,22 @@ export function HomePageContent({
             Top rated
           </Chip>
           <Chip
-            active={filters.sort === "price-asc"}
+            active={filters.maxPrice === 100}
             onClick={() =>
               setFilters((f) => ({
                 ...f,
-                sort: f.sort === "price-asc" ? "relevance" : "price-asc",
+                maxPrice: f.maxPrice === 100 ? null : 100,
               }))
             }
           >
-            Budget first
+            Under ₹100
+          </Chip>
+          {/* Pickup, not delivery — nobody is riding anywhere. */}
+          <Chip
+            active={quickOnly}
+            onClick={() => setQuickOnly((on) => !on)}
+          >
+            Fast pickup
           </Chip>
           {categories.slice(0, 8).map((category) => (
             <Chip
@@ -271,8 +335,7 @@ export function HomePageContent({
               onClick={() =>
                 setFilters((f) => ({
                   ...f,
-                  categoryId:
-                    f.categoryId === category.id ? null : category.id,
+                  categoryId: f.categoryId === category.id ? null : category.id,
                 }))
               }
             >
@@ -342,87 +405,166 @@ export function HomePageContent({
           {/* Paid placement, so it sits high — but below the reorder rail,
               which is the fastest path to checkout for a returning student
               and shouldn't be pushed down by advertising. */}
+          {/* Fastest path to checkout for a returning student. */}
           {reorder}
 
+          {/* Paid placement, high but below the reorder rail. */}
           {promos && promos.length > 0 ? (
             <PromoCarousel slides={promos} />
           ) : null}
 
           {featuredItems.length > 0 ? (
-            <Section>
-              <SectionHeader
-                title="Today's picks"
-                subtitle="Hand-picked by the kitchens"
-              />
-              <div className="rail">
-                {featuredItems.map((item) => (
-                  <ItemCard
-                    key={item.id}
-                    item={item}
-                    canteenId={item.canteen_id}
-                    canteenSlug={item.canteens?.slug}
-                    canteenName={item.canteens?.name ?? "Canteen"}
-                    subtitle={item.canteens?.name}
-                    compact
-                  />
-                ))}
-              </div>
-            </Section>
+            <SectionRail
+              title="Today's picks"
+              subtitle="Hand-picked by the kitchens"
+            >
+              {featuredItems.map((item) => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  canteenId={item.canteen_id}
+                  canteenSlug={item.canteens?.slug}
+                  canteenName={item.canteens?.name ?? "Canteen"}
+                  subtitle={item.canteens?.name}
+                  compact
+                />
+              ))}
+            </SectionRail>
           ) : null}
 
           {categories.length > 0 ? (
-            <Section>
-              <SectionHeader title="What are you after?" />
+            <SectionRail
+              title="What are you craving?"
+              subtitle="Browse by the kind of thing you fancy"
+            >
+              {categories.map((category) => {
+                const cover = categoryCovers[category.id]
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() =>
+                      setFilters((f) => ({ ...f, categoryId: category.id }))
+                    }
+                    className="group w-28 shrink-0 text-left"
+                  >
+                    {/* A photograph of real food from that category, not an
+                        icon: "Snacks" means nothing until you see the samosa. */}
+                    <span className="relative block aspect-square w-full overflow-hidden rounded-2xl bg-primary-soft">
+                      {cover ? (
+                        <Image
+                          src={cover}
+                          alt=""
+                          fill
+                          sizes="112px"
+                          className="object-cover transition-transform duration-300 md:group-hover:scale-105"
+                        />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center">
+                          <UtensilsCrossed className="h-6 w-6 text-primary" />
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-1.5 block truncate text-xs font-semibold text-foreground">
+                      {category.name}
+                    </span>
+                  </button>
+                )
+              })}
+            </SectionRail>
+          ) : null}
 
-              {/*
-               * A rail on phones, a grid from `sm` up. Three tiny tiles per
-               * row wasted the width and buried the later categories under a
-               * wall of text; a horizontal rail gives each one a big enough
-               * photo to recognise and a 44px-plus tap target.
-               */}
-              <div className="rail sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-3 sm:overflow-visible sm:px-0 lg:grid-cols-6">
-                {categories.map((category) => {
-                  const cover = categoryCovers[category.id]
-                  return (
-                    <button
-                      key={category.id}
-                      type="button"
-                      onClick={() =>
-                        setFilters((f) => ({ ...f, categoryId: category.id }))
-                      }
-                      className="flex w-20 shrink-0 flex-col items-center gap-2 rounded-2xl border border-border bg-card p-2.5 text-center transition-transform active:scale-95 sm:w-auto sm:p-3"
-                    >
-                      <span className="relative h-14 w-14 overflow-hidden rounded-xl bg-primary-soft sm:h-11 sm:w-11">
-                        {cover ? (
-                          <Image
-                            src={cover}
-                            alt=""
-                            fill
-                            sizes="56px"
-                            className="object-cover"
-                          />
-                        ) : (
-                          <span className="flex h-full w-full items-center justify-center">
-                            <UtensilsCrossed className="h-5 w-5 text-primary" />
-                          </span>
-                        )}
-                      </span>
-                      <span className="line-clamp-2 text-2xs font-semibold leading-tight text-foreground sm:text-xs">
-                        {category.name}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </Section>
+          {openCanteens.length > 0 ? (
+            <SectionRail
+              title="Canteens on campus"
+              subtitle="Open counters first"
+            >
+              {openCanteens.map((canteen) => (
+                <CanteenRailCard
+                  key={canteen.id}
+                  canteen={canteen}
+                  cuisines={Array.from(cuisinesByCanteen.get(canteen.id) ?? [])}
+                />
+              ))}
+            </SectionRail>
+          ) : null}
+
+          {underHundred.length > 0 ? (
+            <SectionRail
+              title="Under ₹99"
+              subtitle="Full meals that leave change"
+              action={{
+                label: "See all",
+                onClick: () =>
+                  setFilters((f) => ({ ...f, maxPrice: 99, minPrice: null })),
+              }}
+            >
+              {underHundred.map((item) => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  canteenId={item.canteen_id}
+                  canteenSlug={item.canteens?.slug}
+                  canteenName={item.canteens?.name ?? "Canteen"}
+                  subtitle={item.canteens?.name}
+                  compact
+                />
+              ))}
+            </SectionRail>
+          ) : null}
+
+          {quickBites.length > 0 ? (
+            <SectionRail
+              title="Quick pickup"
+              subtitle={`Ready in about ${QUICK_MINUTES} minutes`}
+              action={{
+                label: "See all",
+                onClick: () => setQuickOnly(true),
+              }}
+            >
+              {quickBites.map((item) => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  canteenId={item.canteen_id}
+                  canteenSlug={item.canteens?.slug}
+                  canteenName={item.canteens?.name ?? "Canteen"}
+                  subtitle={item.canteens?.name}
+                  compact
+                />
+              ))}
+            </SectionRail>
+          ) : null}
+
+          {studentFavourites.length > 0 ? (
+            <SectionRail
+              title="Student favourites"
+              subtitle="Best rated on campus"
+              action={{
+                label: "See all",
+                onClick: () => setFilters((f) => ({ ...f, sort: "rating" })),
+              }}
+            >
+              {studentFavourites.map((item) => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  canteenId={item.canteen_id}
+                  canteenSlug={item.canteens?.slug}
+                  canteenName={item.canteens?.name ?? "Canteen"}
+                  subtitle={item.canteens?.name}
+                  compact
+                />
+              ))}
+            </SectionRail>
           ) : null}
 
           {inlinePromo}
 
           <Section>
             <SectionHeader
-              title="All canteens"
-              subtitle={`${matchedCanteens.length} on campus`}
+              title="More from campus"
+              subtitle={`Every canteen · ${matchedCanteens.length}`}
             />
 
             {matchedCanteens.length === 0 ? (

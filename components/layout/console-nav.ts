@@ -2,6 +2,7 @@ import {
   BarChart3,
   Bell,
   Gift,
+  Inbox,
   LayoutDashboard,
   Megaphone,
   QrCode,
@@ -39,6 +40,7 @@ export const ownerNav: ConsoleNavItem[] = [
 export const adminNav: ConsoleNavItem[] = [
   { href: "/admin", icon: LayoutDashboard, label: "Dashboard", primary: true },
   { href: "/admin/canteens", icon: Store, label: "Canteens", primary: true },
+  { href: "/admin/applications", icon: Inbox, label: "Applications" },
   { href: "/admin/users", icon: Users, label: "Users", primary: true },
   { href: "/admin/items", icon: UtensilsCrossed, label: "Items" },
   { href: "/admin/categories", icon: Tags, label: "Categories" },

@@ -705,6 +705,50 @@ export interface Database {
           updated_at?: string
         }
       }
+      canteen_applications: {
+        Row: {
+          id: string
+          canteen_name: string
+          contact_name: string
+          email: string
+          phone: string
+          location: string | null
+          message: string | null
+          status: 'new' | 'contacted' | 'approved' | 'declined'
+          admin_note: string | null
+          created_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+        }
+        Insert: {
+          id?: string
+          canteen_name: string
+          contact_name: string
+          email: string
+          phone: string
+          location?: string | null
+          message?: string | null
+          status?: 'new' | 'contacted' | 'approved' | 'declined'
+          admin_note?: string | null
+          created_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+        Update: {
+          id?: string
+          canteen_name?: string
+          contact_name?: string
+          email?: string
+          phone?: string
+          location?: string | null
+          message?: string | null
+          status?: 'new' | 'contacted' | 'approved' | 'declined'
+          admin_note?: string | null
+          created_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never

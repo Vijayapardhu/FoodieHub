@@ -102,8 +102,12 @@ export function ItemCard({
           </h3>
         </Link>
 
-        {subtitle ? (
-          <p className="line-clamp-1 text-xs text-muted-foreground">{subtitle}</p>
+        {subtitle || item.prep_minutes ? (
+          <p className="line-clamp-1 text-xs text-muted-foreground">
+            {subtitle}
+            {subtitle && item.prep_minutes ? " · " : ""}
+            {item.prep_minutes ? `~${item.prep_minutes} min` : ""}
+          </p>
         ) : null}
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-1">
