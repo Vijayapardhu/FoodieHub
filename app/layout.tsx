@@ -27,7 +27,7 @@ const body = Plus_Jakarta_Sans({
  * relative, and a crawler resolving a relative image against nothing gets no
  * preview at all — which is most of what link metadata is for.
  */
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://foodiehub-dusky.vercel.app"
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://foodiehub.vijayaapardhu.dev"
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next"
 
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://foodiehub-dusky.vercel.app"
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://foodiehub.vijayaapardhu.dev"
 
 /**
  * Only the pages a signed-out visitor can actually see are worth crawling.

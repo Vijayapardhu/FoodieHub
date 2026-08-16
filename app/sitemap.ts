@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next"
 
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://foodiehub-dusky.vercel.app"
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://foodiehub.vijayaapardhu.dev"
 
 /**
  * Three URLs, because three URLs are public.
