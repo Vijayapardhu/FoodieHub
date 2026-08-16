@@ -40,6 +40,7 @@ interface PromoBannerFormProps {
 interface FieldErrors {
   headline?: string
   dates?: string
+  artwork?: string
 }
 
 /** Runs from tomorrow for a week — long enough to be worth buying. */
@@ -81,6 +82,12 @@ export function PromoBannerForm({
   const validate = () => {
     const next: FieldErrors = {}
     if (!headline.trim()) next.headline = "Write the line students will read"
+
+    // The home carousel draws nothing but the picture, so booking that slot
+    // without one buys a plain panel at the highest rate on the platform.
+    if (placement === "home_hero" && !imageUrl) {
+      next.artwork = "The home carousel shows artwork only — upload an image"
+    }
 
     if (!startsAt || !endsAt) {
       next.dates = "Set both a start and an end"
@@ -144,25 +151,21 @@ export function PromoBannerForm({
           <Megaphone className="h-5 w-5" />
         </span>
         <div className="min-w-0">
-          <p className="text-sm font-bold text-foreground">
-            {placementMeta(placement).label}
-          </p>
+          <p className="text-sm font-bold text-foreground">{placementMeta(placement).label}</p>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {placementMeta(placement).description}{" "}
-            {formatRupees(dailyRate * placementMeta(placement).multiplier)} per
-            day, billed for the whole booked window.
+            {formatRupees(dailyRate * placementMeta(placement).multiplier)} per day, billed for the
+            whole booked window.
           </p>
         </div>
       </section>
 
       <section className="space-y-3 rounded-2xl border border-border bg-card p-4">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">
-            Where it runs
-          </h2>
+          <h2 className="text-sm font-semibold text-foreground">Where it runs</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            The carousel gets the most eyes. The cheaper slots reach people who
-            are already ordering.
+            The carousel gets the most eyes. The cheaper slots reach people who are already
+            ordering.
           </p>
         </div>
 
@@ -181,9 +184,7 @@ export function PromoBannerForm({
               )}
             >
               <span className="flex items-center justify-between gap-2">
-                <span className="text-sm font-semibold text-foreground">
-                  {option.label}
-                </span>
+                <span className="text-sm font-semibold text-foreground">{option.label}</span>
                 <span className="shrink-0 text-xs font-bold tabular-nums text-primary">
                   {formatRupees(dailyRate * option.multiplier)}/day
                 </span>
@@ -198,6 +199,13 @@ export function PromoBannerForm({
 
       <section className="space-y-4 rounded-2xl border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">The banner</h2>
+        {placement === "home_hero" ? (
+          <p className="-mt-2 text-xs text-muted-foreground">
+            The home carousel shows your artwork on its own. The headline still matters — it is what
+            a screen reader announces, and what appears if you book any other slot — but students
+            see the picture.
+          </p>
+        ) : null}
 
         <div className="space-y-1.5">
           <Label htmlFor="promo-headline">
@@ -209,16 +217,10 @@ export function PromoBannerForm({
             onChange={(e) => setHeadline(e.target.value.slice(0, 60))}
             placeholder="e.g. Fresh dosas, all afternoon"
             invalid={Boolean(errors.headline)}
-            aria-describedby={
-              errors.headline ? "promo-headline-error" : "promo-headline-hint"
-            }
+            aria-describedby={errors.headline ? "promo-headline-error" : "promo-headline-hint"}
           />
           {errors.headline ? (
-            <p
-              id="promo-headline-error"
-              role="alert"
-              className="text-sm text-destructive"
-            >
+            <p id="promo-headline-error" role="alert" className="text-sm text-destructive">
               {errors.headline}
             </p>
           ) : (
@@ -237,9 +239,7 @@ export function PromoBannerForm({
             onChange={(e) => setSubtext(e.target.value.slice(0, 120))}
             placeholder="One short sentence — a time, a price or a reason"
           />
-          <p className="text-xs text-muted-foreground">
-            {120 - subtext.length} characters left
-          </p>
+          <p className="text-xs text-muted-foreground">{120 - subtext.length} characters left</p>
         </div>
 
         <div className="space-y-1.5">
@@ -262,19 +262,24 @@ export function PromoBannerForm({
             onUploadComplete={setImageUrl}
             label="Upload a wide photo"
           />
-          <p className="text-xs text-muted-foreground">
-            Roughly 3:1 works best. Keep the left half clear — the text sits
-            there. Without one, your banner uses the FoodieHub gradient.
-          </p>
+          {errors.artwork ? (
+            <p role="alert" className="text-sm text-destructive">
+              {errors.artwork}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {placement === "home_hero"
+                ? "On the home carousel your image is the whole banner — nothing is drawn over it, so any wording has to be part of the picture. Around 2:1 reads well on a phone and 3:1 on a laptop."
+                : "Roughly 3:1 works best. Elsewhere your headline is shown beside the image, so the picture can be just the food."}
+            </p>
+          )}
         </div>
       </section>
 
       {offers.length > 0 ? (
         <section className="space-y-3 rounded-2xl border border-border bg-card p-4">
           <div>
-            <h2 className="text-sm font-semibold text-foreground">
-              Attach a discount
-            </h2>
+            <h2 className="text-sm font-semibold text-foreground">Attach a discount</h2>
             <p className="mt-0.5 text-xs text-muted-foreground">
               Adds a badge to the banner. Optional.
             </p>
@@ -339,17 +344,12 @@ export function PromoBannerForm({
         <dl className="space-y-1.5 rounded-xl bg-surface-muted p-3.5 text-sm">
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Days booked</dt>
-            <dd className="font-semibold tabular-nums text-foreground">
-              {days}
-            </dd>
+            <dd className="font-semibold tabular-nums text-foreground">{days}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">
-              {placementMeta(placement).label}
-            </dt>
+            <dt className="text-muted-foreground">{placementMeta(placement).label}</dt>
             <dd className="font-semibold tabular-nums text-foreground">
-              {formatRupees(dailyRate * placementMeta(placement).multiplier)} /
-              day
+              {formatRupees(dailyRate * placementMeta(placement).multiplier)} / day
             </dd>
           </div>
           <div className="flex justify-between border-t border-border pt-1.5">
@@ -361,8 +361,8 @@ export function PromoBannerForm({
         </dl>
 
         <p className="rounded-xl bg-info-soft p-3 text-sm text-info">
-          Nothing is charged here. An admin reviews the banner, collects payment
-          from {canteenName} directly, and then puts it live.
+          Nothing is charged here. An admin reviews the banner, collects payment from {canteenName}{" "}
+          directly, and then puts it live.
         </p>
       </section>
 

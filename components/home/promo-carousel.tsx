@@ -25,13 +25,16 @@ const IMPRESSION_DWELL_MS = 900
 /**
  * Paid banner slots on the home screen.
  *
- * The banner is a card split in two — words on one side, photograph on the
- * other — rather than words laid over the photograph. Overlaying meant the
- * design depended on artwork the platform does not control: a 21:9 strip on a
- * phone left about 150px to hold a badge, a two-line headline, a line of
- * subtext and a button, and the readability gradient ran to transparent on
- * exactly the side the button sat on. Splitting it means a banner is legible
- * whatever a canteen uploads, and the photo is never dimmed to make room.
+ * The artwork is the whole advert. Nothing is drawn over it and nothing is
+ * set beside it, which is how banner inventory works nearly everywhere: the
+ * advertiser supplies a finished image with their own wording already in it,
+ * and the platform's job is to show it undisturbed at a predictable size.
+ *
+ * That does mean the headline and subtext no longer appear on screen. They
+ * are still carried as the image's alt text and the link's label, so the
+ * banner reads properly to a screen reader and is not simply an unlabelled
+ * picture — and a banner booked without artwork still has to render as
+ * something, so that one case falls back to its headline on a brand panel.
  *
  * Native scroll-snap rather than a transform-based slider: it gets momentum,
  * rubber-banding and accessible focus scrolling from the platform for free,
@@ -133,62 +136,28 @@ export function PromoCarousel({ slides }: PromoCarouselProps) {
               aria-label={`${index + 1} of ${slides.length}: ${slide.headline}`}
               aria-hidden={index !== active ? true : undefined}
               tabIndex={index !== active ? -1 : undefined}
-              className="group flex h-36 w-full shrink-0 snap-center overflow-hidden rounded-2xl border border-border bg-card shadow-card sm:h-44"
+              className="group relative aspect-[2/1] w-full shrink-0 snap-center overflow-hidden rounded-2xl bg-muted sm:aspect-[3/1]"
             >
-              <span className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 p-4 sm:gap-2 sm:p-5">
-                <span className="flex flex-wrap items-center gap-1.5">
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Promoted
-                  </span>
-                  {slide.offerLabel ? (
-                    <span className="rounded-full bg-warning px-2 py-0.5 text-2xs font-bold text-warning-foreground">
-                      {slide.offerLabel}
-                    </span>
-                  ) : null}
-                  {!slide.canteenOpen ? (
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-2xs font-bold text-muted-foreground">
-                      Closed now
-                    </span>
-                  ) : null}
-                </span>
-
-                <span className="line-clamp-2 text-base font-extrabold leading-tight tracking-tight text-foreground sm:text-xl">
-                  {slide.headline}
-                </span>
-
-                {slide.subtext ? (
-                  <span className="line-clamp-2 text-xs leading-snug text-muted-foreground sm:text-sm">
-                    {slide.subtext}
-                  </span>
-                ) : null}
-
-                <span className="mt-0.5 inline-flex w-fit items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition-transform group-active:scale-95">
-                  {slide.ctaLabel}
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </span>
-              </span>
-
-              <span className="relative w-[38%] shrink-0 overflow-hidden bg-muted sm:w-[42%]">
-                {slide.imageUrl ? (
-                  <Image
-                    src={slide.imageUrl}
-                    alt=""
-                    fill
-                    priority={index === 0}
-                    sizes="(max-width: 1024px) 40vw, 400px"
-                    className={cn(
-                      "object-cover transition-transform duration-500 md:group-hover:scale-[1.04]",
-                      !slide.canteenOpen && "grayscale"
-                    )}
-                  />
-                ) : null}
-                {/* Feathered into the card so the photo reads as part of it
-                  rather than as a rectangle stuck on the end. */}
-                <span
-                  aria-hidden
-                  className="absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-card to-transparent"
+              {slide.imageUrl ? (
+                <Image
+                  src={slide.imageUrl}
+                  // The headline is the description of the artwork, which is
+                  // the only place it is still spoken.
+                  alt={slide.headline}
+                  fill
+                  priority={index === 0}
+                  sizes="(max-width: 1024px) 100vw, 960px"
+                  className="object-cover transition-transform duration-500 md:group-hover:scale-[1.03]"
                 />
-              </span>
+              ) : (
+                // No artwork was uploaded. A blank tile would be worse than a
+                // plain one, and the advertiser has paid for the slot either way.
+                <span className="flex h-full w-full items-center justify-center bg-brand-gradient p-6">
+                  <span className="line-clamp-3 text-center text-lg font-extrabold leading-tight tracking-tight text-white sm:text-2xl">
+                    {slide.headline}
+                  </span>
+                </span>
+              )}
             </Link>
           ))}
         </div>

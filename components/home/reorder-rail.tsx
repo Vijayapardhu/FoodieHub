@@ -79,20 +79,22 @@ export function ReorderRail({ usual }: { usual: UsualOrder }) {
     .join(", ")
 
   return (
-    <section className="flex items-center gap-3 rounded-2xl bg-primary-soft px-4 py-3">
+    // Two lines rather than three. This sits directly under the banner and is
+    // a shortcut, not a section — the canteen and the total belong on the same
+    // line as the dishes, at the weight of a caption.
+    <section className="flex items-center gap-3 rounded-2xl bg-primary-soft px-3.5 py-2.5">
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-          Your usual
-        </p>
-        <p className="mt-0.5 line-clamp-1 text-sm font-bold text-foreground">
+        <p className="text-2xs font-bold uppercase tracking-wider text-primary">Your usual</p>
+        <p className="line-clamp-1 text-sm font-semibold text-foreground">
           {summary}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {usual.canteenName} · ₹{usual.total.toFixed(0)}
+          <span className="font-normal text-muted-foreground">
+            {" · "}
+            {usual.canteenName} · ₹{usual.total.toFixed(0)}
+          </span>
         </p>
       </div>
 
-      <Button onClick={orderAgain} className="h-10 shrink-0 rounded-xl px-4">
+      <Button onClick={orderAgain} className="h-9 shrink-0 rounded-xl px-3.5">
         <RotateCcw className="h-4 w-4" />
         Again
       </Button>

@@ -291,74 +291,124 @@ export function HomePageContent({
         />
 
         {/*
-         * The filters collapse on the way down and come back on the way up.
+         * The categories collapse on the way down and come back on the way up.
          *
          * The wrapper is the full-bleed element rather than the rail inside
-         * it: clipping the collapse has to happen at the screen edge, and if
-         * the rail kept its own bleed it would be sliced off mid-chip by the
-         * overflow needed to animate the height.
+         * it: animating a height needs overflow hidden, and if the rail kept
+         * its own bleed that clip would land mid-tile instead of at the
+         * screen edge.
          */}
         <div
           className={cn(
             "-mx-4 overflow-hidden transition-[max-height,opacity] duration-200 ease-out sm:-mx-5",
-            filtersPinned ? "max-h-20 opacity-100" : "max-h-0 opacity-0"
+            filtersPinned ? "max-h-48 opacity-100" : "max-h-0 opacity-0"
           )}
         >
-          <ChipRail className="rail-inset pb-1 pt-2">
-            <Chip
-              active={filters.openOnly}
-              onClick={() => setFilters((f) => ({ ...f, openOnly: !f.openOnly }))}
-            >
-              Open now
-            </Chip>
-            <Chip
-              active={filters.vegOnly}
-              onClick={() => setFilters((f) => ({ ...f, vegOnly: !f.vegOnly }))}
-            >
-              Pure veg
-            </Chip>
-            <Chip
-              active={filters.sort === "rating"}
-              onClick={() =>
-                setFilters((f) => ({
-                  ...f,
-                  sort: f.sort === "rating" ? "relevance" : "rating",
-                }))
-              }
-            >
-              Top rated
-            </Chip>
-            <Chip
-              active={filters.maxPrice === 100}
-              onClick={() =>
-                setFilters((f) => ({
-                  ...f,
-                  maxPrice: f.maxPrice === 100 ? null : 100,
-                }))
-              }
-            >
-              Under ₹100
-            </Chip>
-            {/* Pickup, not delivery — nobody is riding anywhere. */}
-            <Chip active={quickOnly} onClick={() => setQuickOnly((on) => !on)}>
-              Fast pickup
-            </Chip>
-            {categories.slice(0, 8).map((category) => (
-              <Chip
-                key={category.id}
-                active={filters.categoryId === category.id}
-                onClick={() =>
-                  setFilters((f) => ({
-                    ...f,
-                    categoryId: f.categoryId === category.id ? null : category.id,
-                  }))
-                }
-              >
-                {category.name}
-              </Chip>
-            ))}
-          </ChipRail>
+          {/* The categories are the one filter worth keeping on screen: a
+              row of photographs is faster to scan than a row of words, and it
+              is what somebody who has scrolled back up is usually reaching
+              for. No section heading — photographs with names under them do
+              not need to be introduced. */}
+          {categories.length > 0 ? (
+            <div className="rail rail-inset pb-1 pt-2.5">
+              {categories.map((category) => {
+                const cover = categoryCovers[category.id]
+                const active = filters.categoryId === category.id
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() =>
+                      setFilters((f) => ({
+                        ...f,
+                        categoryId: active ? null : category.id,
+                      }))
+                    }
+                    aria-pressed={active}
+                    className="group w-card-craving shrink-0 text-left"
+                  >
+                    {/* A photograph of real food from that category, not an
+                        icon: "Snacks" means nothing until you see the samosa. */}
+                    <span
+                      className={cn(
+                        "relative block aspect-square w-full overflow-hidden rounded-2xl bg-primary-soft ring-2 transition-all",
+                        active ? "ring-primary" : "ring-transparent"
+                      )}
+                    >
+                      {cover ? (
+                        <Image
+                          src={cover}
+                          alt=""
+                          fill
+                          sizes="104px"
+                          className="object-cover transition-transform duration-300 md:group-hover:scale-105"
+                        />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center">
+                          <UtensilsCrossed className="h-6 w-6 text-primary" />
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={cn(
+                        "mt-1.5 block truncate text-center text-xs font-semibold",
+                        active ? "text-primary" : "text-foreground"
+                      )}
+                    >
+                      {category.name}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          ) : null}
         </div>
+      </div>
+
+      {/* Deliberately not sticky. These are occasional refinements, not
+          navigation, and a second pinned row would cost more screen than it
+          earns. */}
+      <div className="!mt-3">
+        <ChipRail>
+          <Chip
+            active={filters.openOnly}
+            onClick={() => setFilters((f) => ({ ...f, openOnly: !f.openOnly }))}
+          >
+            Open now
+          </Chip>
+          <Chip
+            active={filters.vegOnly}
+            onClick={() => setFilters((f) => ({ ...f, vegOnly: !f.vegOnly }))}
+          >
+            Pure veg
+          </Chip>
+          <Chip
+            active={filters.sort === "rating"}
+            onClick={() =>
+              setFilters((f) => ({
+                ...f,
+                sort: f.sort === "rating" ? "relevance" : "rating",
+              }))
+            }
+          >
+            Top rated
+          </Chip>
+          <Chip
+            active={filters.maxPrice === 100}
+            onClick={() =>
+              setFilters((f) => ({
+                ...f,
+                maxPrice: f.maxPrice === 100 ? null : 100,
+              }))
+            }
+          >
+            Under ₹100
+          </Chip>
+          {/* Pickup, not delivery — nobody is riding anywhere. */}
+          <Chip active={quickOnly} onClick={() => setQuickOnly((on) => !on)}>
+            Fast pickup
+          </Chip>
+        </ChipRail>
       </div>
 
       <FilterSheet
@@ -442,46 +492,6 @@ export function HomePageContent({
                   compact
                 />
               ))}
-            </SectionRail>
-          ) : null}
-
-          {categories.length > 0 ? (
-            <SectionRail
-              title="What are you craving?"
-              subtitle="Browse by the kind of thing you fancy"
-            >
-              {categories.map((category) => {
-                const cover = categoryCovers[category.id]
-                return (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => setFilters((f) => ({ ...f, categoryId: category.id }))}
-                    className="group w-card-craving shrink-0 text-left"
-                  >
-                    {/* A photograph of real food from that category, not an
-                        icon: "Snacks" means nothing until you see the samosa. */}
-                    <span className="relative block aspect-square w-full overflow-hidden rounded-2xl bg-primary-soft">
-                      {cover ? (
-                        <Image
-                          src={cover}
-                          alt=""
-                          fill
-                          sizes="104px"
-                          className="object-cover transition-transform duration-300 md:group-hover:scale-105"
-                        />
-                      ) : (
-                        <span className="flex h-full w-full items-center justify-center">
-                          <UtensilsCrossed className="h-6 w-6 text-primary" />
-                        </span>
-                      )}
-                    </span>
-                    <span className="mt-1.5 block truncate text-center text-xs font-semibold text-foreground">
-                      {category.name}
-                    </span>
-                  </button>
-                )
-              })}
             </SectionRail>
           ) : null}
 
