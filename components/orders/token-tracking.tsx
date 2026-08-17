@@ -210,11 +210,21 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
           {order.token}
         </p>
 
-        <div className="mt-4 flex justify-center">
-          <div className="rounded-2xl border-2 border-border bg-white p-3">
-            <QRCodeSVG value={order.token} size={148} level="M" />
+        {/*
+         * The code is the handover. It exists so the counter can scan the
+         * order off as collected, so it appears when there is something to
+         * collect — showing it while the food is still being cooked only
+         * invites somebody to wave a phone at a busy kitchen. The token above
+         * is on screen the whole time, which is what a student needs while
+         * they wait.
+         */}
+        {ready || status === "completed" ? (
+          <div className="mt-4 flex justify-center">
+            <div className="rounded-2xl border-2 border-border bg-white p-3">
+              <QRCodeSVG value={order.token} size={148} level="M" />
+            </div>
           </div>
-        </div>
+        ) : null}
 
         {/* The answer to "when is my food ready", directly under the token
             that answers "which order is mine". */}
@@ -222,11 +232,7 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
           <p
             className={cn(
               "mt-3 text-base font-bold",
-              eta.kind === "overdue"
-                ? "text-warning"
-                : ready
-                  ? "text-success"
-                  : "text-primary"
+              eta.kind === "overdue" ? "text-warning" : ready ? "text-success" : "text-primary"
             )}
           >
             {etaText}
@@ -234,8 +240,7 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
         ) : null}
 
         <p className="mt-2 text-sm text-muted-foreground">
-          Show this at {order.canteens?.name ?? "the counter"} and pay on
-          collection.
+          Show this at {order.canteens?.name ?? "the counter"} and pay on collection.
         </p>
 
         <div className="mt-4 flex justify-center gap-2">
@@ -255,21 +260,16 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
           <p className="text-sm font-bold text-destructive">
             {order.canteens?.name ?? "The canteen"} declined this order
           </p>
-          <p className="mt-1 text-sm text-destructive/90">
-            {order.decline_reason}
-          </p>
+          <p className="mt-1 text-sm text-destructive/90">{order.decline_reason}</p>
           <p className="mt-2 text-xs text-destructive/80">
-            Nothing was charged — you pay at the counter, and there was no
-            counter to pay at.
+            Nothing was charged — you pay at the counter, and there was no counter to pay at.
           </p>
         </section>
       ) : null}
 
       {/* Live status */}
       <section className="rounded-2xl border border-border bg-card p-4 shadow-card">
-        <h2 className="mb-4 text-sm font-semibold text-foreground">
-          Order progress
-        </h2>
+        <h2 className="mb-4 text-sm font-semibold text-foreground">Order progress</h2>
 
         <OrderTimeline status={status} />
 
@@ -283,8 +283,7 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
       {/* Items */}
       <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
         <h2 className="border-b border-border px-4 py-3 text-sm font-semibold text-foreground">
-          {order.order_items?.length ?? 0}{" "}
-          {order.order_items?.length === 1 ? "item" : "items"}
+          {order.order_items?.length ?? 0} {order.order_items?.length === 1 ? "item" : "items"}
         </h2>
 
         <ul className="divide-y divide-border">
@@ -308,7 +307,7 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
                 <p className="line-clamp-1 text-sm font-semibold text-foreground">
                   {line.items?.name ?? "Item"}
                 </p>
-                <p className="text-xs text-muted-foreground tabular-nums">
+                <p className="text-xs tabular-nums text-muted-foreground">
                   ₹{Number(line.price).toFixed(2)} × {line.quantity}
                 </p>
               </div>
@@ -331,9 +330,7 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
               </div>
               <div className="flex justify-between text-success">
                 <dt>Discount applied</dt>
-                <dd className="tabular-nums">
-                  −₹{Number(order.discount_amount).toFixed(2)}
-                </dd>
+                <dd className="tabular-nums">−₹{Number(order.discount_amount).toFixed(2)}</dd>
               </div>
             </>
           ) : null}
@@ -341,9 +338,7 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Payment</dt>
             <dd className="text-foreground">
-              {order.payment_status === "completed"
-                ? "Paid at counter"
-                : "Pay at counter"}
+              {order.payment_status === "completed" ? "Paid at counter" : "Pay at counter"}
             </dd>
           </div>
           <div className="flex justify-between">
@@ -354,22 +349,16 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
           </div>
           <div className="flex justify-between border-t border-border pt-2 text-base font-bold">
             <dt>Total</dt>
-            <dd className="tabular-nums">
-              ₹{Number(order.total_amount).toFixed(2)}
-            </dd>
+            <dd className="tabular-nums">₹{Number(order.total_amount).toFixed(2)}</dd>
           </div>
         </dl>
       </section>
 
       {order.special_instructions || order.dietary_notes ? (
         <section className="space-y-2 rounded-2xl border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold text-foreground">
-            Notes for the kitchen
-          </h2>
+          <h2 className="text-sm font-semibold text-foreground">Notes for the kitchen</h2>
           {order.special_instructions ? (
-            <p className="text-sm text-muted-foreground">
-              {order.special_instructions}
-            </p>
+            <p className="text-sm text-muted-foreground">{order.special_instructions}</p>
           ) : null}
           {order.dietary_notes ? (
             <p className="rounded-xl bg-warning-soft p-3 text-sm text-warning">
@@ -410,10 +399,7 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
         {/* Only while the kitchen has not started: after that the bill is
             settled and nothing more can be added. */}
         {status === "pending" ? (
-          <GroupOrderShare
-            orderId={order.id}
-            existingCode={order.group_order_code ?? null}
-          />
+          <GroupOrderShare orderId={order.id} existingCode={order.group_order_code ?? null} />
         ) : null}
 
         {status === "completed" ? (
@@ -439,8 +425,8 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
         {!finished && !canCancel ? (
           <p className="col-span-2 flex items-start gap-2 rounded-xl bg-muted p-3 text-xs text-muted-foreground">
             <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            The kitchen has started cooking, so this order can no longer be
-            cancelled from the app. Call the canteen if something is wrong.
+            The kitchen has started cooking, so this order can no longer be cancelled from the app.
+            Call the canteen if something is wrong.
           </p>
         ) : null}
       </section>
@@ -450,9 +436,8 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
           <DialogHeader>
             <DialogTitle>Cancel this order?</DialogTitle>
             <DialogDescription>
-              Token {order.token} at {order.canteens?.name ?? "the canteen"}{" "}
-              will be released. You can&apos;t undo this, but you can order
-              again any time.
+              Token {order.token} at {order.canteens?.name ?? "the canteen"} will be released. You
+              can&apos;t undo this, but you can order again any time.
             </DialogDescription>
           </DialogHeader>
 
@@ -465,12 +450,7 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
             >
               Keep it
             </Button>
-            <Button
-              variant="destructive"
-              block
-              loading={cancelling}
-              onClick={handleCancel}
-            >
+            <Button variant="destructive" block loading={cancelling} onClick={handleCancel}>
               Cancel order
             </Button>
           </DialogFooter>

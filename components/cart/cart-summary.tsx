@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Disclosure } from "@/components/ui/disclosure"
 import { StickyBar } from "@/components/ui/sticky-bar"
+import { cn } from "@/lib/utils/cn"
 import { OffersSelector } from "./offers-selector"
 import { OrderScheduling } from "./order-scheduling"
 import { OrderTemplates } from "./order-templates"
@@ -22,20 +23,12 @@ interface CartSummaryProps {
   canteenId: string | null
   /** Lines the kitchen can no longer make; excluded from the bill entirely. */
   unavailableIds: Set<string>
-  /** Something must be fixed before an order can be placed. */
-  blocked: boolean
   /** The first check against the kitchen hasn't finished yet. */
   checking: boolean
   closedIds: Set<string>
 }
 
-export function CartSummary({
-  canteenId,
-  unavailableIds,
-  blocked,
-  checking,
-  closedIds,
-}: CartSummaryProps) {
+export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: CartSummaryProps) {
   const router = useRouter()
   const [supabase] = useState(() => createClient())
   const items = useCartStore((state) => state.items)
@@ -100,6 +93,18 @@ export function CartSummary({
   )
   const splitOrder = orderGroups.length > 1
 
+  /*
+   * A closed canteen stops an order it would have to cook now, and nothing
+   * else — the database has always accepted a booking for later. So being
+   * closed is an invitation to schedule rather than a wall, and only becomes
+   * blocking if no pickup time has been chosen.
+   */
+  const closedNames = orderGroups
+    .filter((group) => closedIds.has(group.canteenId))
+    .map((group) => group.canteenName)
+  const needsSchedule = closedNames.length > 0 && !scheduledPickupTime
+  const cannotPlace = unavailableIds.size > 0 || needsSchedule
+
   const handlePlaceOrder = async () => {
     if (cartItems.length === 0) {
       toast.error("Your cart is empty")
@@ -108,9 +113,11 @@ export function CartSummary({
 
     // The database guards reject these too, but being turned away after the
     // tap reads as a broken app rather than a closed kitchen.
-    if (blocked) {
+    if (cannotPlace) {
       toast.error(
-        closedIds.size > 0 ? "That canteen is closed right now" : "Remove the sold-out items first"
+        needsSchedule
+          ? "Pick a collection time — that canteen is closed right now"
+          : "Remove the sold-out items first"
       )
       return
     }
@@ -187,7 +194,11 @@ export function CartSummary({
             dietary_notes: dietaryNotes.trim() || null,
           }
 
-          if (scheduledPickupTime && group.canteenId === canteenId) {
+          // A collection time applies to every order in the checkout, not
+          // only the one canteen in scope. The student is making one trip;
+          // and if the time was chosen because a canteen is shut, scoping it
+          // to a single group is exactly what would get that group rejected.
+          if (scheduledPickupTime) {
             orderData.scheduled_pickup_time = scheduledPickupTime.toISOString()
             orderData.preferred_time_slot = preferredTimeSlot
           }
@@ -347,6 +358,52 @@ export function CartSummary({
           </div>
         </Disclosure>
 
+        {/* Closed, but bookable. Offered here rather than buried in the
+            pickup-time disclosure, because right now it is the only way
+            forward and the student has no reason to go looking for it. */}
+        {closedNames.length > 0 ? (
+          <div
+            className={cn(
+              "space-y-3 rounded-2xl border p-4",
+              scheduledPickupTime
+                ? "border-success/25 bg-success-soft"
+                : "border-warning/25 bg-warning-soft"
+            )}
+          >
+            <div>
+              <p
+                className={cn(
+                  "text-sm font-bold",
+                  scheduledPickupTime ? "text-success" : "text-warning"
+                )}
+              >
+                {scheduledPickupTime
+                  ? `Booked for ${scheduledPickupTime.toLocaleString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}`
+                  : `${closedNames.join(" and ")} ${
+                      closedNames.length === 1 ? "is" : "are"
+                    } closed right now`}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {scheduledPickupTime
+                  ? "The kitchen will have it ready for then. You still pay at the counter."
+                  : "You can still place this as a booking — pick when you want to collect it."}
+              </p>
+            </div>
+
+            <OrderScheduling
+              onScheduleChange={(scheduledTime, timeSlot) => {
+                setScheduledPickupTime(scheduledTime)
+                setPreferredTimeSlot(timeSlot)
+              }}
+            />
+          </div>
+        ) : null}
+
         {/* Bill */}
         <div className="space-y-2.5 rounded-2xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground">Bill details</h2>
@@ -423,7 +480,7 @@ export function CartSummary({
           size="lg"
           block
           loading={loading}
-          disabled={cartItems.length === 0 || blocked || checking}
+          disabled={cartItems.length === 0 || cannotPlace || checking}
           onClick={handlePlaceOrder}
           className="justify-between"
         >
@@ -435,9 +492,9 @@ export function CartSummary({
                 : "Placing order…"
               : checking
                 ? "Checking…"
-                : blocked
-                  ? closedIds.size > 0
-                    ? "Canteen closed"
+                : cannotPlace
+                  ? needsSchedule
+                    ? "Choose a time"
                     : "Fix cart to continue"
                   : splitOrder
                     ? `Place ${orderGroups.length} orders`

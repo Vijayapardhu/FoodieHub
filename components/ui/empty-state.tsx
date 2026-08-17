@@ -43,8 +43,12 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center rounded-2xl border border-dashed border-border bg-surface-muted text-center",
-        compact ? "gap-3 px-5 py-8" : "gap-4 px-6 py-12",
+        "flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface-muted text-center",
+        // A full-page empty state is the only thing on the screen, so it sits
+        // in the middle of it rather than pinned under the app bar with a
+        // screen of nothing beneath. `compact` ones are inline inside a
+        // section and must stay the size of their content.
+        compact ? "gap-3 px-5 py-8" : "min-h-[55vh] gap-4 px-6 py-12",
         className
       )}
     >

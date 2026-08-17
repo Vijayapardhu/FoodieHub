@@ -86,7 +86,13 @@ export function ItemDetail({
       ? Object.entries(item.nutritional_info as Record<string, string | number>)
       : []
 
-  const orderable = item.is_available && canteen?.is_open !== false
+  // Two different situations that used to share one disabled button. A dish
+  // the kitchen has run out of cannot be ordered at all; a kitchen that is
+  // shut can still take a booking, so the cart offers a time rather than
+  // this page refusing outright.
+  const soldOut = !item.is_available
+  const canteenClosed = canteen?.is_open === false
+  const orderable = !soldOut
 
   return (
     <>
@@ -351,10 +357,20 @@ export function ItemDetail({
       </div>
 
       <StickyBar>
+        {canteenClosed && !soldOut ? (
+          <p className="mb-2 text-center text-xs font-medium text-warning">
+            {canteenName} is closed — add it and choose a collection time in your cart.
+          </p>
+        ) : null}
         {orderable ? (
           quantity === 0 ? (
-            <Button size="lg" block onClick={increment}>
-              Add to cart · ₹{Number(item.price)}
+            // Same shape as the cart's action: amount on the left, what the
+            // tap does on the right. It read as part of the page before —
+            // one more full-width block among several rather than the thing
+            // the screen exists for.
+            <Button size="lg" block onClick={increment} className="justify-between shadow-brand">
+              <span className="tabular-nums">₹{Number(item.price)}</span>
+              <span>Add to cart</span>
             </Button>
           ) : (
             <div className="flex items-center gap-3">
@@ -375,7 +391,7 @@ export function ItemDetail({
           )
         ) : (
           <Button size="lg" block disabled>
-            {item.is_available ? "Canteen is closed" : "Sold out"}
+            Sold out
           </Button>
         )}
       </StickyBar>

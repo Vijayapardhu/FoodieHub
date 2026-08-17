@@ -167,7 +167,6 @@ export function CartPageContent({ canteenId, promo }: CartPageContentProps) {
       <CartSummary
         canteenId={canteenId}
         unavailableIds={validation.unavailableIds}
-        blocked={validation.blocked}
         checking={validation.checking}
         closedIds={validation.closedIds}
       />
