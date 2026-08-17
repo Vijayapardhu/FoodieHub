@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Disclosure } from "@/components/ui/disclosure"
 import { StickyBar } from "@/components/ui/sticky-bar"
-import { generateToken } from "@/lib/utils/token"
 import { OffersSelector } from "./offers-selector"
 import { OrderScheduling } from "./order-scheduling"
 import { OrderTemplates } from "./order-templates"
@@ -45,9 +44,7 @@ export function CartSummary({
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null)
   const [discount, setDiscount] = useState(0)
   const [specialInstructions, setSpecialInstructions] = useState("")
-  const [scheduledPickupTime, setScheduledPickupTime] = useState<Date | null>(
-    null
-  )
+  const [scheduledPickupTime, setScheduledPickupTime] = useState<Date | null>(null)
   const [preferredTimeSlot, setPreferredTimeSlot] = useState<string | null>(null)
   const [dietaryNotes, setDietaryNotes] = useState("")
 
@@ -59,10 +56,7 @@ export function CartSummary({
   )
 
   const cartItems = useMemo(
-    () =>
-      canteenId
-        ? orderable.filter((i) => i.canteenId === canteenId)
-        : orderable,
+    () => (canteenId ? orderable.filter((i) => i.canteenId === canteenId) : orderable),
     [orderable, canteenId]
   )
 
@@ -90,6 +84,22 @@ export function CartSummary({
   const total = Math.max(0, subtotal - appliedDiscount)
   const itemCount = cartItems.reduce((n, item) => n + item.quantity, 0)
 
+  // What checkout will actually create. A cart across two counters is two
+  // orders, and the bill has to say so before the tap rather than after.
+  const orderGroups = useMemo(
+    () =>
+      groups
+        .filter((group) => group.items.length > 0)
+        .map((group) => ({
+          canteenId: group.canteenId,
+          canteenName: group.items[0]?.canteenName ?? "Canteen",
+          count: group.items.reduce((n, item) => n + item.quantity, 0),
+          total: sum(group.items),
+        })),
+    [groups]
+  )
+  const splitOrder = orderGroups.length > 1
+
   const handlePlaceOrder = async () => {
     if (cartItems.length === 0) {
       toast.error("Your cart is empty")
@@ -100,9 +110,7 @@ export function CartSummary({
     // tap reads as a broken app rather than a closed kitchen.
     if (blocked) {
       toast.error(
-        closedIds.size > 0
-          ? "That canteen is closed right now"
-          : "Remove the sold-out items first"
+        closedIds.size > 0 ? "That canteen is closed right now" : "Remove the sold-out items first"
       )
       return
     }
@@ -132,88 +140,121 @@ export function CartSummary({
         user.email ||
         null
 
-      const createdOrderHandles: string[] = []
+      /*
+       * One order per canteen, and each one stands alone.
+       *
+       * A cart spanning two counters is two orders with two tokens, collected
+       * separately and paid for separately — so a failure at one canteen must
+       * not take down the other. The previous version threw out of the loop
+       * on the first error, which left the first canteen's order created and
+       * its lines already cleared from the cart while the student was told
+       * the whole thing had failed. That is the one outcome worse than not
+       * ordering: food being cooked that nobody knows about.
+       */
+      const placed: Array<{ canteenName: string; token: string }> = []
+      const failed: Array<{ canteenName: string; reason: string }> = []
 
       for (const group of groups) {
         if (group.items.length === 0) continue
 
-        const groupSubtotal = sum(group.items)
-        const groupTotal =
-          canteenId && group.canteenId === canteenId
-            ? Math.max(0, groupSubtotal - appliedDiscount)
-            : groupSubtotal
+        const canteenName = group.items[0]?.canteenName ?? "that canteen"
 
-        const orderData: Record<string, unknown> = {
-          user_id: user.id,
-          canteen_id: group.canteenId,
-          token: generateToken(6),
-          status: "pending",
-          // The database recomputes this from the lines and re-derives the
-          // discount from the offer below, so this is only a starting value.
-          total_amount: groupTotal,
-          // Nominate the offer rather than asserting a discount: the server
-          // decides whether it applies and for how much.
-          offer_id:
-            selectedOffer && group.canteenId === canteenId
-              ? selectedOffer.id
-              : null,
-          payment_method: "on_shop",
-          payment_status: "pending",
-          customer_name: customerName,
-          customer_phone: profile?.phone_number || null,
-          order_type: scheduledPickupTime ? "scheduled" : "immediate",
-          special_instructions: specialInstructions.trim() || null,
-          dietary_notes: dietaryNotes.trim() || null,
+        try {
+          const groupSubtotal = sum(group.items)
+          const groupTotal =
+            canteenId && group.canteenId === canteenId
+              ? Math.max(0, groupSubtotal - appliedDiscount)
+              : groupSubtotal
+
+          const orderData: Record<string, unknown> = {
+            user_id: user.id,
+            canteen_id: group.canteenId,
+            // No token: the database picks one, retrying against the live
+            // table until it is free. Generating it here raced with itself.
+            status: "pending",
+            // The database recomputes this from the lines and re-derives the
+            // discount from the offer below, so this is only a starting value.
+            total_amount: groupTotal,
+            // Nominate the offer rather than asserting a discount: the server
+            // decides whether it applies and for how much.
+            offer_id: selectedOffer && group.canteenId === canteenId ? selectedOffer.id : null,
+            payment_method: "on_shop",
+            payment_status: "pending",
+            customer_name: customerName,
+            customer_phone: profile?.phone_number || null,
+            order_type: scheduledPickupTime ? "scheduled" : "immediate",
+            special_instructions: specialInstructions.trim() || null,
+            dietary_notes: dietaryNotes.trim() || null,
+          }
+
+          if (scheduledPickupTime && group.canteenId === canteenId) {
+            orderData.scheduled_pickup_time = scheduledPickupTime.toISOString()
+            orderData.preferred_time_slot = preferredTimeSlot
+          }
+
+          const { data: order, error: orderError } = await supabase
+            .from("orders")
+            .insert(orderData as any)
+            .select()
+            .single()
+
+          if (orderError) throw orderError
+
+          const { error: itemsError } = await supabase.from("order_items").insert(
+            group.items.map((item) => ({
+              order_id: order.id,
+              item_id: item.itemId,
+              quantity: item.quantity,
+              price: item.price,
+            }))
+          )
+
+          if (itemsError) {
+            // An order with no lines is not an order. Remove it rather than
+            // leave the kitchen a blank ticket.
+            await supabase.from("orders").delete().eq("id", order.id)
+            throw itemsError
+          }
+
+          // Keep the token, not the uuid: it is what the order is called by
+          // at the counter.
+          placed.push({ canteenName, token: order.token ?? order.id })
+
+          // Only clear lines that actually made it into an order.
+          group.items.forEach((item) => {
+            useCartStore.getState().removeItem(item.itemId)
+          })
+        } catch (groupError: any) {
+          failed.push({
+            canteenName,
+            reason: groupError?.message || "could not be placed",
+          })
         }
-
-        if (scheduledPickupTime && group.canteenId === canteenId) {
-          orderData.scheduled_pickup_time = scheduledPickupTime.toISOString()
-          orderData.preferred_time_slot = preferredTimeSlot
-        }
-
-        const { data: order, error: orderError } = await supabase
-          .from("orders")
-          .insert(orderData as any)
-          .select()
-          .single()
-
-        if (orderError) throw orderError
-        // Keep the token, not the uuid: it's what the order is addressed by.
-        createdOrderHandles.push(order.token ?? order.id)
-
-        const { error: itemsError } = await supabase.from("order_items").insert(
-          group.items.map((item) => ({
-            order_id: order.id,
-            item_id: item.itemId,
-            quantity: item.quantity,
-            price: item.price,
-          }))
-        )
-
-        if (itemsError) throw itemsError
-
-        // Only clear lines that actually made it into an order.
-        group.items.forEach((item) => {
-          useCartStore.getState().removeItem(item.itemId)
-        })
       }
 
-      if (createdOrderHandles.length === 0) {
-        toast.error("Could not create your order. Please try again.")
+      if (placed.length === 0) {
+        toast.error(failed[0]?.reason || "Could not create your order. Please try again.")
         return
       }
 
-      toast.success(
-        createdOrderHandles.length === 1
-          ? "Order placed"
-          : `${createdOrderHandles.length} orders placed, one per canteen`
-      )
+      if (failed.length > 0) {
+        // Say exactly what happened to each, because the cart will still be
+        // holding the lines that did not go through.
+        toast.success(
+          `${placed.length} order${placed.length === 1 ? "" : "s"} placed · ${failed
+            .map((f) => f.canteenName)
+            .join(", ")} did not go through`,
+          { duration: 6000 }
+        )
+      } else {
+        toast.success(
+          placed.length === 1
+            ? "Order placed"
+            : `${placed.length} orders placed — one token per canteen`
+        )
+      }
 
-      router.push(
-        createdOrderHandles.length === 1
-          ? `/orders/${createdOrderHandles[0]}`
-          : "/orders"
-      )
+      router.push(placed.length === 1 ? `/orders/${placed[0].token}` : "/orders")
     } catch (error: any) {
       toast.error(error?.message || "Could not place your order")
     } finally {
@@ -249,9 +290,7 @@ export function CartSummary({
               title="Pickup time"
               icon={Clock}
               summary={
-                scheduledPickupTime
-                  ? scheduledPickupTime.toLocaleString()
-                  : "As soon as it's ready"
+                scheduledPickupTime ? scheduledPickupTime.toLocaleString() : "As soon as it's ready"
               }
             >
               <OrderScheduling
@@ -283,10 +322,7 @@ export function CartSummary({
         >
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <label
-                htmlFor="special-instructions"
-                className="text-sm font-medium text-foreground"
-              >
+              <label htmlFor="special-instructions" className="text-sm font-medium text-foreground">
                 Special instructions
               </label>
               <Textarea
@@ -296,7 +332,7 @@ export function CartSummary({
                 onChange={(e) => setSpecialInstructions(e.target.value)}
                 maxLength={500}
               />
-              <p className="text-right text-xs text-muted-foreground tabular-nums">
+              <p className="text-right text-xs tabular-nums text-muted-foreground">
                 {specialInstructions.length}/500
               </p>
             </div>
@@ -316,14 +352,32 @@ export function CartSummary({
           <h2 className="text-sm font-semibold text-foreground">Bill details</h2>
 
           <dl className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">
-                Item total ({itemCount} {itemCount === 1 ? "item" : "items"})
-              </dt>
-              <dd className="tabular-nums text-foreground">
-                ₹{subtotal.toFixed(2)}
-              </dd>
-            </div>
+            {/* One line per canteen when the cart spans more than one. Each
+                is a separate order, cooked by a different kitchen and paid
+                for at a different counter, so a single merged "item total"
+                is a number nobody is ever asked for. */}
+            {splitOrder ? (
+              orderGroups.map((group) => (
+                <div key={group.canteenId} className="flex justify-between">
+                  <dt className="min-w-0 truncate text-muted-foreground">
+                    {group.canteenName}{" "}
+                    <span className="text-xs">
+                      ({group.count} {group.count === 1 ? "item" : "items"})
+                    </span>
+                  </dt>
+                  <dd className="shrink-0 tabular-nums text-foreground">
+                    ₹{group.total.toFixed(2)}
+                  </dd>
+                </div>
+              ))
+            ) : (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">
+                  Item total ({itemCount} {itemCount === 1 ? "item" : "items"})
+                </dt>
+                <dd className="tabular-nums text-foreground">₹{subtotal.toFixed(2)}</dd>
+              </div>
+            )}
 
             {appliedDiscount > 0 ? (
               <div className="flex justify-between text-success">
@@ -331,22 +385,30 @@ export function CartSummary({
                   <Sparkles className="h-3.5 w-3.5" />
                   {selectedOffer?.title ?? "Discount"}
                 </dt>
-                <dd className="tabular-nums">
-                  −₹{appliedDiscount.toFixed(2)}
-                </dd>
+                <dd className="tabular-nums">−₹{appliedDiscount.toFixed(2)}</dd>
               </div>
             ) : null}
 
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Payment</dt>
-              <dd className="text-foreground">Pay at the counter</dd>
+              <dd className="text-foreground">
+                {splitOrder ? "Pay at each counter" : "Pay at the counter"}
+              </dd>
             </div>
 
             <div className="flex justify-between border-t border-border pt-2.5 text-base font-bold">
-              <dt>To pay</dt>
+              <dt>{splitOrder ? `Across ${orderGroups.length} orders` : "To pay"}</dt>
               <dd className="tabular-nums">₹{total.toFixed(2)}</dd>
             </div>
           </dl>
+
+          {splitOrder ? (
+            <p className="rounded-xl bg-info-soft px-3 py-2 text-xs text-info">
+              This is {orderGroups.length} separate orders with {orderGroups.length} pickup tokens —
+              one per canteen. Nothing is combined: each kitchen cooks its own and you pay each
+              counter separately.
+            </p>
+          ) : null}
 
           {appliedDiscount > 0 ? (
             <p className="rounded-xl bg-success-soft px-3 py-2 text-center text-xs font-bold text-success">
@@ -368,14 +430,18 @@ export function CartSummary({
           <span className="tabular-nums">₹{total.toFixed(2)}</span>
           <span>
             {loading
-              ? "Placing order…"
+              ? splitOrder
+                ? `Placing ${orderGroups.length} orders…`
+                : "Placing order…"
               : checking
                 ? "Checking…"
                 : blocked
                   ? closedIds.size > 0
                     ? "Canteen closed"
                     : "Fix cart to continue"
-                  : "Place order"}
+                  : splitOrder
+                    ? `Place ${orderGroups.length} orders`
+                    : "Place order"}
           </span>
         </Button>
       </StickyBar>

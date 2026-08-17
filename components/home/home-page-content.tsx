@@ -328,32 +328,30 @@ export function HomePageContent({
           onOpenFilters={() => setFiltersOpen(true)}
           activeFilterCount={activeCount}
         />
-
-        {/*
-         * Veg mode, not a veg filter. It sits with the search and stays put
-         * when the categories collapse, because somebody who eats only
-         * vegetarian food wants it on for the whole session rather than
-         * re-applied per search — and needs to be able to see at a glance
-         * that it is still on.
-         */}
-        <label className="mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3 py-1.5">
-          <span className="flex min-w-0 items-center gap-2">
-            <span
-              aria-hidden
-              className="flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border-[1.5px] border-veg bg-surface"
-            >
-              <span className="h-2 w-2 rounded-full bg-veg" />
-            </span>
-            <span className="truncate text-sm font-semibold text-foreground">Pure veg mode</span>
-          </span>
-          <Switch
-            checked={filters.vegOnly}
-            onCheckedChange={(on) => setFilters((f) => ({ ...f, vegOnly: on }))}
-            aria-label="Show vegetarian dishes only"
-            className="h-6 w-11 shrink-0 [&>span]:h-5 [&>span]:w-5 [&>span]:data-[state=checked]:translate-x-5"
-          />
-        </label>
       </div>
+
+      {/*
+       * Veg mode, not a veg filter: it holds for the whole session rather
+       * than being re-applied per search, and it filters the rails at the
+       * source rather than only the results.
+       */}
+      <label className="!mt-3 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3 py-2">
+        <span className="flex min-w-0 items-center gap-2">
+          <span
+            aria-hidden
+            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border-[1.5px] border-veg bg-surface"
+          >
+            <span className="h-2 w-2 rounded-full bg-veg" />
+          </span>
+          <span className="truncate text-sm font-semibold text-foreground">Pure veg mode</span>
+        </span>
+        <Switch
+          checked={filters.vegOnly}
+          onCheckedChange={(on) => setFilters((f) => ({ ...f, vegOnly: on }))}
+          aria-label="Show vegetarian dishes only"
+          className="h-6 w-11 shrink-0 [&>span]:h-5 [&>span]:w-5 [&>span]:data-[state=checked]:translate-x-5"
+        />
+      </label>
 
       {/* Deliberately not sticky. These are occasional refinements, not
           navigation, and a second pinned row would cost more screen than it
