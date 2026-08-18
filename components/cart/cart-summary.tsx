@@ -14,13 +14,12 @@ import {
 import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
 import { useCartStore } from "@/store/cart-store"
-import { createClient } from "@/lib/supabase/client"
+import { useCheckoutDraftStore } from "@/store/checkout-draft"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Disclosure } from "@/components/ui/disclosure"
 import { StickyBar } from "@/components/ui/sticky-bar"
 import { cn } from "@/lib/utils/cn"
-import { payForOrder } from "@/lib/payments/razorpay-client"
 import { OffersSelector } from "./offers-selector"
 import { OrderScheduling } from "./order-scheduling"
 import { OrderTemplates } from "./order-templates"
@@ -40,10 +39,8 @@ interface CartSummaryProps {
 
 export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: CartSummaryProps) {
   const router = useRouter()
-  const [supabase] = useState(() => createClient())
   const items = useCartStore((state) => state.items)
 
-  const [loading, setLoading] = useState(false)
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null)
   const [discount, setDiscount] = useState(0)
   const [specialInstructions, setSpecialInstructions] = useState("")
@@ -137,7 +134,12 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
   const needsSchedule = closedNames.length > 0 && !scheduledPickupTime
   const cannotPlace = unavailableIds.size > 0 || needsSchedule || deliveryIncomplete
 
-  const handlePlaceOrder = async () => {
+  // Placing the order itself happens on /cart/confirm — a deliberate stop
+  // between "here's what I built" and "this is now cooking", where the
+  // student sees the actual items and the actual bill one more time before
+  // anything is charged or sent to a kitchen. This just hands over what was
+  // chosen; nothing here writes anything.
+  const handleReview = () => {
     if (cartItems.length === 0) {
       toast.error("Your cart is empty")
       return
@@ -149,194 +151,28 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
       toast.error(
         needsSchedule
           ? "Pick a collection time — that canteen is closed right now"
-          : "Remove the sold-out items first"
+          : deliveryIncomplete
+            ? "Choose a delivery block"
+            : "Remove the sold-out items first"
       )
       return
     }
 
-    setLoading(true)
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
-        toast.error("Please log in again")
-        router.push("/login")
-        return
-      }
-
-      const { data: profile } = await supabase
-        .from("users")
-        .select("full_name, phone_number")
-        .eq("id", user.id)
-        .maybeSingle()
-
-      const customerName =
-        profile?.full_name ||
-        (user.user_metadata?.full_name as string | undefined) ||
-        (user.user_metadata?.name as string | undefined) ||
-        user.email ||
-        null
-
-      /*
-       * One order per canteen, and each one stands alone.
-       *
-       * A cart spanning two counters is two orders with two tokens, collected
-       * separately and paid for separately — so a failure at one canteen must
-       * not take down the other. The previous version threw out of the loop
-       * on the first error, which left the first canteen's order created and
-       * its lines already cleared from the cart while the student was told
-       * the whole thing had failed. That is the one outcome worse than not
-       * ordering: food being cooked that nobody knows about.
-       */
-      const placed: Array<{ canteenName: string; token: string; orderId: string }> = []
-      const failed: Array<{ canteenName: string; reason: string }> = []
-
-      for (const group of groups) {
-        if (group.items.length === 0) continue
-
-        const canteenName = group.items[0]?.canteenName ?? "that canteen"
-
-        try {
-          const groupSubtotal = sum(group.items)
-          const groupTotal =
-            (canteenId && group.canteenId === canteenId
-              ? Math.max(0, groupSubtotal - appliedDiscount)
-              : groupSubtotal) + deliveryFee
-
-          const delivering = delivery.fulfillmentType === "delivery" && delivery.blockId
-
-          const orderData: Record<string, unknown> = {
-            user_id: user.id,
-            canteen_id: group.canteenId,
-            // No token: the database picks one, retrying against the live
-            // table until it is free. Generating it here raced with itself.
-            status: "pending",
-            // The database recomputes this from the lines, re-derives the
-            // discount from the offer below, and re-prices delivery from the
-            // canteen's current rate — so this is only a starting value.
-            total_amount: groupTotal,
-            // Nominate the offer rather than asserting a discount: the server
-            // decides whether it applies and for how much.
-            offer_id: selectedOffer && group.canteenId === canteenId ? selectedOffer.id : null,
-            payment_method: paymentMethod,
-            payment_status: "pending",
-            customer_name: customerName,
-            customer_phone: profile?.phone_number || null,
-            order_type: scheduledPickupTime ? "scheduled" : "immediate",
-            special_instructions: specialInstructions.trim() || null,
-            dietary_notes: dietaryNotes.trim() || null,
-            fulfillment_type: delivering ? "delivery" : "pickup",
-            delivery_block_id: delivering ? delivery.blockId : null,
-            delivery_fee: delivering ? delivery.fee : 0,
-          }
-
-          // A collection time applies to every order in the checkout, not
-          // only the one canteen in scope. The student is making one trip;
-          // and if the time was chosen because a canteen is shut, scoping it
-          // to a single group is exactly what would get that group rejected.
-          if (scheduledPickupTime) {
-            orderData.scheduled_pickup_time = scheduledPickupTime.toISOString()
-            orderData.preferred_time_slot = preferredTimeSlot
-          }
-
-          const { data: order, error: orderError } = await supabase
-            .from("orders")
-            .insert(orderData as any)
-            .select()
-            .single()
-
-          if (orderError) throw orderError
-
-          const { error: itemsError } = await supabase.from("order_items").insert(
-            group.items.map((item) => ({
-              order_id: order.id,
-              item_id: item.itemId,
-              quantity: item.quantity,
-              price: item.price,
-            }))
-          )
-
-          if (itemsError) {
-            // An order with no lines is not an order. Remove it rather than
-            // leave the kitchen a blank ticket.
-            await supabase.from("orders").delete().eq("id", order.id)
-            throw itemsError
-          }
-
-          // Keep the token, not the uuid: it is what the order is called by
-          // at the counter.
-          placed.push({ canteenName, token: order.token ?? order.id, orderId: order.id })
-
-          // Only clear lines that actually made it into an order.
-          group.items.forEach((item) => {
-            useCartStore.getState().removeItem(item.itemId)
-          })
-        } catch (groupError: any) {
-          failed.push({
-            canteenName,
-            reason: groupError?.message || "could not be placed",
-          })
-        }
-      }
-
-      if (placed.length === 0) {
-        toast.error(failed[0]?.reason || "Could not create your order. Please try again.")
-        return
-      }
-
-      // The useEffect above forces "on_shop" the moment a cart splits across
-      // canteens, so online payment only ever gets here with exactly one
-      // order to collect for.
-      if (paymentMethod === "online" && failed.length === 0) {
-        try {
-          await payForOrder({
-            orderId: placed[0].orderId,
-            canteenName: placed[0].canteenName,
-            prefill: {
-              name: customerName,
-              email: user.email ?? null,
-              contact: profile?.phone_number ?? null,
-            },
-          })
-          toast.success("Order placed & paid")
-        } catch {
-          // The order still exists either way — cancelling the popup or a
-          // declined card isn't a reason to lose it. It stays payable from
-          // the order page.
-          toast(
-            "Order placed — payment didn't go through. You can pay again from the order page.",
-            { icon: "⚠️", duration: 6000 }
-          )
-        }
-        router.push(`/orders/${placed[0].token}`)
-        return
-      }
-
-      if (failed.length > 0) {
-        // Say exactly what happened to each, because the cart will still be
-        // holding the lines that did not go through.
-        toast.success(
-          `${placed.length} order${placed.length === 1 ? "" : "s"} placed · ${failed
-            .map((f) => f.canteenName)
-            .join(", ")} did not go through`,
-          { duration: 6000 }
-        )
-      } else {
-        toast.success(
-          placed.length === 1
-            ? "Order placed"
-            : `${placed.length} orders placed — one token per canteen`
-        )
-      }
-
-      router.push(placed.length === 1 ? `/orders/${placed[0].token}` : "/orders")
-    } catch (error: any) {
-      toast.error(error?.message || "Could not place your order")
-    } finally {
-      setLoading(false)
-    }
+    useCheckoutDraftStore.getState().setDraft({
+      canteenId,
+      paymentMethod,
+      fulfillmentType: delivery.fulfillmentType,
+      deliveryBlockId: delivery.blockId,
+      deliveryFee: delivery.fee,
+      offerId: canteenId && selectedOffer ? selectedOffer.id : null,
+      offerTitle: selectedOffer?.title ?? null,
+      discount: appliedDiscount,
+      specialInstructions: specialInstructions.trim(),
+      dietaryNotes: dietaryNotes.trim(),
+      scheduledPickupTime: scheduledPickupTime ? scheduledPickupTime.toISOString() : null,
+      preferredTimeSlot,
+    })
+    router.push("/cart/confirm")
   }
 
   return (
@@ -607,32 +443,23 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
         <Button
           size="lg"
           block
-          loading={loading}
           disabled={cartItems.length === 0 || cannotPlace || checking}
-          onClick={handlePlaceOrder}
+          onClick={handleReview}
           className="justify-between"
         >
           <span className="tabular-nums">₹{total.toFixed(2)}</span>
           <span>
-            {loading
-              ? splitOrder
-                ? `Placing ${orderGroups.length} orders…`
-                : paymentMethod === "online"
-                  ? "Opening payment…"
-                  : "Placing order…"
-              : checking
-                ? "Checking…"
-                : cannotPlace
-                  ? needsSchedule
-                    ? "Choose a time"
-                    : deliveryIncomplete
-                      ? "Choose a delivery block"
-                      : "Fix cart to continue"
-                  : splitOrder
-                    ? `Place ${orderGroups.length} orders`
-                    : paymentMethod === "online"
-                      ? "Pay & place order"
-                      : "Place order"}
+            {checking
+              ? "Checking…"
+              : cannotPlace
+                ? needsSchedule
+                  ? "Choose a time"
+                  : deliveryIncomplete
+                    ? "Choose a delivery block"
+                    : "Fix cart to continue"
+                : splitOrder
+                  ? `Review ${orderGroups.length} orders`
+                  : "Review order"}
           </span>
         </Button>
       </StickyBar>
