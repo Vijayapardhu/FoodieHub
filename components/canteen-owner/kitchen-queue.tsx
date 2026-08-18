@@ -155,6 +155,13 @@ export function KitchenQueue({
    * — it needs no asset, no network, and no decode delay when the kitchen is
    * busy. Off by default: browsers block audio until the page is interacted
    * with, and a counter tablet that beeps unbidden is worse than silence.
+   *
+   * Three passes of the rising two-note chime, not one: a single ~350ms
+   * chime at a soft gain was easy to miss over a working kitchen (grinders,
+   * exhaust fans, people talking), and a missed "new order" alert is worse
+   * than an alert that's slightly too insistent. Louder gain, a brighter
+   * waveform on the second note, and repetition make it something you
+   * notice without turning it into a fire-alarm screech.
    */
   const audioRef = useRef<AudioContext | null>(null)
   const lastArrived = useRef(arrived)
@@ -171,29 +178,30 @@ export function KitchenQueue({
           .webkitAudioContext
       const ctx = (audioRef.current ??= new Ctx())
       const now = ctx.currentTime
+      const PEAK_GAIN = 0.7
+      const PASS_GAP = 0.5
 
-      // Two short rising notes — recognisable across a noisy kitchen without
-      // being an alarm.
-      ;[880, 1174].forEach((frequency, index) => {
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.frequency.value = frequency
-        osc.type = "sine"
-        gain.gain.setValueAtTime(0.0001, now + index * 0.18)
-        gain.gain.exponentialRampToValueAtTime(0.25, now + index * 0.18 + 0.02)
-        gain.gain.exponentialRampToValueAtTime(
-          0.0001,
-          now + index * 0.18 + 0.16
-        )
-        osc.connect(gain).connect(ctx.destination)
-        osc.start(now + index * 0.18)
-        osc.stop(now + index * 0.18 + 0.18)
-      })
+      for (let pass = 0; pass < 3; pass++) {
+        const passStart = now + pass * PASS_GAP
+        ;[880, 1174].forEach((frequency, index) => {
+          const osc = ctx.createOscillator()
+          const gain = ctx.createGain()
+          const start = passStart + index * 0.18
+          osc.frequency.value = frequency
+          osc.type = index === 0 ? "sine" : "triangle"
+          gain.gain.setValueAtTime(0.0001, start)
+          gain.gain.exponentialRampToValueAtTime(PEAK_GAIN, start + 0.02)
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.16)
+          osc.connect(gain).connect(ctx.destination)
+          osc.start(start)
+          osc.stop(start + 0.18)
+        })
+      }
     } catch {
       // An unavailable audio context is not worth surfacing.
     }
 
-    if ("vibrate" in navigator) navigator.vibrate?.([40, 60, 40])
+    if ("vibrate" in navigator) navigator.vibrate?.([60, 80, 60, 80, 60])
   }, [arrived, soundOn])
 
   const toggleSound = () => {
