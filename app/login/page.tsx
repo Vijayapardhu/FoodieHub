@@ -49,8 +49,10 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
+  const [activeTab, setActiveTab] = useState<"login" | "register">("login")
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const [loginEmail, setLoginEmail] = useState("")
   const [loginPassword, setLoginPassword] = useState("")
@@ -115,10 +117,15 @@ function LoginForm() {
     setLoading(true)
     try {
       const supabase = createClient()
+      const email = registerEmail.trim()
       const { data, error } = await supabase.auth.signUp({
-        email: registerEmail.trim(),
+        email,
         password: registerPassword,
         options: {
+          // The row itself is created by the handle_new_user trigger, which
+          // reads name and phone straight out of this metadata — nothing
+          // client-side has to write it back in afterward, which used to be
+          // the one part of this flow with no session to run as yet.
           data: {
             full_name: registerName.trim(),
             phone_number: registerPhone.trim(),
@@ -128,30 +135,33 @@ function LoginForm() {
       })
       if (error) throw error
 
-      if (data.user) {
-        // The signup trigger creates the row; fill in what it can't infer.
-        const { error: profileError } = await supabase
-          .from("users")
-          .update({
-            full_name: registerName.trim(),
-            phone_number: registerPhone.trim(),
-          })
-          .eq("id", data.user.id)
-
-        if (profileError) {
-          console.error("[signup] profile update failed", profileError)
-        }
-      }
-
-      toast.success("Account created — check your email to verify it")
       setRegisterName("")
       setRegisterPhone("")
-      setRegisterEmail("")
       setRegisterPassword("")
       setConfirmPassword("")
+
+      // Whether this is a session yet depends entirely on whether the
+      // project requires confirming the email first — signUp() returns one
+      // immediately when it doesn't. Telling someone to "check their email"
+      // when there was never going to be one to act on is its own kind of
+      // broken, so branch on what actually happened rather than assuming.
+      if (data.session && data.user) {
+        const destination = await resolveDestination(supabase, data.user.id)
+        toast.success("Account created — welcome to FoodieHub")
+        // Left loading/disabled deliberately: it's about to navigate away,
+        // and re-enabling the form for the instant before that happens
+        // reads as the tap not having registered.
+        router.replace(destination)
+        return
+      }
+
+      toast.success("Account created — check your email to verify it, then sign in")
+      setLoginEmail(email)
+      setRegisterEmail("")
+      setActiveTab("login")
+      setLoading(false)
     } catch (error: any) {
       toast.error(error?.message || "Could not create your account")
-    } finally {
       setLoading(false)
     }
   }
@@ -182,6 +192,19 @@ function LoginForm() {
     </button>
   )
 
+  const confirmPasswordToggle = (
+    <button
+      type="button"
+      onClick={() => setShowConfirmPassword((value) => !value)}
+      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+      className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted"
+    >
+      {showConfirmPassword ? <EyeOff /> : <Eye />}
+    </button>
+  )
+
+  const passwordsMismatched = confirmPassword.length > 0 && confirmPassword !== registerPassword
+
   return (
     <main className="flex min-h-screen flex-col justify-center bg-surface-fade px-4 py-8 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-[calc(2rem+env(safe-area-inset-top))]">
       <div className="mx-auto w-full max-w-md space-y-6">
@@ -198,7 +221,7 @@ function LoginForm() {
         </header>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
-          <Tabs defaultValue="login">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "login" | "register")}>
             <TabsList>
               <TabsTrigger value="login">Sign in</TabsTrigger>
               <TabsTrigger value="register">Create account</TabsTrigger>
@@ -313,19 +336,23 @@ function LoginForm() {
                   <Label htmlFor="confirm-password">Confirm password</Label>
                   <Input
                     id="confirm-password"
-                    type={showPassword ? "text" : "password"}
+                    type={showConfirmPassword ? "text" : "password"}
                     autoComplete="new-password"
                     placeholder="Repeat your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     disabled={loading}
-                    invalid={
-                      confirmPassword.length > 0 &&
-                      confirmPassword !== registerPassword
-                    }
+                    invalid={passwordsMismatched}
+                    aria-describedby={passwordsMismatched ? "confirm-password-error" : undefined}
                     startAdornment={<Lock />}
+                    endAdornment={confirmPasswordToggle}
                   />
+                  {passwordsMismatched ? (
+                    <p id="confirm-password-error" role="alert" className="text-sm text-destructive">
+                      Those passwords don&apos;t match
+                    </p>
+                  ) : null}
                 </div>
 
                 <Button type="submit" size="lg" block loading={loading}>
