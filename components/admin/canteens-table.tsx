@@ -234,7 +234,7 @@ export function CanteensTable({
           .from("canteens")
           .update(payload)
           .eq("id", editing.id)
-          .select("*, users(email, full_name)")
+          .select("*, users:users!canteens_owner_id_fkey(email, full_name)")
           .single()
         if (error) throw error
 
@@ -271,7 +271,7 @@ export function CanteensTable({
             operating_hours: {},
             is_approved: true,
           })
-          .select("*, users(email, full_name)")
+          .select("*, users:users!canteens_owner_id_fkey(email, full_name)")
           .single()
         if (error) throw error
 
