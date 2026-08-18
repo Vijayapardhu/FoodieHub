@@ -131,18 +131,22 @@ export interface Database {
           name: string
           description: string | null
           created_at: string
+          // Added by migration 051_category_images
+          image_url: string | null
         }
         Insert: {
           id?: string
           name: string
           description?: string | null
           created_at?: string
+          image_url?: string | null
         }
         Update: {
           id?: string
           name?: string
           description?: string | null
           created_at?: string
+          image_url?: string | null
         }
       }
       items: {

@@ -103,10 +103,10 @@ export function HomePageContent({
   /** "Fast pickup" — dishes the kitchen can turn round quickly. */
   const [quickOnly, setQuickOnly] = useState(false)
 
-  // The categories table has no image column, so each tile borrows the photo
-  // of its best-rated dish. That keeps the tiles honest — they show food the
-  // canteens actually serve — without a schema change, and it needs no
-  // separate upload flow for owners to keep up to date.
+  // An admin-set category image wins when there is one. Otherwise the tile
+  // borrows the photo of the category's best-rated dish — food the canteens
+  // actually serve — rather than sitting on the generic icon while nobody
+  // has gotten round to uploading a picture.
   const categoryCovers = useMemo(() => {
     const best: Record<string, { url: string; rating: number }> = {}
     for (const item of items) {
@@ -491,7 +491,7 @@ export function HomePageContent({
             {categories.length > 0 ? (
               <div className="rail rail-inset pb-1 pt-2.5">
                 {categories.map((category) => {
-                  const cover = categoryCovers[category.id]
+                  const cover = category.image_url || categoryCovers[category.id]
                   const active = filters.categoryId === category.id
                   return (
                     <button

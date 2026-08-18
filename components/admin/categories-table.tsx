@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
+import Image from "next/image"
 import { Pencil, Plus, Tags, Trash2 } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
@@ -12,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { EmptyState } from "@/components/ui/empty-state"
+import { ImageUpload } from "@/components/ui/image-upload"
 import {
   Dialog,
   DialogContent,
@@ -34,6 +36,7 @@ export function CategoriesTable({
   const [editing, setEditing] = useState<Category | null>(null)
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
+  const [imageUrl, setImageUrl] = useState("")
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
   const [working, setWorking] = useState(false)
@@ -42,6 +45,7 @@ export function CategoriesTable({
     setEditing(null)
     setName("")
     setDescription("")
+    setImageUrl("")
     setEditorOpen(true)
   }
 
@@ -49,6 +53,7 @@ export function CategoriesTable({
     setEditing(category)
     setName(category.name)
     setDescription(category.description ?? "")
+    setImageUrl(category.image_url ?? "")
     setEditorOpen(true)
   }
 
@@ -64,6 +69,7 @@ export function CategoriesTable({
       const payload = {
         name: name.trim(),
         description: description.trim() || null,
+        image_url: imageUrl || null,
       }
 
       if (editing) {
@@ -153,8 +159,18 @@ export function CategoriesTable({
               key={category.id}
               className="flex items-start gap-3 rounded-2xl border border-border bg-card p-3.5"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
-                <Tags className="h-4 w-4" />
+              <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary-soft text-primary">
+                {category.image_url ? (
+                  <Image
+                    src={category.image_url}
+                    alt=""
+                    fill
+                    sizes="40px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <Tags className="h-4 w-4" />
+                )}
               </span>
 
               <div className="min-w-0 flex-1">
@@ -224,6 +240,20 @@ export function CategoriesTable({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="What belongs in this category"
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Image</Label>
+              <ImageUpload
+                bucket="categories"
+                aspectRatio="square"
+                currentImageUrl={imageUrl || null}
+                onUploadComplete={setImageUrl}
+                label="Add a square photo"
+              />
+              <p className="text-xs text-muted-foreground">
+                Cropped to a 1:1 square — this is the tile shown on the home screen.
+              </p>
             </div>
           </div>
 
