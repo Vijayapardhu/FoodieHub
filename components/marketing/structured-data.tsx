@@ -53,7 +53,7 @@ export function StructuredData({
           "Order ahead from campus canteens",
           "Live order tracking with a pickup token",
           "Estimated ready time per dish",
-          "Pay at the counter — no online payment",
+          "Pay online or at the counter",
           "Works offline and installs to the home screen",
         ],
       },

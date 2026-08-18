@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
+  Bike,
   CalendarClock,
   ChefHat,
   Clock,
@@ -26,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useLiveQueue, type QueueOrder } from "@/lib/hooks/use-live-queue"
+import { nextActionLabel, nextStatus, type OrderStatus } from "@/lib/utils/order-status"
 import { ownerOrderPath } from "@/lib/utils/public-id"
 import { cn } from "@/lib/utils/cn"
 
@@ -36,15 +38,19 @@ const DECLINE_REASONS = [
   "Can't make it in time",
 ]
 
-/** The three things a kitchen does, in the order it does them. */
+/**
+ * The three things a kitchen does, in the order it does them. What each
+ * card's own button says and does next comes from nextStatus/nextActionLabel
+ * instead of a fixed per-column value — "ready" for a pickup order and "out
+ * for delivery" for a delivery order are different statuses that land in
+ * this same third bucket, with different next steps and different labels.
+ */
 const COLUMNS = [
   {
     key: "pending" as const,
     title: "New",
     hint: "Accept or decline",
     icon: Inbox,
-    next: "preparing" as const,
-    advance: "Accept & cook",
     accent: "border-warning/40 bg-warning-soft",
   },
   {
@@ -52,22 +58,23 @@ const COLUMNS = [
     title: "Cooking",
     hint: "On the stove",
     icon: ChefHat,
-    next: "ready" as const,
-    advance: "Mark ready",
     accent: "border-info/40 bg-info-soft",
   },
   {
     key: "ready" as const,
     title: "Ready",
-    hint: "Waiting at the counter",
+    hint: "At the counter, or out for delivery",
     icon: PackageCheck,
-    next: "completed" as const,
-    advance: "Handed over",
     accent: "border-success/40 bg-success-soft",
   },
 ]
 
 const SOUND_KEY = "foodiehub.queue-sound"
+
+/** Left the kitchen already — waiting on the counter or the road, not the stove. */
+function isHandedOff(status: string) {
+  return status === "ready" || status === "out_for_delivery"
+}
 
 /**
  * When the kitchen should start on this order.
@@ -117,7 +124,7 @@ export function KitchenQueue({
 }) {
   const router = useRouter()
   const statuses = useMemo(
-    () => ["pending", "confirmed", "preparing", "ready"],
+    () => ["pending", "confirmed", "preparing", "ready", "out_for_delivery"],
     []
   )
   const { orders, refresh, arrived } = useLiveQueue(
@@ -253,7 +260,7 @@ export function KitchenQueue({
   const upcoming = useMemo(
     () =>
       orders
-        .filter((order) => isUpcoming(order, now) && order.status !== "ready")
+        .filter((order) => isUpcoming(order, now) && !isHandedOff(order.status))
         .sort(
           (a, b) =>
             new Date(a.scheduled_pickup_time!).getTime() -
@@ -271,9 +278,11 @@ export function KitchenQueue({
       ready: [],
     }
     for (const order of orders) {
-      if (isUpcoming(order, now) && order.status !== "ready") continue
+      if (isUpcoming(order, now) && !isHandedOff(order.status)) continue
       if (order.status === "pending" || order.status === "confirmed") {
         map.pending.push(order)
+      } else if (isHandedOff(order.status)) {
+        map.ready.push(order)
       } else if (map[order.status]) {
         map[order.status].push(order)
       }
@@ -290,7 +299,7 @@ export function KitchenQueue({
   const prepTotals = useMemo(() => {
     const totals = new Map<string, number>()
     for (const order of orders) {
-      if (order.status === "ready") continue
+      if (isHandedOff(order.status)) continue
       if (isUpcoming(order, now)) continue
       for (const line of order.lines) {
         totals.set(line.name, (totals.get(line.name) ?? 0) + line.quantity)
@@ -303,28 +312,25 @@ export function KitchenQueue({
 
   const lateCount = orders.filter(
     (order) =>
-      order.status !== "ready" &&
+      !isHandedOff(order.status) &&
       !isUpcoming(order, now) &&
       urgency(order, now) === "late"
   ).length
 
-  const OrderCard = ({
-    order,
-    column,
-  }: {
-    order: QueueOrder
-    column: (typeof COLUMNS)[number]
-  }) => {
+  const OrderCard = ({ order }: { order: QueueOrder }) => {
     const level = urgency(order, now)
     const waited = waitedMinutes(order, now)
     const customer =
       order.customer_name || order.users?.full_name || "Guest"
+    const next = nextStatus(order.status as OrderStatus, order.fulfillment_type)
+    const label = nextActionLabel(order.status as OrderStatus, order.fulfillment_type)
+    const delivering = order.fulfillment_type === "delivery"
 
     return (
       <li
         className={cn(
           "overflow-hidden rounded-2xl border bg-card",
-          level === "late" && order.status !== "ready"
+          level === "late" && !isHandedOff(order.status)
             ? "border-destructive/50 shadow-[0_0_0_1px_hsl(var(--destructive)/0.2)]"
             : "border-border"
         )}
@@ -334,8 +340,16 @@ export function KitchenQueue({
           className="block p-3 transition-colors active:bg-muted"
         >
           <div className="flex items-start justify-between gap-2">
-            <span className="font-mono text-lg font-black tracking-wider text-foreground">
-              {order.token}
+            <span className="flex items-center gap-1.5">
+              <span className="font-mono text-lg font-black tracking-wider text-foreground">
+                {order.token}
+              </span>
+              {delivering ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-info-soft px-2 py-0.5 text-2xs font-semibold text-info">
+                  <Bike className="h-3 w-3" />
+                  {order.delivery_blocks?.name ?? "Delivery"}
+                </span>
+              ) : null}
             </span>
 
             {/* The clock is the most important number on the card. */}
@@ -411,9 +425,10 @@ export function KitchenQueue({
             size="sm"
             className="flex-1"
             loading={busyId === order.id}
-            onClick={() => setStatus(order, column.next)}
+            disabled={!next}
+            onClick={() => next && setStatus(order, next)}
           >
-            {column.advance}
+            {label ?? "—"}
           </Button>
         </div>
       </li>
@@ -572,11 +587,7 @@ export function KitchenQueue({
                   ) : (
                     <ul className="space-y-2">
                       {list.map((order) => (
-                        <OrderCard
-                          key={order.id}
-                          order={order}
-                          column={column}
-                        />
+                        <OrderCard key={order.id} order={order} />
                       ))}
                     </ul>
                   )}

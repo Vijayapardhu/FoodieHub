@@ -16,6 +16,7 @@ import {
   RotateCcw,
   Share2,
   Star,
+  Wallet,
   XCircle,
 } from "@/components/ui/icons"
 import toast from "react-hot-toast"
@@ -35,6 +36,7 @@ import {
 import { useRealtimeOrders } from "@/lib/hooks/use-realtime-orders"
 import { useCartStore } from "@/store/cart-store"
 import { createClient } from "@/lib/supabase/client"
+import { payForOrder } from "@/lib/payments/razorpay-client"
 import { downloadInvoice, printInvoice } from "@/lib/utils/invoice"
 import { isCustomerCancellable, type OrderStatus } from "@/lib/utils/order-status"
 import { cartPath, orderFeedbackPath } from "@/lib/utils/public-id"
@@ -44,6 +46,7 @@ import { cn } from "@/lib/utils/cn"
 
 type Order = Database["public"]["Tables"]["orders"]["Row"] & {
   canteens: Database["public"]["Tables"]["canteens"]["Row"]
+  delivery_blocks?: { name: string } | null
   order_items: Array<
     Database["public"]["Tables"]["order_items"]["Row"] & {
       items: Database["public"]["Tables"]["items"]["Row"]
@@ -61,6 +64,7 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
   const [order, setOrder] = useState(initialOrder)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [cancelling, setCancelling] = useState(false)
+  const [paying, setPaying] = useState(false)
 
   const realtimeOrder = useRealtimeOrders(order.id)
 
@@ -85,7 +89,35 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
 
   const canCancel = isCustomerCancellable(status)
   const finished = status === "completed" || status === "cancelled"
-  const ready = status === "ready"
+  const delivering = order.fulfillment_type === "delivery"
+  // "Ready" for a pickup order and "out for delivery" for a delivery order
+  // are the same moment in each flow — the kitchen is done and the order has
+  // moved to whoever collects it next.
+  const ready = status === "ready" || status === "out_for_delivery"
+
+  const needsPayment =
+    order.payment_method === "online" && order.payment_status !== "completed" && status !== "cancelled"
+
+  const handlePayNow = async () => {
+    setPaying(true)
+    try {
+      await payForOrder({
+        orderId: order.id,
+        canteenName: order.canteens?.name ?? "the canteen",
+        prefill: {
+          name: order.customer_name,
+          email: order.users?.email ?? null,
+          contact: order.customer_phone,
+        },
+      })
+      toast.success("Payment received")
+      router.refresh()
+    } catch (error: any) {
+      toast.error(error?.message || "Payment didn't go through")
+    } finally {
+      setPaying(false)
+    }
+  }
 
   const handleCancel = async () => {
     setCancelling(true)
@@ -240,7 +272,9 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
         ) : null}
 
         <p className="mt-2 text-sm text-muted-foreground">
-          Show this at {order.canteens?.name ?? "the counter"} and pay on collection.
+          {delivering
+            ? `On its way to ${order.delivery_blocks?.name ?? "your block"}. Keep this token as your reference.`
+            : `Show this at ${order.canteens?.name ?? "the counter"} and pay on collection.`}
         </p>
 
         <div className="mt-4 flex justify-center gap-2">
@@ -271,7 +305,7 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
       <section className="rounded-2xl border border-border bg-card p-4 shadow-card">
         <h2 className="mb-4 text-sm font-semibold text-foreground">Order progress</h2>
 
-        <OrderTimeline status={status} />
+        <OrderTimeline status={status} fulfillmentType={order.fulfillment_type} />
 
         {etaDetailText ? (
           <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">
@@ -335,10 +369,50 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
             </>
           ) : null}
 
+          {delivering ? (
+            <>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Deliver to</dt>
+                <dd className="text-foreground">
+                  {order.delivery_blocks?.name ?? "—"}
+                </dd>
+              </div>
+              {Number(order.delivery_fee) > 0 ? (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Delivery fee</dt>
+                  <dd className="tabular-nums text-foreground">
+                    ₹{Number(order.delivery_fee).toFixed(2)}
+                  </dd>
+                </div>
+              ) : null}
+            </>
+          ) : null}
+
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Payment</dt>
-            <dd className="text-foreground">
-              {order.payment_status === "completed" ? "Paid at counter" : "Pay at counter"}
+            <dd
+              className={cn(
+                "font-medium",
+                order.payment_status === "completed"
+                  ? "text-success"
+                  : order.payment_status === "failed"
+                    ? "text-destructive"
+                    : "text-foreground"
+              )}
+            >
+              {order.payment_method === "online"
+                ? order.payment_status === "completed"
+                  ? "Paid online"
+                  : order.payment_status === "failed"
+                    ? "Payment failed"
+                    : "Payment pending"
+                : order.payment_status === "completed"
+                  ? delivering
+                    ? "Paid on delivery"
+                    : "Paid at counter"
+                  : delivering
+                    ? "Pay on delivery"
+                    : "Pay at counter"}
             </dd>
           </div>
           <div className="flex justify-between">
@@ -368,6 +442,23 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
         </section>
       ) : null}
 
+      {needsPayment ? (
+        <section className="space-y-2 rounded-2xl border border-warning/25 bg-warning-soft p-4">
+          <p className="text-sm font-bold text-warning">
+            {order.payment_status === "failed" ? "Payment failed" : "Payment pending"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {order.payment_status === "failed"
+              ? "The last attempt didn't go through. Nothing was charged — try again."
+              : "This order is held online. Pay now to have the kitchen start on it."}
+          </p>
+          <Button block loading={paying} onClick={handlePayNow}>
+            <Wallet className="h-4 w-4" />
+            Pay ₹{Number(order.total_amount).toFixed(2)}
+          </Button>
+        </section>
+      ) : null}
+
       {/* Actions */}
       <section className="grid grid-cols-2 gap-2">
         {order.canteens?.contact_phone ? (
@@ -386,12 +477,24 @@ export function TokenTracking({ order: initialOrder }: { order: Order }) {
           </Button>
         ) : null}
 
-        <Button variant="outline" onClick={() => printInvoice(order)}>
+        {/* Printing from a phone means a popup window and window.print() —
+            unreliable at best on mobile browsers. The download works
+            everywhere, so on small screens it's the only option offered;
+            print returns once there's a real desktop window to print from. */}
+        <Button
+          variant="outline"
+          onClick={() => printInvoice(order)}
+          className="hidden sm:inline-flex"
+        >
           <Printer className="h-4 w-4" />
           Print bill
         </Button>
 
-        <Button variant="outline" onClick={() => downloadInvoice(order)}>
+        <Button
+          variant="outline"
+          onClick={() => downloadInvoice(order)}
+          className="col-span-2 sm:col-span-1"
+        >
           <Download className="h-4 w-4" />
           Save bill
         </Button>

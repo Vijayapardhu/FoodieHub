@@ -33,7 +33,7 @@ export default async function OrderDetailPage({
 
   const { data: order } = await supabase
     .from("orders")
-    .select("*, users(*), order_items(*, items(*))")
+    .select("*, users(*), delivery_blocks(name), order_items(*, items(*))")
     .eq(
       isUuid(handle) ? "id" : "token",
       isUuid(handle) ? handle : handle.toUpperCase()

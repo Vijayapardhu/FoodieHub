@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Copy, Save } from "@/components/ui/icons"
+import { Copy, IndianRupee, Save, Truck } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
 import { createClient } from "@/lib/supabase/client"
@@ -45,6 +45,11 @@ export function CanteenSettings({ canteen }: CanteenSettingsProps) {
   const [logoUrl, setLogoUrl] = useState(canteen.logo_url ?? "")
   const [bannerUrl, setBannerUrl] = useState(canteen.banner_url ?? "")
   const [isOpen, setIsOpen] = useState(canteen.is_open)
+  const [deliveryEnabled, setDeliveryEnabled] = useState(canteen.delivery_enabled ?? false)
+  const [deliveryFee, setDeliveryFee] = useState(
+    canteen.delivery_fee ? String(canteen.delivery_fee) : ""
+  )
+  const supportsDelivery = canteen.delivery_enabled !== undefined
   const [prepMinutes, setPrepMinutes] = useState(
     canteen.prep_minutes ? String(canteen.prep_minutes) : ""
   )
@@ -98,6 +103,12 @@ export function CanteenSettings({ canteen }: CanteenSettingsProps) {
           banner_url: bannerUrl || null,
           is_open: isOpen,
           operating_hours: hours,
+          ...(supportsDelivery
+            ? {
+                delivery_enabled: deliveryEnabled,
+                delivery_fee: deliveryFee ? Number(deliveryFee) : 0,
+              }
+            : {}),
           ...(supportsPrepMinutes
             ? {
                 prep_minutes: prepMinutes ? Number(prepMinutes) : null,
@@ -147,6 +158,47 @@ export function CanteenSettings({ canteen }: CanteenSettingsProps) {
           This overrides your schedule — use it to close early or open late.
         </p>
       </section>
+
+      {supportsDelivery ? (
+        <section className="space-y-4 rounded-2xl border border-border bg-card p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Truck className="h-4 w-4 text-primary" />
+              Delivery
+            </h2>
+            <Switch
+              checked={deliveryEnabled}
+              onCheckedChange={setDeliveryEnabled}
+              aria-label="Deliver orders"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Also needs the platform-wide delivery switch on, and at least one
+            delivery block set up by an admin — this only opts your canteen in.
+          </p>
+
+          {deliveryEnabled ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="canteen-delivery-fee">Delivery fee</Label>
+              <Input
+                id="canteen-delivery-fee"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="1"
+                value={deliveryFee}
+                onChange={(e) => setDeliveryFee(e.target.value)}
+                placeholder="0"
+                startAdornment={<IndianRupee className="h-4 w-4" />}
+              />
+              <p className="text-xs text-muted-foreground">
+                Charged on top of the bill for every delivery order, regardless of
+                which block it's going to.
+              </p>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="space-y-4 rounded-2xl border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">Profile</h2>

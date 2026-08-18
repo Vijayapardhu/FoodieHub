@@ -140,11 +140,16 @@ export function slotCost(
   )
 }
 
-/** Approved, paid for or not, and inside its booked window. */
-export function isLive(banner: Pick<PromoBanner, "status" | "starts_at" | "ends_at">) {
+/** Approved, paid in full, and inside its booked window — all three, or a
+ *  browsing student never sees it. Must agree with the RLS policy that
+ *  actually enforces this (migration 048). */
+export function isLive(
+  banner: Pick<PromoBanner, "status" | "starts_at" | "ends_at" | "amount_due" | "amount_paid">
+) {
   const now = Date.now()
   return (
     banner.status === "approved" &&
+    Number(banner.amount_paid) >= Number(banner.amount_due) &&
     new Date(banner.starts_at).getTime() <= now &&
     new Date(banner.ends_at).getTime() >= now
   )

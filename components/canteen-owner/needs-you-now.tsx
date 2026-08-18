@@ -27,6 +27,7 @@ export function NeedsYouNow({
     "confirmed",
     "preparing",
     "ready",
+    "out_for_delivery",
   ])
 
   const [now, setNow] = useState(() => Date.now())
@@ -39,7 +40,9 @@ export function NeedsYouNow({
     (order) => order.status === "pending" || order.status === "confirmed"
   )
   const cooking = orders.filter((order) => order.status === "preparing")
-  const ready = orders.filter((order) => order.status === "ready")
+  const ready = orders.filter(
+    (order) => order.status === "ready" || order.status === "out_for_delivery"
+  )
 
   const waitedFor = (order: QueueOrder) =>
     Math.floor((now - new Date(order.created_at).getTime()) / 60000)
@@ -111,7 +114,7 @@ export function NeedsYouNow({
                 {" · "}
               </>
             ) : null}
-            {cooking.length} cooking · {ready.length} ready to collect
+            {cooking.length} cooking · {ready.length} ready or out for delivery
           </p>
         </div>
 

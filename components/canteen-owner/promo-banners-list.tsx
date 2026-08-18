@@ -7,6 +7,7 @@ import { format } from "date-fns"
 import { Megaphone } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { createClient } from "@/lib/supabase/client"
+import { payForBanner } from "@/lib/payments/razorpay-client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -36,6 +37,7 @@ export function PromoBannersList({ banners: initial }: PromoBannersListProps) {
   const router = useRouter()
   const [banners, setBanners] = useState(initial)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [payingId, setPayingId] = useState<string | null>(null)
 
   const setStatus = async (
     banner: PromoBannerWithCanteen,
@@ -61,6 +63,19 @@ export function PromoBannersList({ banners: initial }: PromoBannersListProps) {
       toast.error(error?.message || "Could not update that banner")
     } finally {
       setBusyId(null)
+    }
+  }
+
+  const pay = async (banner: PromoBannerWithCanteen) => {
+    setPayingId(banner.id)
+    try {
+      await payForBanner({ bannerId: banner.id, headline: banner.headline })
+      toast.success("Paid — banner is live")
+      router.refresh()
+    } catch (error: any) {
+      toast.error(error?.message || "Payment didn't go through")
+    } finally {
+      setPayingId(null)
     }
   }
 
@@ -198,7 +213,16 @@ export function PromoBannersList({ banners: initial }: PromoBannersListProps) {
               </p>
 
               <div className="flex gap-2">
-                {banner.status === "approved" && !expired ? (
+                {banner.status === "approved" && owed > 0 && !expired ? (
+                  <Button
+                    size="sm"
+                    loading={payingId === banner.id}
+                    onClick={() => pay(banner)}
+                  >
+                    Pay {formatRupees(owed)}
+                  </Button>
+                ) : null}
+                {banner.status === "approved" && owed <= 0 && !expired ? (
                   <Button
                     size="sm"
                     variant="outline"

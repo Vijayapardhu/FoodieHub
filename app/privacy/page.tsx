@@ -40,9 +40,11 @@ export default function PrivacyPage() {
 
       <LegalSection heading="What we never store">
         <p>
-          Card numbers, UPI IDs and bank details. There is nothing to store,
-          because FoodieHub does not process payments — you pay the canteen at
-          the counter, exactly as you would without the app.
+          Card numbers, UPI IDs and bank details. If you pay at the counter,
+          there's nothing to store — FoodieHub doesn't process that payment
+          at all. If you pay online instead, Razorpay handles the card/UPI
+          transaction directly; your payment details never pass through
+          FoodieHub's servers.
         </p>
       </LegalSection>
 

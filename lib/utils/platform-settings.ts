@@ -22,6 +22,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   new_canteens_require_approval: true,
   maintenance_message: null,
   promo_daily_rate: 199,
+  delivery_enabled: false,
   updated_by: null,
   updated_at: new Date(0).toISOString(),
   created_at: new Date(0).toISOString(),
@@ -42,6 +43,7 @@ export const SETTING_LABELS: Record<string, string> = {
   new_canteens_require_approval: "Canteen approval",
   maintenance_message: "Maintenance banner",
   promo_daily_rate: "Banner rate per day",
+  delivery_enabled: "Delivery",
 }
 
 export function settingLabel(key: string): string {

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ChevronRight, Inbox, Search, X } from "@/components/ui/icons"
+import { Bike, ChevronRight, Inbox, Search, X } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
 import { createClient } from "@/lib/supabase/client"
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog"
 import {
   ORDER_STATUS_META,
+  nextActionLabel,
   nextStatus,
   type OrderStatus,
 } from "@/lib/utils/order-status"
@@ -32,19 +33,13 @@ type Order = Database["public"]["Tables"]["orders"]["Row"] & {
   users: { email: string; full_name: string | null } | null
 }
 
-const advanceLabel: Partial<Record<OrderStatus, string>> = {
-  pending: "Accept",
-  confirmed: "Start cooking",
-  preparing: "Mark ready",
-  ready: "Hand over",
-}
-
 const filters: Array<{ key: OrderStatus | "all"; label: string }> = [
   { key: "all", label: "All" },
   { key: "pending", label: "New" },
   { key: "confirmed", label: "Confirmed" },
   { key: "preparing", label: "Cooking" },
   { key: "ready", label: "Ready" },
+  { key: "out_for_delivery", label: "Out for delivery" },
 ]
 
 export function OrderManagement({ orders }: { orders: Order[] }) {
@@ -190,8 +185,8 @@ export function OrderManagement({ orders }: { orders: Order[] }) {
           <ul className="space-y-3">
             {visible.map((order) => {
               const status = order.status as OrderStatus
-              const next = nextStatus(status)
-              const label = advanceLabel[status]
+              const next = nextStatus(status, order.fulfillment_type)
+              const label = nextActionLabel(status, order.fulfillment_type)
               const customer =
                 order.customer_name ||
                 order.users?.full_name ||
@@ -223,6 +218,9 @@ export function OrderManagement({ orders }: { orders: Order[] }) {
                           {customer}
                         </span>
                         <StatusBadge status={status} size="sm" showIcon={false} />
+                        {order.fulfillment_type === "delivery" ? (
+                          <Bike className="h-3.5 w-3.5 shrink-0 text-info" />
+                        ) : null}
                       </span>
                       <span className="mt-0.5 block text-xs text-muted-foreground">
                         ₹{Number(order.total_amount).toFixed(2)} ·{" "}

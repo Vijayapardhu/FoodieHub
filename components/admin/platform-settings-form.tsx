@@ -44,6 +44,7 @@ export function PlatformSettingsForm({
   // database that hasn't had it applied would fail the whole save, so the
   // field only appears once the row actually carries it.
   const supportsPromoRate = initial.promo_daily_rate !== undefined
+  const supportsDelivery = initial.delivery_enabled !== undefined
 
   const set = <K extends keyof PlatformSettings>(
     key: K,
@@ -83,6 +84,9 @@ export function PlatformSettingsForm({
           maintenance_message: form.maintenance_message?.trim() || null,
           ...(supportsPromoRate
             ? { promo_daily_rate: form.promo_daily_rate }
+            : {}),
+          ...(supportsDelivery
+            ? { delivery_enabled: form.delivery_enabled }
             : {}),
           updated_by: user?.id ?? null,
         })
@@ -281,6 +285,14 @@ export function PlatformSettingsForm({
               set("new_canteens_require_approval", value)
             }
           />
+          {supportsDelivery ? (
+            <SwitchRow
+              label="Delivery"
+              description="Platform-wide switch. A canteen still needs its own delivery toggle on, and at least one delivery block has to exist, before checkout offers it."
+              checked={form.delivery_enabled}
+              onCheckedChange={(value) => set("delivery_enabled", value)}
+            />
+          ) : null}
         </CardContent>
       </Card>
 

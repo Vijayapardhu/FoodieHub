@@ -361,8 +361,8 @@ export function PromoBannerForm({
         </dl>
 
         <p className="rounded-xl bg-info-soft p-3 text-sm text-info">
-          Nothing is charged here. An admin reviews the banner, collects payment from {canteenName}{" "}
-          directly, and then puts it live.
+          Nothing is charged here. An admin reviews the banner first — once approved, you'll pay{" "}
+          {formatRupees(cost)} online to put it live.
         </p>
       </section>
 

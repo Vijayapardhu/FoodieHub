@@ -30,6 +30,7 @@ export default async function OrderDetailPage({
       `
         *,
         canteens:canteens(*),
+        delivery_blocks:delivery_blocks(name),
         order_items(
           *,
           items(*)

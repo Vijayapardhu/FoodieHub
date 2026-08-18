@@ -25,6 +25,7 @@ const activeStatuses: OrderStatus[] = [
   "confirmed",
   "preparing",
   "ready",
+  "out_for_delivery",
 ]
 const pastStatuses: OrderStatus[] = ["completed", "cancelled"]
 

@@ -1,7 +1,9 @@
 import { Check, XCircle } from "@/components/ui/icons"
 import {
-  ORDER_FLOW,
   ORDER_STATUS_META,
+  PICKUP_FLOW,
+  orderFlow,
+  type FulfillmentType,
   type OrderStatus,
 } from "@/lib/utils/order-status"
 import { cn } from "@/lib/utils/cn"
@@ -12,11 +14,15 @@ import { cn } from "@/lib/utils/cn"
  */
 export function OrderTimeline({
   status,
+  fulfillmentType,
   className,
 }: {
   status: OrderStatus
+  fulfillmentType?: FulfillmentType
   className?: string
 }) {
+  const flow = orderFlow(fulfillmentType)
+
   if (status === "cancelled") {
     const meta = ORDER_STATUS_META.cancelled
     return (
@@ -39,13 +45,13 @@ export function OrderTimeline({
 
   return (
     <ol className={cn("relative space-y-0", className)}>
-      {ORDER_FLOW.map((step, index) => {
+      {flow.map((step, index) => {
         const meta = ORDER_STATUS_META[step]
         const Icon = meta.icon
         const done = index < currentStep
         const current = index === currentStep
         const reached = done || current
-        const last = index === ORDER_FLOW.length - 1
+        const last = index === flow.length - 1
 
         return (
           <li key={step} className="flex gap-3">
@@ -120,7 +126,7 @@ export function OrderProgressBar({
   }
 
   const step = ORDER_STATUS_META[status]?.step ?? 0
-  const percent = ((step + 1) / ORDER_FLOW.length) * 100
+  const percent = ((step + 1) / PICKUP_FLOW.length) * 100
 
   return (
     <div

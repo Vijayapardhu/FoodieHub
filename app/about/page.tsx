@@ -37,8 +37,10 @@ export default function AboutPage() {
             scooter across campus for a ₹15 chai.
           </li>
           <li>
-            <strong>No online payment.</strong> You pay the canteen at the
-            counter, as you always have. FoodieHub never holds your money.
+            <strong>No markup on how you pay.</strong> Pay the canteen at the
+            counter, as you always have, or online through Razorpay if you'd
+            rather have it settled before you arrive. FoodieHub never holds
+            your money either way.
           </li>
           <li>
             <strong>No commission.</strong> A canteen keeps every rupee it

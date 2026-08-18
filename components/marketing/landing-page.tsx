@@ -163,7 +163,7 @@ const canteenFeatures = [
 const comparison = [
   { row: "Time spent waiting", queue: "The whole break", delivery: "30–45 minutes", hub: "Walk up and collect" },
   { row: "Extra fees", queue: "None", delivery: "Delivery, platform, surge", hub: "None" },
-  { row: "Pay online", queue: "No", delivery: "Required", hub: "No — at the counter" },
+  { row: "Pay online", queue: "No", delivery: "Required", hub: "Optional — or at the counter" },
   { row: "Know what is sold out", queue: "Only at the front", delivery: "Sometimes", hub: "Before you order" },
   { row: "Order between lectures", queue: "No", delivery: "Yes", hub: "Yes" },
   { row: "Money goes to", queue: "The canteen", delivery: "Split with the platform", hub: "The canteen" },
@@ -176,7 +176,7 @@ const faqs = [
   },
   {
     q: "Do I have to pay online?",
-    a: "No. You pay the canteen when you collect, the same way you already do. FoodieHub does not process payments and never holds your money.",
+    a: "No. Paying at the counter when you collect is still there and still the default. You can pay online with Razorpay instead if you'd rather have it settled before you arrive — either way, FoodieHub never holds your money.",
   },
   {
     q: "What if I do not turn up?",
@@ -207,7 +207,7 @@ const faqs = [
 const trustPoints = [
   "No service or convenience fee",
   "No commission from canteens",
-  "No online payment, ever",
+  "Pay online or at the counter — your choice",
   "Prices set by the canteen",
 ]
 
@@ -858,7 +858,8 @@ export function LandingPage({
               <p className="mt-5 text-base leading-relaxed text-muted-foreground">
                 There is no student fee and no canteen commission. FoodieHub is
                 run for the campus, so the only money that moves is the money
-                that already moved — from a student to a canteen, at a counter.
+                that already moved — from a student to a canteen, whether that
+                happens online or at the counter.
               </p>
 
               <ul className="mt-8 space-y-4">
@@ -903,8 +904,9 @@ export function LandingPage({
                   <div>
                     <dt className="font-semibold text-foreground">We never store</dt>
                     <dd className="mt-1.5 leading-relaxed text-muted-foreground">
-                      Card details, UPI IDs or bank information. There is
-                      nothing to store, because payment happens at the counter.
+                      Card details, UPI IDs or bank information. Online
+                      payments are handled by Razorpay directly — your card
+                      and banking details never pass through FoodieHub.
                     </dd>
                   </div>
                   <div>
@@ -1030,7 +1032,7 @@ export function LandingPage({
         <div className="app-container-wide mt-10 border-t border-border pt-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              No service fee · No commission · No online payment
+              No service fee · No commission · Pay online or at the counter
             </p>
             <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-1">
               {[

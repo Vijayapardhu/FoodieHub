@@ -14,7 +14,7 @@ import { CanteenApplicationForm } from "@/components/marketing/canteen-applicati
 export const metadata: Metadata = {
   title: "Put your canteen on FoodieHub",
   description:
-    "Take orders ahead at Aditya University, Surampalem. No commission, no online payments, nothing to install. Apply in a minute.",
+    "Take orders ahead at Aditya University, Surampalem. No commission, nothing to install. Apply in a minute.",
   alternates: { canonical: "/register-canteen" },
 }
 

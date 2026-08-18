@@ -34,6 +34,7 @@ import {
   CursorMagicSelection01Icon,
   DashboardSquare01Icon,
   Delete02Icon,
+  DeliveryTruck01Icon,
   Download01Icon,
   Edit02Icon,
   FavouriteIcon,
@@ -77,6 +78,7 @@ import {
   Restaurant02Icon,
   RupeeCircleIcon,
   RupeeIcon,
+  Scooter01Icon,
   Search01Icon,
   SentIcon,
   Settings01Icon,
@@ -160,6 +162,7 @@ export const ArrowUp = icon(ArrowUp01Icon, "ArrowUp")
 export const BadgeIndianRupee = icon(RupeeCircleIcon, "BadgeIndianRupee")
 export const BarChart3 = icon(Analytics01Icon, "BarChart3")
 export const Bell = icon(Notification01Icon, "Bell")
+export const Bike = icon(Scooter01Icon, "Bike")
 export const BellOff = icon(NotificationOff01Icon, "BellOff")
 export const BellRing = icon(Notification02Icon, "BellRing")
 export const BookmarkCheck = icon(Bookmark02Icon, "BookmarkCheck")
@@ -241,6 +244,7 @@ export const Tags = icon(Tag01Icon, "Tags")
 export const Ticket = icon(Ticket01Icon, "Ticket")
 export const TicketPercent = icon(TicketStarIcon, "TicketPercent")
 export const Trash2 = icon(Delete02Icon, "Trash2")
+export const Truck = icon(DeliveryTruck01Icon, "Truck")
 export const TrendingDown = icon(ChartDownIcon, "TrendingDown")
 export const TrendingUp = icon(ChartUpIcon, "TrendingUp")
 export const TriangleAlert = icon(Alert02Icon, "TriangleAlert")

@@ -17,7 +17,6 @@ import { createClient } from "@/lib/supabase/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { StatGrid, StatTile } from "@/components/ui/stat-tile"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -52,8 +51,6 @@ export function PromoBannerManagement({
   const [busyId, setBusyId] = useState<string | null>(null)
   const [rejecting, setRejecting] = useState<string | null>(null)
   const [note, setNote] = useState("")
-  const [collecting, setCollecting] = useState<string | null>(null)
-  const [reference, setReference] = useState("")
 
   const patch = (id: string, changes: Partial<PromoBannerWithCanteen>) =>
     setBanners((list) =>
@@ -98,24 +95,11 @@ export function PromoBannerManagement({
         reviewed_by: user?.id ?? null,
         reviewed_at: new Date().toISOString(),
       },
-      approve ? "Banner is live" : "Request rejected"
+      approve ? "Approved — the owner can now pay to publish it" : "Request rejected"
     )
 
     setRejecting(null)
     setNote("")
-  }
-
-  const collect = async (banner: PromoBannerWithCanteen) => {
-    await save(
-      banner.id,
-      {
-        amount_paid: Number(banner.amount_due),
-        payment_reference: reference.trim() || null,
-      },
-      "Payment recorded"
-    )
-    setCollecting(null)
-    setReference("")
   }
 
   const totals = useMemo(() => {
@@ -258,51 +242,14 @@ export function PromoBannerManagement({
         </dl>
 
         {owed > 0 ? (
-          collecting === banner.id ? (
-            <div className="space-y-2 rounded-xl border border-border p-3">
-              <Input
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                placeholder="Receipt or UPI reference (optional)"
-                aria-label="Payment reference"
-              />
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    setCollecting(null)
-                    setReference("")
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  variant="success"
-                  className="flex-1"
-                  loading={busyId === banner.id}
-                  onClick={() => collect(banner)}
-                >
-                  Mark {formatRupees(owed)} received
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setCollecting(banner.id)}
-              className="flex items-center justify-between gap-2 rounded-xl bg-warning-soft px-3 py-2 text-left text-sm text-warning"
-            >
-              <span className="font-semibold">
-                {formatRupees(owed)} outstanding
-              </span>
-              <span className="text-xs font-semibold underline underline-offset-2">
-                Record payment
-              </span>
-            </button>
-          )
+          <p className="flex items-center justify-between gap-2 rounded-xl bg-warning-soft px-3 py-2 text-sm text-warning">
+            <span className="font-semibold">{formatRupees(owed)} outstanding</span>
+            <span className="text-xs">
+              {banner.status === "approved"
+                ? "Waiting on the owner to pay online"
+                : "Payable once approved"}
+            </span>
+          </p>
         ) : (
           <p className="rounded-xl bg-success-soft px-3 py-2 text-sm font-semibold text-success">
             Paid {formatRupees(Number(banner.amount_paid))}

@@ -1,8 +1,16 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { BookmarkCheck, Clock, MessageSquare, Sparkles, TicketPercent } from "@/components/ui/icons"
+import {
+  BookmarkCheck,
+  Clock,
+  IndianRupee,
+  MessageSquare,
+  Sparkles,
+  TicketPercent,
+  Wallet,
+} from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
 import { useCartStore } from "@/store/cart-store"
@@ -12,10 +20,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Disclosure } from "@/components/ui/disclosure"
 import { StickyBar } from "@/components/ui/sticky-bar"
 import { cn } from "@/lib/utils/cn"
+import { payForOrder } from "@/lib/payments/razorpay-client"
 import { OffersSelector } from "./offers-selector"
 import { OrderScheduling } from "./order-scheduling"
 import { OrderTemplates } from "./order-templates"
 import { DietaryPreferences } from "./dietary-preferences"
+import { DeliverySelector, type DeliverySelection } from "./delivery-selector"
 
 type Offer = Database["public"]["Tables"]["offers"]["Row"]
 
@@ -40,6 +50,12 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
   const [scheduledPickupTime, setScheduledPickupTime] = useState<Date | null>(null)
   const [preferredTimeSlot, setPreferredTimeSlot] = useState<string | null>(null)
   const [dietaryNotes, setDietaryNotes] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState<"on_shop" | "online">("on_shop")
+  const [delivery, setDelivery] = useState<DeliverySelection>({
+    fulfillmentType: "pickup",
+    blockId: null,
+    fee: 0,
+  })
 
   // Sold-out lines are dropped here rather than at the point of insert, so
   // the bill on screen and the order sent to the kitchen are the same thing.
@@ -74,7 +90,8 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
   const subtotal = sum(cartItems)
   // Offers are per canteen, so they only apply when checking out one canteen.
   const appliedDiscount = canteenId ? discount : 0
-  const total = Math.max(0, subtotal - appliedDiscount)
+  const deliveryFee = delivery.fulfillmentType === "delivery" ? delivery.fee : 0
+  const total = Math.max(0, subtotal - appliedDiscount) + deliveryFee
   const itemCount = cartItems.reduce((n, item) => n + item.quantity, 0)
 
   // What checkout will actually create. A cart across two counters is two
@@ -93,6 +110,21 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
   )
   const splitOrder = orderGroups.length > 1
 
+  // Online payment collects one charge for one order. A cart split across
+  // canteens is several orders with several bills, so it stays "pay at each
+  // counter" rather than opening a Razorpay popup once per canteen.
+  useEffect(() => {
+    if (splitOrder) setPaymentMethod("on_shop")
+  }, [splitOrder])
+
+  // Same reasoning for delivery: one block, one fee, one order. A split cart
+  // stays pickup-only rather than asking which canteen goes where.
+  useEffect(() => {
+    if (splitOrder) setDelivery({ fulfillmentType: "pickup", blockId: null, fee: 0 })
+  }, [splitOrder])
+
+  const deliveryIncomplete = delivery.fulfillmentType === "delivery" && !delivery.blockId
+
   /*
    * A closed canteen stops an order it would have to cook now, and nothing
    * else — the database has always accepted a booking for later. So being
@@ -103,7 +135,7 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
     .filter((group) => closedIds.has(group.canteenId))
     .map((group) => group.canteenName)
   const needsSchedule = closedNames.length > 0 && !scheduledPickupTime
-  const cannotPlace = unavailableIds.size > 0 || needsSchedule
+  const cannotPlace = unavailableIds.size > 0 || needsSchedule || deliveryIncomplete
 
   const handlePlaceOrder = async () => {
     if (cartItems.length === 0) {
@@ -158,7 +190,7 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
        * the whole thing had failed. That is the one outcome worse than not
        * ordering: food being cooked that nobody knows about.
        */
-      const placed: Array<{ canteenName: string; token: string }> = []
+      const placed: Array<{ canteenName: string; token: string; orderId: string }> = []
       const failed: Array<{ canteenName: string; reason: string }> = []
 
       for (const group of groups) {
@@ -169,9 +201,11 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
         try {
           const groupSubtotal = sum(group.items)
           const groupTotal =
-            canteenId && group.canteenId === canteenId
+            (canteenId && group.canteenId === canteenId
               ? Math.max(0, groupSubtotal - appliedDiscount)
-              : groupSubtotal
+              : groupSubtotal) + deliveryFee
+
+          const delivering = delivery.fulfillmentType === "delivery" && delivery.blockId
 
           const orderData: Record<string, unknown> = {
             user_id: user.id,
@@ -179,19 +213,23 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
             // No token: the database picks one, retrying against the live
             // table until it is free. Generating it here raced with itself.
             status: "pending",
-            // The database recomputes this from the lines and re-derives the
-            // discount from the offer below, so this is only a starting value.
+            // The database recomputes this from the lines, re-derives the
+            // discount from the offer below, and re-prices delivery from the
+            // canteen's current rate — so this is only a starting value.
             total_amount: groupTotal,
             // Nominate the offer rather than asserting a discount: the server
             // decides whether it applies and for how much.
             offer_id: selectedOffer && group.canteenId === canteenId ? selectedOffer.id : null,
-            payment_method: "on_shop",
+            payment_method: paymentMethod,
             payment_status: "pending",
             customer_name: customerName,
             customer_phone: profile?.phone_number || null,
             order_type: scheduledPickupTime ? "scheduled" : "immediate",
             special_instructions: specialInstructions.trim() || null,
             dietary_notes: dietaryNotes.trim() || null,
+            fulfillment_type: delivering ? "delivery" : "pickup",
+            delivery_block_id: delivering ? delivery.blockId : null,
+            delivery_fee: delivering ? delivery.fee : 0,
           }
 
           // A collection time applies to every order in the checkout, not
@@ -229,7 +267,7 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
 
           // Keep the token, not the uuid: it is what the order is called by
           // at the counter.
-          placed.push({ canteenName, token: order.token ?? order.id })
+          placed.push({ canteenName, token: order.token ?? order.id, orderId: order.id })
 
           // Only clear lines that actually made it into an order.
           group.items.forEach((item) => {
@@ -245,6 +283,34 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
 
       if (placed.length === 0) {
         toast.error(failed[0]?.reason || "Could not create your order. Please try again.")
+        return
+      }
+
+      // The useEffect above forces "on_shop" the moment a cart splits across
+      // canteens, so online payment only ever gets here with exactly one
+      // order to collect for.
+      if (paymentMethod === "online" && failed.length === 0) {
+        try {
+          await payForOrder({
+            orderId: placed[0].orderId,
+            canteenName: placed[0].canteenName,
+            prefill: {
+              name: customerName,
+              email: user.email ?? null,
+              contact: profile?.phone_number ?? null,
+            },
+          })
+          toast.success("Order placed & paid")
+        } catch {
+          // The order still exists either way — cancelling the popup or a
+          // declined card isn't a reason to lose it. It stays payable from
+          // the order page.
+          toast(
+            "Order placed — payment didn't go through. You can pay again from the order page.",
+            { icon: "⚠️", duration: 6000 }
+          )
+        }
+        router.push(`/orders/${placed[0].token}`)
         return
       }
 
@@ -358,6 +424,46 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
           </div>
         </Disclosure>
 
+        {/* Split across canteens, both of these stay pickup / pay-at-each-
+            counter — see the useEffects that reset them above. */}
+        {!splitOrder && orderGroups[0] ? (
+          <DeliverySelector canteenId={orderGroups[0].canteenId} onChange={setDelivery} />
+        ) : null}
+
+        {!splitOrder ? (
+          <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
+            <h2 className="text-sm font-semibold text-foreground">Payment</h2>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("on_shop")}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors",
+                  paymentMethod === "on_shop"
+                    ? "border-primary bg-primary-soft text-primary"
+                    : "border-border text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <IndianRupee className="h-4 w-4" />
+                {delivery.fulfillmentType === "delivery" ? "Pay on delivery" : "Pay at counter"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("online")}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors",
+                  paymentMethod === "online"
+                    ? "border-primary bg-primary-soft text-primary"
+                    : "border-border text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <Wallet className="h-4 w-4" />
+                Pay online
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         {/* Closed, but bookable. Offered here rather than buried in the
             pickup-time disclosure, because right now it is the only way
             forward and the student has no reason to go looking for it. */}
@@ -446,10 +552,32 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
               </div>
             ) : null}
 
+            {deliveryFee > 0 ? (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Delivery fee</dt>
+                <dd className="tabular-nums text-foreground">₹{deliveryFee.toFixed(2)}</dd>
+              </div>
+            ) : null}
+
+            {!splitOrder ? (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Collection</dt>
+                <dd className="text-foreground">
+                  {delivery.fulfillmentType === "delivery" ? "Delivery" : "Pickup"}
+                </dd>
+              </div>
+            ) : null}
+
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Payment</dt>
               <dd className="text-foreground">
-                {splitOrder ? "Pay at each counter" : "Pay at the counter"}
+                {splitOrder
+                  ? "Pay at each counter"
+                  : paymentMethod === "online"
+                    ? "Pay online now"
+                    : delivery.fulfillmentType === "delivery"
+                      ? "Pay on delivery"
+                      : "Pay at the counter"}
               </dd>
             </div>
 
@@ -489,16 +617,22 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
             {loading
               ? splitOrder
                 ? `Placing ${orderGroups.length} orders…`
-                : "Placing order…"
+                : paymentMethod === "online"
+                  ? "Opening payment…"
+                  : "Placing order…"
               : checking
                 ? "Checking…"
                 : cannotPlace
                   ? needsSchedule
                     ? "Choose a time"
-                    : "Fix cart to continue"
+                    : deliveryIncomplete
+                      ? "Choose a delivery block"
+                      : "Fix cart to continue"
                   : splitOrder
                     ? `Place ${orderGroups.length} orders`
-                    : "Place order"}
+                    : paymentMethod === "online"
+                      ? "Pay & place order"
+                      : "Place order"}
           </span>
         </Button>
       </StickyBar>

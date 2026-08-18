@@ -32,7 +32,7 @@ export default async function OrdersPage() {
 
   const select = "*, users(email, full_name)"
   const queueSelect =
-    "id, token, status, total_amount, created_at, estimated_preparation_time, scheduled_pickup_time, special_instructions, dietary_notes, customer_name, customer_phone, users(email, full_name), order_items(quantity, items(name))"
+    "id, token, status, total_amount, created_at, estimated_preparation_time, scheduled_pickup_time, special_instructions, dietary_notes, customer_name, customer_phone, fulfillment_type, delivery_blocks(name), users(email, full_name), order_items(quantity, items(name))"
 
   const [{ data: activeOrders }, { data: pastOrders }] = await Promise.all([
     supabase

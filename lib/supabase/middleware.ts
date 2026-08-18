@@ -20,6 +20,11 @@ const PUBLIC_PREFIXES = [
   '/terms',
   '/privacy',
   '/about',
+  // Razorpay calls this server-to-server, with no session cookie of any
+  // kind — the redirect-to-login fast path above would otherwise swallow
+  // every webhook delivery before the route's own signature check ever
+  // runs. The signature check is what actually guards this endpoint.
+  '/api/payments/razorpay/webhook',
 ]
 
 /**

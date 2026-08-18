@@ -20,12 +20,14 @@ export interface QueueOrder {
   dietary_notes: string | null
   customer_name: string | null
   customer_phone: string | null
+  fulfillment_type: "pickup" | "delivery"
+  delivery_blocks: { name: string } | null
   users: { email: string; full_name: string | null } | null
   lines: QueueLine[]
 }
 
 const SELECT =
-  "id, token, status, total_amount, created_at, estimated_preparation_time, scheduled_pickup_time, special_instructions, dietary_notes, customer_name, customer_phone, users(email, full_name), order_items(quantity, items(name))"
+  "id, token, status, total_amount, created_at, estimated_preparation_time, scheduled_pickup_time, special_instructions, dietary_notes, customer_name, customer_phone, fulfillment_type, delivery_blocks(name), users(email, full_name), order_items(quantity, items(name))"
 
 function shape(rows: any[]): QueueOrder[] {
   return rows.map((row) => ({

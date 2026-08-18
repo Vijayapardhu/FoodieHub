@@ -66,6 +66,9 @@ export interface Database {
           slug: string | null
           prep_minutes: number | null
           concurrent_orders: number
+          // Added by migration 049_delivery
+          delivery_enabled: boolean
+          delivery_fee: number
         }
         Insert: {
           id?: string
@@ -91,6 +94,8 @@ export interface Database {
           slug?: string | null
           prep_minutes?: number | null
           concurrent_orders?: number
+          delivery_enabled?: boolean
+          delivery_fee?: number
         }
         Update: {
           id?: string
@@ -116,6 +121,8 @@ export interface Database {
           slug?: string | null
           prep_minutes?: number | null
           concurrent_orders?: number
+          delivery_enabled?: boolean
+          delivery_fee?: number
         }
       }
       categories: {
@@ -212,16 +219,23 @@ export interface Database {
           canteen_id: string
           token: string
           qr_code_url: string | null
-          status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'no_show'
+          status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out_for_delivery' | 'completed' | 'cancelled' | 'no_show'
           total_amount: number
-          payment_method: 'on_shop'
-          payment_status: 'pending' | 'completed'
+          payment_method: 'on_shop' | 'online'
+          payment_status: 'pending' | 'completed' | 'failed'
           cash_received: number | null
           change_amount: number | null
           customer_name: string | null
           customer_phone: string | null
           created_at: string
           updated_at: string
+          // Added by migration 047_razorpay_payments
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          // Added by migration 049_delivery
+          fulfillment_type: 'pickup' | 'delivery'
+          delivery_block_id: string | null
+          delivery_fee: number
           // Added by migration 012_add_booking_features
           scheduled_pickup_time: string | null
           order_type: 'immediate' | 'scheduled' | 'recurring' | null
@@ -258,16 +272,21 @@ export interface Database {
           discount_amount?: number
           offer_id?: string | null
           qr_code_url?: string | null
-          status?: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'no_show'
+          status?: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out_for_delivery' | 'completed' | 'cancelled' | 'no_show'
           total_amount: number
-          payment_method?: 'on_shop'
-          payment_status?: 'pending' | 'completed'
+          payment_method?: 'on_shop' | 'online'
+          payment_status?: 'pending' | 'completed' | 'failed'
           cash_received?: number | null
           change_amount?: number | null
           customer_name?: string | null
           customer_phone?: string | null
           created_at?: string
           updated_at?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          fulfillment_type?: 'pickup' | 'delivery'
+          delivery_block_id?: string | null
+          delivery_fee?: number
         }
         Update: {
           id?: string
@@ -275,16 +294,21 @@ export interface Database {
           canteen_id?: string
           token?: string
           qr_code_url?: string | null
-          status?: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'no_show'
+          status?: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out_for_delivery' | 'completed' | 'cancelled' | 'no_show'
           total_amount?: number
-          payment_method?: 'on_shop'
-          payment_status?: 'pending' | 'completed'
+          payment_method?: 'on_shop' | 'online'
+          payment_status?: 'pending' | 'completed' | 'failed'
           cash_received?: number | null
           change_amount?: number | null
           customer_name?: string | null
           customer_phone?: string | null
           created_at?: string
           updated_at?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          fulfillment_type?: 'pickup' | 'delivery'
+          delivery_block_id?: string | null
+          delivery_fee?: number
           scheduled_pickup_time?: string | null
           order_type?: 'immediate' | 'scheduled' | 'recurring' | null
           preferred_time_slot?: string | null
@@ -535,6 +559,7 @@ export interface Database {
           new_canteens_require_approval: boolean
           maintenance_message: string | null
           promo_daily_rate: number
+          delivery_enabled: boolean
           updated_by: string | null
           updated_at: string
           created_at: string
@@ -554,6 +579,7 @@ export interface Database {
           new_canteens_require_approval?: boolean
           maintenance_message?: string | null
           promo_daily_rate?: number
+          delivery_enabled?: boolean
           updated_by?: string | null
           updated_at?: string
           created_at?: string
@@ -573,6 +599,7 @@ export interface Database {
           new_canteens_require_approval?: boolean
           maintenance_message?: string | null
           promo_daily_rate?: number
+          delivery_enabled?: boolean
           updated_by?: string | null
           updated_at?: string
           created_at?: string
@@ -638,7 +665,7 @@ export interface Database {
           image_url: string | null
           cta_label: string
           status: 'pending' | 'approved' | 'rejected' | 'paused'
-          placement: 'home_hero' | 'home_inline' | 'orders' | 'cart'
+          placement: 'home_hero' | 'home_inline' | 'orders' | 'cart' | 'order_detail' | 'canteen_menu' | 'item_detail' | 'search_empty'
           review_note: string | null
           priority: number
           starts_at: string
@@ -646,6 +673,7 @@ export interface Database {
           amount_due: number
           amount_paid: number
           payment_reference: string | null
+          razorpay_order_id: string | null
           impressions: number
           clicks: number
           created_by: string | null
@@ -663,7 +691,7 @@ export interface Database {
           image_url?: string | null
           cta_label?: string
           status?: 'pending' | 'approved' | 'rejected' | 'paused'
-          placement?: 'home_hero' | 'home_inline' | 'orders' | 'cart'
+          placement?: 'home_hero' | 'home_inline' | 'orders' | 'cart' | 'order_detail' | 'canteen_menu' | 'item_detail' | 'search_empty'
           review_note?: string | null
           priority?: number
           starts_at?: string
@@ -671,6 +699,7 @@ export interface Database {
           amount_due?: number
           amount_paid?: number
           payment_reference?: string | null
+          razorpay_order_id?: string | null
           impressions?: number
           clicks?: number
           created_by?: string | null
@@ -688,7 +717,7 @@ export interface Database {
           image_url?: string | null
           cta_label?: string
           status?: 'pending' | 'approved' | 'rejected' | 'paused'
-          placement?: 'home_hero' | 'home_inline' | 'orders' | 'cart'
+          placement?: 'home_hero' | 'home_inline' | 'orders' | 'cart' | 'order_detail' | 'canteen_menu' | 'item_detail' | 'search_empty'
           review_note?: string | null
           priority?: number
           starts_at?: string
@@ -696,6 +725,7 @@ export interface Database {
           amount_due?: number
           amount_paid?: number
           payment_reference?: string | null
+          razorpay_order_id?: string | null
           impressions?: number
           clicks?: number
           created_by?: string | null
@@ -749,6 +779,33 @@ export interface Database {
           reviewed_by?: string | null
         }
       }
+      // Added by migration 049_delivery
+      delivery_blocks: {
+        Row: {
+          id: string
+          name: string
+          is_active: boolean
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -771,7 +828,7 @@ export interface Database {
     }
     Enums: {
       user_role: 'user' | 'canteen_owner' | 'admin'
-      order_status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'no_show'
+      order_status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out_for_delivery' | 'completed' | 'cancelled' | 'no_show'
       payment_status: 'pending' | 'completed'
       notification_type: 'order' | 'promotion' | 'system' | 'feedback'
       discount_type: 'percentage' | 'flat'

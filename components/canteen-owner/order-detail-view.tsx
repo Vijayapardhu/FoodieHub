@@ -5,7 +5,7 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { QRCodeSVG } from "qrcode.react"
 import { format } from "date-fns"
-import { Mail, Phone, Printer, User } from "@/components/ui/icons"
+import { Bike, Mail, Phone, Printer, User } from "@/components/ui/icons"
 import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
 import { createClient } from "@/lib/supabase/client"
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog"
 import {
   ORDER_STATUS_META,
+  nextActionLabel,
   nextStatus,
   type OrderStatus,
 } from "@/lib/utils/order-status"
@@ -36,18 +37,12 @@ import { CustomerHistory } from "@/components/canteen-owner/customer-history"
 type Order = Database["public"]["Tables"]["orders"]["Row"] & {
   canteens: Database["public"]["Tables"]["canteens"]["Row"]
   users: Database["public"]["Tables"]["users"]["Row"] | null
+  delivery_blocks?: { name: string } | null
   order_items: Array<
     Database["public"]["Tables"]["order_items"]["Row"] & {
       items: Database["public"]["Tables"]["items"]["Row"]
     }
   >
-}
-
-const advanceLabel: Partial<Record<OrderStatus, string>> = {
-  pending: "Accept order",
-  confirmed: "Start cooking",
-  preparing: "Mark ready",
-  ready: "Hand over & complete",
 }
 
 const DECLINE_REASONS = [
@@ -66,8 +61,8 @@ export function OrderDetailView({ order }: { order: Order }) {
   const [declineReason, setDeclineReason] = useState("")
 
   const status = order.status as OrderStatus
-  const next = nextStatus(status)
-  const label = advanceLabel[status]
+  const next = nextStatus(status, order.fulfillment_type)
+  const label = nextActionLabel(status, order.fulfillment_type)
   const total = Number(order.total_amount)
   const cash = Number(cashReceived)
   const change = cash > total ? cash - total : 0
@@ -290,6 +285,16 @@ export function OrderDetailView({ order }: { order: Order }) {
                 </p>
               ) : null}
 
+              {order.fulfillment_type === "delivery" ? (
+                <p className="flex items-center gap-2 rounded-xl bg-info-soft p-2.5 text-info">
+                  <Bike className="h-4 w-4 shrink-0" />
+                  Deliver to {order.delivery_blocks?.name ?? "the chosen block"}
+                  {Number(order.delivery_fee) > 0
+                    ? ` · ₹${Number(order.delivery_fee).toFixed(2)} delivery fee`
+                    : ""}
+                </p>
+              ) : null}
+
               {order.scheduled_pickup_time ? (
                 <p className="rounded-xl bg-info-soft p-2.5 text-info">
                   Scheduled pickup:{" "}
@@ -328,7 +333,13 @@ export function OrderDetailView({ order }: { order: Order }) {
             <CardHeader className="flex-row items-center justify-between space-y-0">
               <CardTitle>Payment</CardTitle>
               <Badge variant={settled ? "success" : "warning"} size="sm">
-                {settled ? "Paid" : "Due at counter"}
+                {settled
+                  ? order.payment_method === "online"
+                    ? "Paid online"
+                    : "Paid"
+                  : order.payment_method === "online"
+                    ? "Payment pending"
+                    : "Due at counter"}
               </Badge>
             </CardHeader>
 
@@ -342,7 +353,11 @@ export function OrderDetailView({ order }: { order: Order }) {
                 </span>
               </div>
 
-              {settled ? (
+              {settled && order.payment_method === "online" ? (
+                <p className="rounded-xl bg-success-soft p-3 text-sm text-success">
+                  Paid online via Razorpay — nothing to collect at the counter.
+                </p>
+              ) : settled ? (
                 <dl className="space-y-1.5 rounded-xl bg-success-soft p-3 text-sm text-success">
                   <div className="flex justify-between">
                     <dt>Cash received</dt>
@@ -359,6 +374,10 @@ export function OrderDetailView({ order }: { order: Order }) {
                     </div>
                   ) : null}
                 </dl>
+              ) : order.payment_method === "online" ? (
+                <p className="rounded-xl bg-warning-soft p-3 text-sm text-warning">
+                  Waiting on the customer to pay online — nothing to collect here.
+                </p>
               ) : (
                 <>
                   <div className="space-y-1.5">

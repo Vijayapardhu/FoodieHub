@@ -28,7 +28,8 @@ export interface ActiveOrder {
  */
 export function ActiveOrderCard({ order }: { order: ActiveOrder }) {
   const meta = statusMeta(order.status)
-  const ready = order.status === "ready"
+  const delivering = order.status === "out_for_delivery"
+  const ready = order.status === "ready" || delivering
   const etaText = etaLabel(
     orderEta({
       created_at: order.createdAt,
@@ -72,7 +73,7 @@ export function ActiveOrderCard({ order }: { order: ActiveOrder }) {
             ready ? "text-success" : "text-primary"
           )}
         >
-          {ready ? "Ready to collect" : meta.customerHint}
+          {delivering ? "Out for delivery" : ready ? "Ready to collect" : meta.customerHint}
         </span>
         <span className="mt-0.5 block truncate text-sm text-foreground">
           {order.canteenName} · {order.itemCount}{" "}

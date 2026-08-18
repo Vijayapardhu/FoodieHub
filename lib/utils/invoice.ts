@@ -3,6 +3,7 @@ import { format } from "date-fns"
 
 type Order = Database["public"]["Tables"]["orders"]["Row"] & {
   canteens: Database["public"]["Tables"]["canteens"]["Row"]
+  delivery_blocks?: { name: string } | null
   order_items: Array<
     Database["public"]["Tables"]["order_items"]["Row"] & {
       items: Database["public"]["Tables"]["items"]["Row"]
@@ -14,15 +15,54 @@ type Order = Database["public"]["Tables"]["orders"]["Row"] & {
   } | null
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+}
+
+/** The bowl mark from components/brand/logo.tsx, redrawn as a static string — this
+ *  document is a standalone HTML file with no React tree to render the component into. */
+const LOGO_MARK_SVG = `
+  <svg viewBox="70 172 372 174" xmlns="http://www.w3.org/2000/svg" width="30" height="14" fill="#f6f2e4">
+    <rect x="76" y="178" width="360" height="42" rx="21" />
+    <path d="M108 220a148 118 0 0 0 296 0z" />
+  </svg>
+`
+
+/**
+ * A classic ruled bill, not a corporate PDF — dashed rules, a monospace
+ * table with dotted leaders, one ink colour. This is what a canteen counter
+ * actually hands over, so the printed and downloaded copy should read like
+ * one rather than like an enterprise SaaS receipt.
+ */
 export function generateInvoiceHTML(order: Order): string {
   const orderDate = format(new Date(order.created_at), "dd MMM yyyy, hh:mm a")
-  const invoiceNumber = `INV-${order.id.substring(0, 8).toUpperCase()}`
-  const subtotal = order.order_items?.reduce(
-    (sum, item) => sum + Number(item.price) * item.quantity,
-    0
-  ) || 0
-  const tax = 0 // Can be added if tax is calculated
+  const invoiceNumber = `FH-${order.id.substring(0, 8).toUpperCase()}`
+  const subtotal = Number(order.subtotal) || 0
+  const discount = Number(order.discount_amount) || 0
   const total = Number(order.total_amount)
+  const customerName = order.customer_name || order.users?.full_name || "Customer"
+  const isOnline = order.payment_method === "online"
+  const isPaid = order.payment_status === "completed"
+  const delivering = order.fulfillment_type === "delivery"
+  const deliveryFee = Number(order.delivery_fee) || 0
+
+  const rows = (order.order_items ?? [])
+    .map((item, index) => {
+      const name = escapeHtml(item.items?.name ?? "Item")
+      const lineTotal = Number(item.price) * item.quantity
+      return `
+        <tr>
+          <td class="num">${index + 1}</td>
+          <td class="item">${name}</td>
+          <td class="num">${item.quantity}</td>
+          <td class="rate">₹${Number(item.price).toFixed(2)}</td>
+          <td class="amount">₹${lineTotal.toFixed(2)}</td>
+        </tr>`
+    })
+    .join("")
 
   return `
 <!DOCTYPE html>
@@ -30,243 +70,219 @@ export function generateInvoiceHTML(order: Order): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Invoice - ${order.token}</title>
+  <title>Bill ${order.token}</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background: #fff;
-      padding: 20px;
+      font-family: 'Courier New', ui-monospace, Consolas, monospace;
+      color: #1a1a1a;
+      background: #e9e9e4;
+      padding: 32px 16px;
     }
-    .invoice-container {
-      max-width: 800px;
+    .bill {
+      max-width: 420px;
       margin: 0 auto;
-      background: white;
-      padding: 40px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      background: #fffdf7;
+      padding: 28px 26px 24px;
+      border: 1px solid #1a1a1a;
+      box-shadow: 0 2px 0 #1a1a1a;
     }
-    .header {
-      border-bottom: 3px solid #2E7D5B;
-      padding-bottom: 20px;
-      margin-bottom: 30px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
+    .rule { border: none; border-top: 1px dashed #1a1a1a; margin: 16px 0; }
+    .rule.solid { border-top: 2px solid #1a1a1a; }
+    .center { text-align: center; }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
-    .logo-section h1 {
-      color: #2E7D5B;
-      font-size: 28px;
-      margin-bottom: 5px;
-    }
-    .logo-section p {
-      color: #666;
-      font-size: 14px;
-    }
-    .invoice-info {
-      text-align: right;
-    }
-    .invoice-info h2 {
-      font-size: 24px;
-      color: #333;
-      margin-bottom: 10px;
-    }
-    .invoice-info p {
-      color: #666;
-      font-size: 14px;
-      margin: 3px 0;
-    }
-    .details-section {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 30px;
-      margin-bottom: 30px;
-    }
-    .detail-box h3 {
-      color: #2E7D5B;
-      font-size: 14px;
-      text-transform: uppercase;
-      margin-bottom: 10px;
-      letter-spacing: 1px;
-    }
-    .detail-box p {
-      color: #333;
-      margin: 5px 0;
-      font-size: 14px;
-    }
-    .items-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-    }
-    .items-table thead {
-      background: #2E7D5B;
-      color: white;
-    }
-    .items-table th {
-      padding: 12px;
-      text-align: left;
-      font-weight: 600;
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .items-table td {
-      padding: 12px;
-      border-bottom: 1px solid #eee;
-      font-size: 14px;
-    }
-    .items-table tbody tr:hover {
-      background: #fafafa;
-    }
-    .text-right {
-      text-align: right;
-    }
-    .text-center {
-      text-align: center;
-    }
-    .totals-section {
-      margin-top: 20px;
-      display: flex;
-      justify-content: flex-end;
-    }
-    .totals-box {
-      width: 300px;
-      border: 2px solid #2E7D5B;
-      padding: 20px;
+    .brand .mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
       border-radius: 8px;
+      background: linear-gradient(135deg, #2f7f5c, #1f5c40);
     }
-    .total-row {
+    .brand .word {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .brand .word .hub { color: #2f7f5c; }
+    .tagline {
+      margin-top: 3px;
+      font-size: 10.5px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #555;
+    }
+    .doc-title {
+      margin-top: 14px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .meta {
+      margin-top: 10px;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+    .meta .row { display: flex; justify-content: space-between; gap: 12px; }
+    .meta .row span:first-child { color: #555; }
+    .party { font-size: 12px; line-height: 1.6; }
+    .party .label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 3px;
+    }
+    .party + .party { margin-top: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th {
+      text-align: left;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #555;
+      padding-bottom: 6px;
+      border-bottom: 1px dashed #1a1a1a;
+    }
+    td { padding: 5px 0; vertical-align: top; }
+    .num { width: 24px; }
+    th.num, td.num { text-align: center; }
+    th.rate, td.rate, th.amount, td.amount { text-align: right; }
+    td.rate, td.amount { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .totals { font-size: 12px; margin-top: 4px; }
+    .totals .row {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 10px;
-      font-size: 14px;
+      padding: 3px 0;
+      font-variant-numeric: tabular-nums;
     }
-    .total-row.grand-total {
-      font-size: 20px;
-      font-weight: bold;
-      color: #2E7D5B;
-      border-top: 2px solid #2E7D5B;
+    .totals .row.discount { color: #1f6b3a; }
+    .totals .row.grand {
+      margin-top: 6px;
       padding-top: 10px;
-      margin-top: 10px;
+      border-top: 2px solid #1a1a1a;
+      font-size: 16px;
+      font-weight: 700;
     }
-    .footer {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 2px solid #eee;
-      text-align: center;
-      color: #666;
-      font-size: 12px;
-    }
-    .status-badge {
+    .badge {
       display: inline-block;
-      padding: 5px 15px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
+      margin-top: 6px;
+      padding: 2px 9px;
+      border: 1px solid #1a1a1a;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
-      margin-top: 5px;
     }
-    .status-pending { background: #fef3c7; color: #92400e; }
-    .status-confirmed { background: #e7f4ec; color: #21603f; }
-    .status-preparing { background: #fdf0d5; color: #8a5a06; }
-    .status-ready { background: #d1fae5; color: #065f46; }
-    .status-completed { background: #d1fae5; color: #065f46; }
-    .status-cancelled { background: #fee2e2; color: #991b1b; }
+    .badge.paid { background: #e3f3e9; }
+    .badge.due { background: #fdf0d5; }
+    .footer {
+      margin-top: 4px;
+      text-align: center;
+      font-size: 12px;
+    }
+    .footer .thanks { font-weight: 700; letter-spacing: 0.04em; }
+    .fine-print {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 10px;
+      color: #777;
+      line-height: 1.6;
+    }
     @media print {
-      body {
-        padding: 0;
-      }
-      .invoice-container {
-        box-shadow: none;
-      }
+      body { background: #fff; padding: 0; }
+      .bill { box-shadow: none; border: none; max-width: 100%; padding: 0; }
     }
   </style>
 </head>
 <body>
-  <div class="invoice-container">
-    <div class="header">
-      <div class="logo-section">
-        <h1>FoodieHub</h1>
-        <p>College Canteen Management System</p>
-      </div>
-      <div class="invoice-info">
-        <h2>INVOICE</h2>
-        <p><strong>Invoice #:</strong> ${invoiceNumber}</p>
-        <p><strong>Token:</strong> ${order.token}</p>
-        <p><strong>Date:</strong> ${orderDate}</p>
-        <span class="status-badge status-${order.status}">${order.status}</span>
-      </div>
+  <div class="bill">
+    <div class="center">
+      <span class="brand">
+        <span class="mark">${LOGO_MARK_SVG}</span>
+        <span class="word">Foodie<span class="hub">Hub</span></span>
+      </span>
+      <div class="tagline">Campus canteen ordering</div>
+      <div class="doc-title">Bill of sale</div>
     </div>
 
-    <div class="details-section">
-      <div class="detail-box">
-        <h3>Bill From</h3>
-        <p><strong>${order.canteens?.name || "Canteen"}</strong></p>
-        ${order.canteens?.address ? `<p>${order.canteens.address}</p>` : ""}
-        ${order.canteens?.contact_phone ? `<p>Phone: ${order.canteens.contact_phone}</p>` : ""}
-      </div>
-      <div class="detail-box">
-        <h3>Bill To</h3>
-        <p><strong>${order.customer_name || order.users?.full_name || "Customer"}</strong></p>
-        ${order.customer_phone ? `<p>Phone: ${order.customer_phone}</p>` : ""}
-        ${order.users?.email ? `<p>Email: ${order.users.email}</p>` : ""}
-        ${order.user_id ? `<p style="color: #999; font-size: 12px;">Customer ID: ${order.user_id.substring(0, 8)}</p>` : ""}
-      </div>
+    <hr class="rule">
+
+    <div class="meta">
+      <div class="row"><span>Bill no.</span><span>${invoiceNumber}</span></div>
+      <div class="row"><span>Token</span><span>${escapeHtml(order.token)}</span></div>
+      <div class="row"><span>Date</span><span>${orderDate}</span></div>
     </div>
 
-    <table class="items-table">
+    <hr class="rule">
+
+    <div class="party">
+      <div class="label">Served by</div>
+      <div>${escapeHtml(order.canteens?.name || "Canteen")}</div>
+      ${order.canteens?.address ? `<div>${escapeHtml(order.canteens.address)}</div>` : ""}
+      ${order.canteens?.contact_phone ? `<div>${escapeHtml(order.canteens.contact_phone)}</div>` : ""}
+    </div>
+    <div class="party">
+      <div class="label">Billed to</div>
+      <div>${escapeHtml(customerName)}</div>
+      ${order.customer_phone ? `<div>${escapeHtml(order.customer_phone)}</div>` : ""}
+    </div>
+
+    <hr class="rule">
+
+    <table>
       <thead>
         <tr>
-          <th>#</th>
-          <th>Item Description</th>
-          <th class="text-center">Qty</th>
-          <th class="text-right">Unit Price</th>
-          <th class="text-right">Amount</th>
+          <th class="num">#</th>
+          <th>Item</th>
+          <th class="num">Qty</th>
+          <th class="rate">Rate</th>
+          <th class="amount">Amount</th>
         </tr>
       </thead>
       <tbody>
-        ${order.order_items?.map((item, index) => `
-          <tr>
-            <td>${index + 1}</td>
-            <td><strong>${item.items.name}</strong></td>
-            <td class="text-center">${item.quantity}</td>
-            <td class="text-right">₹${Number(item.price).toFixed(2)}</td>
-            <td class="text-right"><strong>₹${(Number(item.price) * item.quantity).toFixed(2)}</strong></td>
-          </tr>
-        `).join("") || "<tr><td colspan='5' class='text-center'>No items</td></tr>"}
+        ${rows || `<tr><td colspan="5" class="center">No items</td></tr>`}
       </tbody>
     </table>
 
-    <div class="totals-section">
-      <div class="totals-box">
-        <div class="total-row">
-          <span>Subtotal:</span>
-          <span>₹${subtotal.toFixed(2)}</span>
-        </div>
-        ${tax > 0 ? `
-        <div class="total-row">
-          <span>Tax:</span>
-          <span>₹${tax.toFixed(2)}</span>
-        </div>
-        ` : ""}
-        <div class="total-row grand-total">
-          <span>Total Amount:</span>
-          <span>₹${total.toFixed(2)}</span>
-        </div>
-      </div>
+    <hr class="rule">
+
+    <div class="totals">
+      <div class="row"><span>Subtotal</span><span>₹${subtotal.toFixed(2)}</span></div>
+      ${discount > 0 ? `<div class="row discount"><span>Discount</span><span>−₹${discount.toFixed(2)}</span></div>` : ""}
+      ${delivering && deliveryFee > 0 ? `<div class="row"><span>Delivery fee</span><span>₹${deliveryFee.toFixed(2)}</span></div>` : ""}
+      <div class="row grand"><span>Total</span><span>₹${total.toFixed(2)}</span></div>
     </div>
 
+    <hr class="rule">
+
+    ${delivering ? `<div class="footer" style="margin-bottom: 4px;">Deliver to ${escapeHtml(order.delivery_blocks?.name ?? "—")}</div>` : ""}
+
     <div class="footer">
-      <p><strong>Payment Method:</strong> ${order.payment_method === "on_shop" ? "On Shop Payment" : order.payment_method}</p>
-      <p><strong>Payment Status:</strong> <span class="status-badge status-${order.payment_status}">${order.payment_status}</span></p>
-      <p style="margin-top: 15px;">Thank you for your order! Please show your token at the canteen to collect your order.</p>
-      <p style="margin-top: 10px; font-size: 11px;">This is a computer-generated invoice and does not require a signature.</p>
+      <div>${
+        isOnline
+          ? "Paid online · Razorpay"
+          : delivering
+            ? "Payable on delivery"
+            : "Payable at the counter"
+      }</div>
+      <span class="badge ${isPaid ? "paid" : "due"}">${isPaid ? "Paid" : "Payment due"}</span>
+      <div class="thanks" style="margin-top: 12px;">Thank you — see you again!</div>
+    </div>
+
+    <div class="fine-print">
+      Computer-generated bill, no signature required.<br>
+      FoodieHub takes no commission — this is what the canteen actually charged.
     </div>
   </div>
 </body>
@@ -280,7 +296,7 @@ export function downloadInvoice(order: Order) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement("a")
   a.href = url
-  a.download = `invoice-${order.token}-${format(new Date(order.created_at), "yyyyMMdd")}.html`
+  a.download = `foodiehub-bill-${order.token}-${format(new Date(order.created_at), "yyyyMMdd")}.html`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
@@ -300,4 +316,3 @@ export function printInvoice(order: Order) {
     }, 250)
   }
 }
-
