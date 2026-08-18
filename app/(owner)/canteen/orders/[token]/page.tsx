@@ -57,9 +57,7 @@ export default async function OrderDetailPage({
         }
       />
 
-      <div className="pb-24 md:pb-0">
-        <OrderDetailView order={{ ...order, canteens: canteen } as any} />
-      </div>
+      <OrderDetailView order={{ ...order, canteens: canteen } as any} />
     </>
   )
 }

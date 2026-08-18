@@ -3,7 +3,6 @@
 import { useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { QRCodeSVG } from "qrcode.react"
 import { format } from "date-fns"
 import { Bike, Mail, Phone, Printer, User } from "@/components/ui/icons"
 import toast from "react-hot-toast"
@@ -15,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { ImagePlaceholder } from "@/components/ui/image-placeholder"
-import { StickyBar } from "@/components/ui/sticky-bar"
+import { StickyBar, StickyBarSpacer } from "@/components/ui/sticky-bar"
 import {
   Dialog,
   DialogContent,
@@ -189,9 +188,6 @@ export function OrderDetailView({ order }: { order: Order }) {
           <p className="font-mono text-4xl font-black tracking-[0.15em] text-primary">
             {order.token}
           </p>
-          <div className="rounded-2xl border-2 border-border bg-white p-3">
-            <QRCodeSVG value={order.token} size={132} level="M" />
-          </div>
           <p className="text-xs text-muted-foreground">
             Placed {format(new Date(order.created_at), "d MMM, h:mm a")}
           </p>
@@ -497,6 +493,7 @@ export function OrderDetailView({ order }: { order: Order }) {
         </Card>
       </div>
 
+      {next && label ? <StickyBarSpacer className="md:hidden" /> : null}
       {next && label ? (
         <StickyBar aboveTabBar context="console">
           <div className="flex gap-2">

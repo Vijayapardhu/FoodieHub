@@ -47,7 +47,7 @@ export default async function NewPromoBannerPage() {
         description="Runs in the carousel at the top of the student home screen"
       />
 
-      <div className="mx-auto max-w-2xl pb-24 lg:pb-0">
+      <div className="mx-auto max-w-2xl">
         <PromoBannerForm
           canteenId={canteen.id}
           canteenName={canteen.name}

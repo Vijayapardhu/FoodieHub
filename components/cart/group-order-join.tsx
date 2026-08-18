@@ -13,7 +13,7 @@ import { ImagePlaceholder } from "@/components/ui/image-placeholder"
 import { QuantityStepper } from "@/components/ui/quantity-stepper"
 import { VegMark } from "@/components/ui/status-badge"
 import { Search } from "@/components/ui/icons"
-import { StickyBar } from "@/components/ui/sticky-bar"
+import { StickyBar, StickyBarSpacer } from "@/components/ui/sticky-bar"
 import { GroupOrderLines, type GroupLine } from "@/components/cart/group-order-lines"
 
 interface Dish {
@@ -267,6 +267,7 @@ export function GroupOrderJoin({
       {/* Nothing is final until this is tapped. Up to that point a friend can
           change their mind freely; after it their lines are frozen, and the
           host can see they are done rather than guessing. */}
+      {myLines.length > 0 ? <StickyBarSpacer /> : null}
       {myLines.length > 0 ? (
         <StickyBar>
           {iAmDone ? (

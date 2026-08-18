@@ -37,7 +37,7 @@ export default async function EditMenuItemPage({
     <>
       <ConsoleHeader title="Edit dish" description={item.name} />
 
-      <div className="mx-auto max-w-2xl pb-24 lg:max-w-6xl lg:pb-0">
+      <div className="mx-auto max-w-2xl lg:max-w-6xl">
         <EditItemForm
           canteenId={canteen.id}
           item={item}

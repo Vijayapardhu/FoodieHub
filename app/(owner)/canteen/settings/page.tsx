@@ -33,7 +33,7 @@ export default async function SettingsPage() {
         description="Profile, imagery, location and opening hours"
       />
 
-      <div className="mx-auto max-w-2xl pb-24 md:pb-0">
+      <div className="mx-auto max-w-2xl">
         <CanteenSettings canteen={canteen} categories={categories ?? []} />
       </div>
     </>

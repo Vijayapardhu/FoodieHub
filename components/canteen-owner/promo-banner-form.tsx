@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ImageUpload } from "@/components/ui/image-upload"
-import { StickyBar } from "@/components/ui/sticky-bar"
+import { StickyBar, StickyBarSpacer } from "@/components/ui/sticky-bar"
 import {
   PROMO_PLACEMENTS,
   formatRupees,
@@ -366,6 +366,7 @@ export function PromoBannerForm({
         </p>
       </section>
 
+      <StickyBarSpacer className="lg:hidden" />
       <StickyBar aboveTabBar context="console">
         <div className="flex gap-2">
           <Button

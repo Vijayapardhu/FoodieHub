@@ -15,7 +15,7 @@ import { ImageUpload } from "@/components/ui/image-upload"
 import { ImagePlaceholder } from "@/components/ui/image-placeholder"
 import { VegMark } from "@/components/ui/status-badge"
 import { SwitchRow } from "@/components/ui/switch"
-import { StickyBar } from "@/components/ui/sticky-bar"
+import { StickyBar, StickyBarSpacer } from "@/components/ui/sticky-bar"
 import { MAX_GALLERY_IMAGES } from "@/lib/utils/constants"
 import { cn } from "@/lib/utils/cn"
 
@@ -41,6 +41,9 @@ export function ItemForm({ canteenId, categories, item }: ItemFormProps) {
 
   const [name, setName] = useState(item?.name ?? "")
   const [description, setDescription] = useState(item?.description ?? "")
+  const [keywords, setKeywords] = useState(item?.search_keywords ?? "")
+  // Added by migration 052; the field waits for the column.
+  const supportsKeywords = item ? item.search_keywords !== undefined : true
   const [price, setPrice] = useState(item ? String(item.price) : "")
   const [categoryId, setCategoryId] = useState(item?.category_id ?? "")
   const [imageUrl, setImageUrl] = useState(item?.image_url ?? "")
@@ -88,6 +91,9 @@ export function ItemForm({ canteenId, categories, item }: ItemFormProps) {
         is_featured: isFeatured,
         ...(supportsPrepMinutes
           ? { prep_minutes: prepMinutes ? Number(prepMinutes) : null }
+          : {}),
+        ...(supportsKeywords
+          ? { search_keywords: keywords.trim() || null }
           : {}),
       }
 
@@ -164,6 +170,22 @@ export function ItemForm({ canteenId, categories, item }: ItemFormProps) {
             rows={3}
           />
         </div>
+
+        {supportsKeywords ? (
+          <div className="space-y-1.5">
+            <Label htmlFor="item-keywords">Search keywords</Label>
+            <Input
+              id="item-keywords"
+              value={keywords}
+              onChange={(e) => setKeywords(e.target.value)}
+              placeholder="e.g. south indian, crepe, breakfast, tiffin"
+            />
+            <p className="text-xs text-muted-foreground">
+              Words a student might search that aren't in the name or description —
+              cuisine, alternate spellings, what it's like. Comma-separated.
+            </p>
+          </div>
+        ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
@@ -419,6 +441,7 @@ export function ItemForm({ canteenId, categories, item }: ItemFormProps) {
         </div>
       </div>
 
+      <StickyBarSpacer className="lg:hidden" />
       <StickyBar aboveTabBar context="console" className="lg:hidden">
         <div className="flex gap-2">
           <Button

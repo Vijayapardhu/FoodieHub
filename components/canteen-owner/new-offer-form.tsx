@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { StickyBar } from "@/components/ui/sticky-bar"
+import { StickyBar, StickyBarSpacer } from "@/components/ui/sticky-bar"
 import { cn } from "@/lib/utils/cn"
 
 interface NewOfferFormProps {
@@ -270,6 +270,7 @@ export function NewOfferForm({ canteenId }: NewOfferFormProps) {
         </p>
       </section>
 
+      <StickyBarSpacer className="lg:hidden" />
       <StickyBar aboveTabBar context="console">
         <div className="flex gap-2">
           <Button

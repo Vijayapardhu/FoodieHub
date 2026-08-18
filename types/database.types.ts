@@ -170,6 +170,8 @@ export interface Database {
           featured_image_url: string | null
           slug: string | null
           prep_minutes: number | null
+          // Added by migration 052_item_search_keywords
+          search_keywords: string | null
         }
         Insert: {
           id?: string
@@ -192,6 +194,7 @@ export interface Database {
           slug?: string | null
           prep_minutes?: number | null
           concurrent_orders?: number
+          search_keywords?: string | null
         }
         Update: {
           id?: string
@@ -214,6 +217,7 @@ export interface Database {
           slug?: string | null
           prep_minutes?: number | null
           concurrent_orders?: number
+          search_keywords?: string | null
         }
       }
       orders: {

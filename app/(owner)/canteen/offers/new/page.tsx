@@ -33,7 +33,7 @@ export default async function NewOfferPage() {
         description="An admin reviews it before students can use it"
       />
 
-      <div className="mx-auto max-w-2xl pb-24 lg:pb-0">
+      <div className="mx-auto max-w-2xl">
         <NewOfferForm canteenId={canteen.id} />
       </div>
     </>

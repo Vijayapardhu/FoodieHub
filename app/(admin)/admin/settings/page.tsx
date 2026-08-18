@@ -26,7 +26,7 @@ export default async function AdminSettingsPage() {
         description="Ordering rules, feature switches and the maintenance banner"
       />
 
-      <div className="mx-auto max-w-3xl pb-24 md:pb-0">
+      <div className="mx-auto max-w-3xl">
         <PlatformSettingsForm
           settings={settings ?? DEFAULT_PLATFORM_SETTINGS}
           auditLog={(auditLog ?? []) as any}

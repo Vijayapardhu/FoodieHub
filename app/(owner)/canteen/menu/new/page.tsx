@@ -33,7 +33,7 @@ export default async function NewItemPage() {
         description="It goes live on your menu as soon as you save"
       />
 
-      <div className="mx-auto max-w-2xl pb-24 lg:max-w-6xl lg:pb-0">
+      <div className="mx-auto max-w-2xl lg:max-w-6xl">
         <NewItemForm canteenId={canteen.id} categories={categories ?? []} />
       </div>
     </>

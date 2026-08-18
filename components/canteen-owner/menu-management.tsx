@@ -27,7 +27,7 @@ import { Switch } from "@/components/ui/switch"
 import { EmptyState } from "@/components/ui/empty-state"
 import { VegMark } from "@/components/ui/status-badge"
 import { ImagePlaceholder } from "@/components/ui/image-placeholder"
-import { StickyBar } from "@/components/ui/sticky-bar"
+import { StickyBar, StickyBarSpacer } from "@/components/ui/sticky-bar"
 import {
   Dialog,
   DialogContent,
@@ -515,7 +515,10 @@ export function MenuManagement({
         )}
       </div>
 
-      {/* Bulk action bar — appears only once something is selected */}
+      {/* Bulk action bar — appears only once something is selected. The
+          spacer keeps the last row(s) of the grid/list from ending up
+          underneath it once it does. */}
+      {selected.size > 0 ? <StickyBarSpacer /> : null}
       {selected.size > 0 ? (
         <StickyBar aboveTabBar context="console">
           <div className="flex items-center gap-2">

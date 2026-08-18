@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { SwitchRow } from "@/components/ui/switch"
 import { EmptyState } from "@/components/ui/empty-state"
-import { StickyBar } from "@/components/ui/sticky-bar"
+import { StickyBar, StickyBarSpacer } from "@/components/ui/sticky-bar"
 import {
   PlatformSettings,
   settingLabel,
@@ -368,6 +368,7 @@ export function PlatformSettingsForm({
         </CardContent>
       </Card>
 
+      <StickyBarSpacer className="md:hidden" />
       <StickyBar aboveTabBar context="console">
         <Button
           type="submit"

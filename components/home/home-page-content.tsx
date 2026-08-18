@@ -13,6 +13,7 @@ import { Section, SectionHeader } from "@/components/ui/section-header"
 import { CanteenCard } from "@/components/canteen/canteen-card"
 import { ItemCard } from "@/components/menu/item-card"
 import { cn } from "@/lib/utils/cn"
+import { matchesSearch } from "@/lib/utils/search"
 import { useDebounce } from "@/lib/hooks/use-debounce"
 import { PromoCarousel } from "@/components/home/promo-carousel"
 import { SectionRail } from "@/components/home/section-rail"
@@ -133,10 +134,7 @@ export function HomePageContent({
 
     if (filters.openOnly) list = list.filter((c) => c.is_open)
     if (filters.minRating !== null) list = list.filter((c) => c.rating >= filters.minRating!)
-    if (query)
-      list = list.filter(
-        (c) => c.name.toLowerCase().includes(query) || c.description?.toLowerCase().includes(query)
-      )
+    if (query) list = list.filter((c) => matchesSearch(query, c.name, c.description))
 
     const sorted = [...list]
     switch (filters.sort) {
@@ -153,6 +151,13 @@ export function HomePageContent({
     return sorted
   }, [canteens, filters, query])
 
+  // Lets search reach "south indian" for a dish filed under that category
+  // without the word needing to also live in the dish's own name.
+  const categoryNameById = useMemo(
+    () => new Map(categories.map((c) => [c.id, c.name])),
+    [categories]
+  )
+
   const matchedItems = useMemo(() => {
     let list = items
 
@@ -164,11 +169,15 @@ export function HomePageContent({
     if (filters.minRating !== null) list = list.filter((i) => i.rating >= filters.minRating!)
     if (quickOnly) list = list.filter((i) => (i.prep_minutes ?? 99) <= QUICK_MINUTES)
     if (query)
-      list = list.filter(
-        (i) =>
-          i.name.toLowerCase().includes(query) ||
-          i.description?.toLowerCase().includes(query) ||
-          i.canteens?.name.toLowerCase().includes(query)
+      list = list.filter((i) =>
+        matchesSearch(
+          query,
+          i.name,
+          i.description,
+          i.search_keywords,
+          i.canteens?.name,
+          categoryNameById.get(i.category_id)
+        )
       )
 
     const sorted = [...list]
@@ -189,7 +198,7 @@ export function HomePageContent({
         sorted.sort((a, b) => b.rating - a.rating)
     }
     return sorted
-  }, [items, filters, query, quickOnly])
+  }, [items, filters, query, quickOnly, categoryNameById])
 
   // Any filter beyond canteen-level ones means the user is shopping for dishes.
   const dishMode =

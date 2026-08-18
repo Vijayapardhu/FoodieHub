@@ -20,6 +20,7 @@ import {
   countActiveFilters,
   defaultFilters,
 } from "@/components/home/home-filters"
+import { matchesSearch } from "@/lib/utils/search"
 import { useDebounce } from "@/lib/hooks/use-debounce"
 
 type Canteen = Database["public"]["Tables"]["canteens"]["Row"]
@@ -77,10 +78,8 @@ export function CanteenMenuPage({
     if (filters.minRating !== null)
       list = list.filter((i) => i.rating >= filters.minRating!)
     if (query)
-      list = list.filter(
-        (i) =>
-          i.name.toLowerCase().includes(query) ||
-          i.description?.toLowerCase().includes(query)
+      list = list.filter((i) =>
+        matchesSearch(query, i.name, i.description, i.search_keywords, i.categories?.name)
       )
 
     const sorted = [...list]

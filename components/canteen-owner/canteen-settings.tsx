@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { SwitchRow, Switch } from "@/components/ui/switch"
-import { StickyBar } from "@/components/ui/sticky-bar"
+import { StickyBar, StickyBarSpacer } from "@/components/ui/sticky-bar"
 import { PushOptIn } from "@/components/notifications/push-opt-in"
 import {
   DAY_KEYS,
@@ -414,6 +414,7 @@ export function CanteenSettings({ canteen }: CanteenSettingsProps) {
         </ul>
       </section>
 
+      <StickyBarSpacer className="md:hidden" />
       <StickyBar aboveTabBar context="console">
         <Button type="submit" size="lg" block loading={saving}>
           {saving ? null : <Save className="h-4 w-4" />}

@@ -238,8 +238,18 @@ export function ItemDetail({
             href={canteenPath(canteen)}
             className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 transition-transform active:scale-[0.99]"
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
-              <Store className="h-4 w-4" />
+            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary-soft text-primary">
+              {canteen.logo_url ? (
+                <Image
+                  src={canteen.logo_url}
+                  alt=""
+                  fill
+                  sizes="40px"
+                  className="object-cover"
+                />
+              ) : (
+                <Store className="h-4 w-4" />
+              )}
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold text-foreground">
