@@ -11,6 +11,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageLoader } from "@/components/ui/loading-state"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { createClient } from "@/lib/supabase/client"
 import { resolveDestination } from "@/lib/auth/destination"
 
@@ -56,6 +64,10 @@ function LoginForm() {
 
   const [loginEmail, setLoginEmail] = useState("")
   const [loginPassword, setLoginPassword] = useState("")
+
+  const [forgotOpen, setForgotOpen] = useState(false)
+  const [resetEmail, setResetEmail] = useState("")
+  const [sendingReset, setSendingReset] = useState(false)
 
   const [registerName, setRegisterName] = useState("")
   const [registerPhone, setRegisterPhone] = useState("")
@@ -181,6 +193,43 @@ function LoginForm() {
     }
   }
 
+  const openForgotPassword = () => {
+    setResetEmail(loginEmail)
+    setForgotOpen(true)
+  }
+
+  const handleForgotPassword = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const email = resetEmail.trim()
+    if (!email) {
+      toast.error("Enter your email")
+      return
+    }
+
+    setSendingReset(true)
+    try {
+      const supabase = createClient()
+      // Its own page rather than /auth/callback: a recovery link and an
+      // OAuth sign-in both hand back a code, but they mean completely
+      // different things — one should end on "you're in", the other must
+      // stop at "now set a new password" before it lets you anywhere else.
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
+      if (error) throw error
+
+      // Deliberately the same message whether or not that email actually
+      // has an account — confirming which emails are registered is a
+      // second, smaller thing to leak on top of the password itself.
+      toast.success("If that email has an account, a reset link is on its way")
+      setForgotOpen(false)
+    } catch (error: any) {
+      toast.error(error?.message || "Could not send the reset email")
+    } finally {
+      setSendingReset(false)
+    }
+  }
+
   const passwordToggle = (
     <button
       type="button"
@@ -246,7 +295,16 @@ function LoginForm() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="login-password">Password</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="login-password">Password</Label>
+                    <button
+                      type="button"
+                      onClick={openForgotPassword}
+                      className="text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <Input
                     id="login-password"
                     type={showPassword ? "text" : "password"}
@@ -398,6 +456,51 @@ function LoginForm() {
           .
         </p>
       </div>
+
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent>
+          <form onSubmit={handleForgotPassword}>
+            <DialogHeader>
+              <DialogTitle>Reset your password</DialogTitle>
+              <DialogDescription>
+                We&apos;ll email you a link to set a new one.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-1.5 py-2">
+              <Label htmlFor="reset-email">Email</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder="you@college.edu"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                required
+                disabled={sendingReset}
+                autoFocus
+                startAdornment={<Mail />}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                block
+                onClick={() => setForgotOpen(false)}
+                disabled={sendingReset}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" block loading={sendingReset}>
+                Send reset link
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </main>
   )
 }

@@ -12,6 +12,10 @@ import { NextResponse, type NextRequest } from 'next/server'
 const PUBLIC_PREFIXES = [
   '/login',
   '/auth',
+  // A password-reset link arrives with no session at all — its own code
+  // exchange on the page is what establishes one, so this has to be
+  // reachable before that happens, the same as /auth/callback.
+  '/reset-password',
   '/offline',
   '/credits',
   // A canteen applying to join has no account yet, and the legal pages have
