@@ -117,7 +117,7 @@ export function MenuItemRow({
               size="sm"
               variant="outline"
               onClick={increment}
-              className="h-9 w-full border-primary/40 bg-surface font-bold uppercase tracking-wide text-primary shadow-soft"
+              className="h-9 w-full animate-fade-in border-primary/40 bg-surface font-bold uppercase tracking-wide text-primary shadow-soft"
             >
               Add
             </Button>
@@ -129,7 +129,7 @@ export function MenuItemRow({
               onDecrement={decrement}
               removeAtOne
               label={item.name}
-              className="w-full bg-surface shadow-soft"
+              className="w-full animate-fade-in bg-surface shadow-soft"
             />
           )}
         </div>

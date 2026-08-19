@@ -130,7 +130,7 @@ export function ItemCard({
             variant="soft"
             block
             onClick={increment}
-            className="mt-0.5 h-10 rounded-xl text-sm font-bold uppercase tracking-wide"
+            className="mt-0.5 h-10 animate-fade-in rounded-xl text-sm font-bold uppercase tracking-wide"
           >
             Add
           </Button>
@@ -142,7 +142,7 @@ export function ItemCard({
             onDecrement={decrement}
             removeAtOne
             label={item.name}
-            className="mt-0.5 w-full"
+            className="mt-0.5 w-full animate-fade-in"
           />
         )}
       </div>

@@ -378,12 +378,17 @@ export function ItemDetail({
             // tap does on the right. It read as part of the page before —
             // one more full-width block among several rather than the thing
             // the screen exists for.
-            <Button size="lg" block onClick={increment} className="justify-between shadow-brand">
+            <Button
+              size="lg"
+              block
+              onClick={increment}
+              className="animate-fade-in justify-between shadow-brand"
+            >
               <span className="tabular-nums">₹{Number(item.price)}</span>
               <span>Add to cart</span>
             </Button>
           ) : (
-            <div className="flex items-center gap-3">
+            <div className="flex animate-fade-in items-center gap-3">
               <QuantityStepper
                 size="lg"
                 quantity={quantity}
