@@ -40,6 +40,18 @@ export const POST = createSecureHandler({
       return errorResponse("This order is already paid", 400)
     }
 
+    // Admin-panel master switch (migration 055) — checked here too, not
+    // just hidden in the UI, since the button being hidden doesn't stop a
+    // request built by hand.
+    const { data: settings } = await supabase
+      .from("platform_settings")
+      .select("online_payments_enabled")
+      .eq("id", true)
+      .maybeSingle()
+    if (settings && settings.online_payments_enabled === false) {
+      return errorResponse("Online payments are currently switched off", 400)
+    }
+
     const amount = toPaise(Number(order.total_amount))
     if (amount < 100) {
       // Razorpay's own floor (₹1). An order this small shouldn't reach
@@ -47,7 +59,7 @@ export const POST = createSecureHandler({
       return errorResponse("Order amount is too small for online payment", 400)
     }
 
-    const razorpay = getRazorpay()
+    const { razorpay, keyId } = await getRazorpay()
 
     // A retry (page refresh, popup dismissed and reopened) should resume the
     // same Razorpay order rather than mint a new one every time — Razorpay
@@ -61,7 +73,7 @@ export const POST = createSecureHandler({
             razorpay_order_id: existing.id,
             amount: existing.amount,
             currency: existing.currency,
-            key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+            key_id: keyId,
           })
         }
       } catch {
@@ -93,7 +105,7 @@ export const POST = createSecureHandler({
       razorpay_order_id: razorpayOrder.id,
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
-      key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      key_id: keyId,
     })
   },
 })

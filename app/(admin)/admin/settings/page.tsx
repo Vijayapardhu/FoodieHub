@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth/require-role"
 import { ConsoleHeader } from "@/components/layout/console-shell"
 import { PlatformSettingsForm } from "@/components/admin/platform-settings-form"
+import { PaymentSettingsForm } from "@/components/admin/payment-settings-form"
 import { DEFAULT_PLATFORM_SETTINGS } from "@/lib/utils/platform-settings"
 
 export const metadata = { title: "Platform settings" }
@@ -26,7 +27,9 @@ export default async function AdminSettingsPage() {
         description="Ordering rules, feature switches and the maintenance banner"
       />
 
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-3xl space-y-8">
+        <PaymentSettingsForm />
+
         <PlatformSettingsForm
           settings={settings ?? DEFAULT_PLATFORM_SETTINGS}
           auditLog={(auditLog ?? []) as any}

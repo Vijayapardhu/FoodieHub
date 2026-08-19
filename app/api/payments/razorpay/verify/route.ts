@@ -6,6 +6,7 @@ import {
   errorResponse,
 } from "@/lib/api/middleware"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getRazorpayCredentials } from "@/lib/payments/razorpay-credentials"
 
 const schema = z.object({
   razorpay_order_id: z.string().min(1),
@@ -23,7 +24,7 @@ export const POST = createSecureHandler({
   allowedRoles: ["user", "canteen_owner", "admin"],
   schema,
   handler: async (request, { user, supabase, body }) => {
-    const keySecret = process.env.RAZORPAY_KEY_SECRET
+    const { keySecret } = await getRazorpayCredentials()
     if (!keySecret) {
       return errorResponse("Razorpay is not configured", 500)
     }

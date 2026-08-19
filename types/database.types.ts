@@ -568,6 +568,7 @@ export interface Database {
           maintenance_message: string | null
           promo_daily_rate: number
           delivery_enabled: boolean
+          online_payments_enabled: boolean
           updated_by: string | null
           updated_at: string
           created_at: string
@@ -588,6 +589,7 @@ export interface Database {
           maintenance_message?: string | null
           promo_daily_rate?: number
           delivery_enabled?: boolean
+          online_payments_enabled?: boolean
           updated_by?: string | null
           updated_at?: string
           created_at?: string
@@ -608,6 +610,7 @@ export interface Database {
           maintenance_message?: string | null
           promo_daily_rate?: number
           delivery_enabled?: boolean
+          online_payments_enabled?: boolean
           updated_by?: string | null
           updated_at?: string
           created_at?: string

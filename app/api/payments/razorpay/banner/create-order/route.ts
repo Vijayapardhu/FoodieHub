@@ -42,12 +42,22 @@ export const POST = createSecureHandler({
       return errorResponse("This banner is already paid for", 400)
     }
 
+    // Admin-panel master switch (migration 055).
+    const { data: settings } = await supabase
+      .from("platform_settings")
+      .select("online_payments_enabled")
+      .eq("id", true)
+      .maybeSingle()
+    if (settings && settings.online_payments_enabled === false) {
+      return errorResponse("Online payments are currently switched off", 400)
+    }
+
     const amount = toPaise(owed)
     if (amount < 100) {
       return errorResponse("Amount is too small for online payment", 400)
     }
 
-    const razorpay = getRazorpay()
+    const { razorpay, keyId } = await getRazorpay()
 
     if (banner.razorpay_order_id) {
       try {
@@ -57,7 +67,7 @@ export const POST = createSecureHandler({
             razorpay_order_id: existing.id,
             amount: existing.amount,
             currency: existing.currency,
-            key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+            key_id: keyId,
           })
         }
       } catch {
@@ -86,7 +96,7 @@ export const POST = createSecureHandler({
       razorpay_order_id: razorpayOrder.id,
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
-      key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      key_id: keyId,
     })
   },
 })

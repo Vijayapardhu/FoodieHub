@@ -23,6 +23,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   maintenance_message: null,
   promo_daily_rate: 199,
   delivery_enabled: false,
+  online_payments_enabled: true,
   updated_by: null,
   updated_at: new Date(0).toISOString(),
   created_at: new Date(0).toISOString(),
@@ -44,6 +45,10 @@ export const SETTING_LABELS: Record<string, string> = {
   maintenance_message: "Maintenance banner",
   promo_daily_rate: "Banner rate per day",
   delivery_enabled: "Delivery",
+  online_payments_enabled: "Online payments",
+  razorpay_key_id: "Razorpay Key ID",
+  razorpay_key_secret: "Razorpay Key Secret",
+  razorpay_webhook_secret: "Razorpay Webhook Secret",
 }
 
 export function settingLabel(key: string): string {

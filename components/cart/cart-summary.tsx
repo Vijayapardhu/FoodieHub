@@ -15,6 +15,7 @@ import toast from "react-hot-toast"
 import { Database } from "@/types/database.types"
 import { useCartStore } from "@/store/cart-store"
 import { useCheckoutDraftStore } from "@/store/checkout-draft"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Disclosure } from "@/components/ui/disclosure"
@@ -53,6 +54,32 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
     blockId: null,
     fee: 0,
   })
+  const [onlinePaymentsEnabled, setOnlinePaymentsEnabled] = useState(true)
+
+  // Self-fetched, same pattern as DeliverySelector: the admin panel's
+  // master switch (migration 055) can flip at any time, so this reads it
+  // fresh rather than trusting a value baked in at build time.
+  useEffect(() => {
+    let cancelled = false
+    const supabase = createClient()
+    supabase
+      .from("platform_settings")
+      .select("online_payments_enabled")
+      .eq("id", true)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setOnlinePaymentsEnabled(data?.online_payments_enabled ?? true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // Switched off mid-session (another tab, another admin) while "online"
+  // was already selected — fall back rather than let a submit try it.
+  useEffect(() => {
+    if (!onlinePaymentsEnabled && paymentMethod === "online") setPaymentMethod("on_shop")
+  }, [onlinePaymentsEnabled, paymentMethod])
 
   // Sold-out lines are dropped here rather than at the point of insert, so
   // the bill on screen and the order sent to the kitchen are the same thing.
@@ -269,7 +296,7 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
         {!splitOrder ? (
           <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-foreground">Payment</h2>
-            <div className="grid grid-cols-2 gap-2">
+            <div className={cn("grid gap-2", onlinePaymentsEnabled ? "grid-cols-2" : "grid-cols-1")}>
               <button
                 type="button"
                 onClick={() => setPaymentMethod("on_shop")}
@@ -283,19 +310,21 @@ export function CartSummary({ canteenId, unavailableIds, checking, closedIds }: 
                 <IndianRupee className="h-4 w-4" />
                 {delivery.fulfillmentType === "delivery" ? "Pay on delivery" : "Pay at counter"}
               </button>
-              <button
-                type="button"
-                onClick={() => setPaymentMethod("online")}
-                className={cn(
-                  "flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors",
-                  paymentMethod === "online"
-                    ? "border-primary bg-primary-soft text-primary"
-                    : "border-border text-muted-foreground hover:bg-muted"
-                )}
-              >
-                <Wallet className="h-4 w-4" />
-                Pay online
-              </button>
+              {onlinePaymentsEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("online")}
+                  className={cn(
+                    "flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors",
+                    paymentMethod === "online"
+                      ? "border-primary bg-primary-soft text-primary"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  <Wallet className="h-4 w-4" />
+                  Pay online
+                </button>
+              ) : null}
             </div>
           </div>
         ) : null}

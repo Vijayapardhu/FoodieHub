@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
@@ -38,6 +38,26 @@ export function PromoBannersList({ banners: initial }: PromoBannersListProps) {
   const [banners, setBanners] = useState(initial)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [payingId, setPayingId] = useState<string | null>(null)
+  const [onlinePaymentsEnabled, setOnlinePaymentsEnabled] = useState(true)
+
+  // The admin panel's master switch (migration 055) — banners have no
+  // pay-at-counter fallback, so when it's off the "Pay" button turns into
+  // an explanation instead of just vanishing.
+  useEffect(() => {
+    let cancelled = false
+    const supabase = createClient()
+    supabase
+      .from("platform_settings")
+      .select("online_payments_enabled")
+      .eq("id", true)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setOnlinePaymentsEnabled(data?.online_payments_enabled ?? true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const setStatus = async (
     banner: PromoBannerWithCanteen,
@@ -214,13 +234,19 @@ export function PromoBannersList({ banners: initial }: PromoBannersListProps) {
 
               <div className="flex gap-2">
                 {banner.status === "approved" && owed > 0 && !expired ? (
-                  <Button
-                    size="sm"
-                    loading={payingId === banner.id}
-                    onClick={() => pay(banner)}
-                  >
-                    Pay {formatRupees(owed)}
-                  </Button>
+                  onlinePaymentsEnabled ? (
+                    <Button
+                      size="sm"
+                      loading={payingId === banner.id}
+                      onClick={() => pay(banner)}
+                    >
+                      Pay {formatRupees(owed)}
+                    </Button>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Payments are paused platform-wide — check back soon
+                    </p>
+                  )
                 ) : null}
                 {banner.status === "approved" && owed <= 0 && !expired ? (
                   <Button

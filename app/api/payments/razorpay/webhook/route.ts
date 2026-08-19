@@ -1,6 +1,7 @@
 import crypto from "node:crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getRazorpayCredentials } from "@/lib/payments/razorpay-credentials"
 
 /**
  * Razorpay → us, server-to-server. No Supabase session exists here, so the
@@ -16,9 +17,9 @@ import { createAdminClient } from "@/lib/supabase/admin"
  * tolerate running twice, so it doesn't matter which gets there first.
  */
 export async function POST(request: NextRequest) {
-  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET
+  const { webhookSecret } = await getRazorpayCredentials()
   if (!webhookSecret) {
-    console.error("RAZORPAY_WEBHOOK_SECRET is not set")
+    console.error("Razorpay webhook secret is not set")
     return NextResponse.json({ error: "Webhook not configured" }, { status: 500 })
   }
 

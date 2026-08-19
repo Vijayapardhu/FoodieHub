@@ -1,20 +1,20 @@
 import Razorpay from "razorpay"
+import { getRazorpayCredentials } from "./razorpay-credentials"
 
-let instance: Razorpay | null = null
+/**
+ * Server-only. Throws rather than silently no-op'ing if keys are missing.
+ * Built fresh on every call rather than cached — an admin can rotate the
+ * key pair at any time from the admin panel, and a cached instance would
+ * keep signing requests with the old secret until the process restarted.
+ */
+export async function getRazorpay(): Promise<{ razorpay: Razorpay; keyId: string }> {
+  const { keyId, keySecret } = await getRazorpayCredentials()
 
-/** Server-only. Throws rather than silently no-op'ing if keys are missing. */
-export function getRazorpay(): Razorpay {
-  if (instance) return instance
-
-  const key_id = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
-  const key_secret = process.env.RAZORPAY_KEY_SECRET
-
-  if (!key_id || !key_secret) {
+  if (!keyId || !keySecret) {
     throw new Error("Razorpay is not configured (missing key id or key secret)")
   }
 
-  instance = new Razorpay({ key_id, key_secret })
-  return instance
+  return { razorpay: new Razorpay({ key_id: keyId, key_secret: keySecret }), keyId }
 }
 
 /** Razorpay takes amounts as integer paise, never rupees. */
