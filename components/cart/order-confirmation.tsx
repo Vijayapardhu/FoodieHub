@@ -28,12 +28,18 @@ export function OrderConfirmation() {
 
   // Reached directly (a refresh, a bookmarked link) rather than via "Review
   // order" — there's no draft to confirm, so send them back to make one.
+  //
+  // Guarded on `placing`: handleConfirm clears the draft the instant the
+  // order rows are written, before the online-payment round trip even
+  // starts, so this effect would otherwise fire mid-submission — bouncing
+  // back to an empty cart before the Razorpay popup ever had a chance to
+  // open, on every single online-payment order.
   useEffect(() => {
-    if (!draft) {
+    if (!draft && !placing) {
       toast.error("Review your order again before confirming")
       router.replace("/cart")
     }
-  }, [draft, router])
+  }, [draft, placing, router])
 
   const cartItems = useMemo(() => {
     if (!draft) return []
